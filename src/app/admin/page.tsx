@@ -8,7 +8,7 @@ import { EventSubmissionForm } from '@/components/submit/EventSubmissionForm';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
-import { Eye, LogOut, Users } from 'lucide-react';
+import { Eye, LogOut, Users, UserCog } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BulkUploadForm } from '@/components/submit/BulkUploadForm';
 
@@ -56,6 +56,12 @@ export default function AdminDashboardPage() {
                 <Link href="/admin/users">
                     <Users className="mr-2 h-4 w-4" />
                     Manage Users
+                </Link>
+            </Button>
+            <Button asChild variant="outline">
+                <Link href="/admin/team">
+                    <UserCog className="mr-2 h-4 w-4" />
+                    Manage Team
                 </Link>
             </Button>
             <Button asChild variant="outline">
