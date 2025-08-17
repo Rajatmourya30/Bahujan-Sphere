@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -8,13 +9,46 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Button } from '../ui/button';
 import Link from 'next/link';
 import { useLanguage } from '@/hooks/use-language';
-import { mockEventsByDay } from '@/lib/events';
+import { mockEventsByDay, type CalendarEvent } from '@/lib/events';
+import { Share2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export function EventCalendar() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const { t } = useLanguage();
+  const { toast } = useToast();
   const selectedDay = date ? date.getDate().toString() : null;
   const dayEvents = selectedDay ? mockEventsByDay[selectedDay as keyof typeof mockEventsByDay] || [] : [];
+
+  const handleShare = async (event: CalendarEvent) => {
+    const eventTitle = t(event.titleKey);
+    const eventDescription = t(event.descriptionKey);
+    const shareText = `${eventTitle}\n\n${eventDescription}\n\n${t('share.footer')}`;
+    const shareUrl = event.readMoreUrl;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: eventTitle,
+          text: shareText,
+          url: shareUrl,
+        });
+      } catch (error) {
+        console.error('Error sharing:', error);
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
+        toast({
+          title: t('share.copied_title'),
+          description: t('share.copied_description'),
+        });
+      } catch (error) {
+        console.error('Error copying to clipboard:', error);
+      }
+    }
+  };
+
 
   return (
     <div className="flex flex-col gap-8">
@@ -49,11 +83,17 @@ export function EventCalendar() {
                 </AccordionTrigger>
                 <AccordionContent>
                   <p className="mb-4">{t(event.descriptionKey)}</p>
-                  <Button asChild size="sm">
-                    <Link href={event.readMoreUrl} target="_blank">
-                      {t('event_calendar.read_more_button')}
-                    </Link>
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button asChild size="sm">
+                      <Link href={event.readMoreUrl} target="_blank">
+                        {t('event_calendar.read_more_button')}
+                      </Link>
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleShare(event)}>
+                        <Share2 className="mr-2 h-4 w-4" />
+                        {t('share.button_text')}
+                    </Button>
+                  </div>
                 </AccordionContent>
               </AccordionItem>
             ))}

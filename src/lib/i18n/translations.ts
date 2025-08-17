@@ -1,3 +1,4 @@
+
 // This is a minimal set of translations to get started.
 // In a real app, you would have a more robust system.
 
@@ -89,6 +90,11 @@ const en = {
   "tag_buddhist": "Buddhist",
   "tag_social_reform": "Social Reform",
   "tag_constitutional": "Constitutional",
+  
+  "share.button_text": "Share",
+  "share.footer": "Shared from BahujanSphere",
+  "share.copied_title": "Copied to Clipboard",
+  "share.copied_description": "Event details have been copied to your clipboard.",
 };
 
 const hi = {
@@ -179,6 +185,11 @@ const hi = {
   "tag_buddhist": "बौद्ध",
   "tag_social_reform": "समाज सुधार",
   "tag_constitutional": "संवैधानिक",
+
+  "share.button_text": "शेयर करें",
+  "share.footer": "बहुजनस्फेयर से साझा किया गया",
+  "share.copied_title": "क्लिपबोर्ड पर कॉपी किया गया",
+  "share.copied_description": "कार्यक्रम का विवरण आपके क्लिपबोर्ड पर कॉपी कर लिया गया है।",
 };
 
 export const translations = { en, hi };
