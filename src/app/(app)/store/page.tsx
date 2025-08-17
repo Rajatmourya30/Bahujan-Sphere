@@ -1,12 +1,15 @@
 
 'use client';
 
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLanguage } from '@/hooks/use-language';
 import { allBahujanStores, type BahujanStore } from '@/lib/store';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
 
 function StoreCard({ store }: { store: BahujanStore }) {
     const { t } = useLanguage();
@@ -41,6 +44,17 @@ function StoreCard({ store }: { store: BahujanStore }) {
 
 export default function StorePage() {
     const { t } = useLanguage();
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredStores = useMemo(() => {
+        if (!searchTerm) {
+            return allBahujanStores;
+        }
+        return allBahujanStores.filter(store => 
+            t(store.nameKey).toLowerCase().includes(searchTerm.toLowerCase()) ||
+            t(store.descriptionKey).toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [searchTerm, t]);
 
     return (
         <div className="space-y-8">
@@ -51,11 +65,26 @@ export default function StorePage() {
                 </p>
             </header>
             
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                {allBahujanStores.map(item => (
-                    <StoreCard key={item.id} store={item} />
-                ))}
+            <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input
+                    type="search"
+                    placeholder={t('store.search_placeholder')}
+                    className="pl-10"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
             </div>
+
+            {filteredStores.length > 0 ? (
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    {filteredStores.map(item => (
+                        <StoreCard key={item.id} store={item} />
+                    ))}
+                </div>
+            ) : (
+                 <p className="text-center text-muted-foreground py-8">{t('store.no_results')}</p>
+            )}
 
             <footer className="text-center text-sm text-muted-foreground">
                 <p>{t('store.footer_text')}</p>

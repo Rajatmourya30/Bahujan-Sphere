@@ -99,6 +99,8 @@ const en = {
   "store.title": "Bahujan Store Directory",
   "store.description": "Discover and support businesses and creators from the Bahujan community.",
   "store.visit_store_button": "Visit Store",
+  "store.search_placeholder": "Search stores...",
+  "store.no_results": "No stores found.",
   "store.footer_text": "Support Bahujan Creators – Powered by BahujanSphere",
 
   "event_ambedkar_birth_title": "Birth of Dr. B. R. Ambedkar",
@@ -228,6 +230,8 @@ const hi = {
   "store.title": "बहुजन स्टोर डायरेक्टरी",
   "store.description": "बहुजन समुदाय के व्यवसायों और रचनाकारों को खोजें और समर्थन करें।",
   "store.visit_store_button": "स्टोर पर जाएं",
+  "store.search_placeholder": "स्टोर खोजें...",
+  "store.no_results": "कोई स्टोर नहीं मिला।",
   "store.footer_text": "बहुजन रचनाकारों का समर्थन करें - बहुजनSphere द्वारा संचालित",
 
   "event_ambedkar_birth_title": "डॉ. बी. आर. अम्बेडकर का जन्म",
