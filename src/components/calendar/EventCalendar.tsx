@@ -14,6 +14,7 @@ import { useBookmarks } from '@/hooks/use-bookmarks';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { EventDetailModal } from './EventDetailModal';
+import { Separator } from '../ui/separator';
 
 function EventDetail({ event, onReadMoreClick }: { event: CalendarEvent, onReadMoreClick: () => void }) {
   const { t } = useLanguage();
@@ -42,23 +43,14 @@ function EventDetail({ event, onReadMoreClick }: { event: CalendarEvent, onReadM
           <Badge key={tagKey} variant="secondary">{t(tagKey)}</Badge>
         ))}
       </div>
-      <p className="text-sm text-muted-foreground">
+      <p className="text-sm">
         {displayDescription}
-        {isLongDescription && (
-            <Button variant="link" className="p-1 h-auto ml-1" onClick={onReadMoreClick}>
-                {t('event_calendar.read_more_button')}
-            </Button>
-        )}
       </p>
       <div className="flex justify-between items-center">
-         <div className="flex-grow">
-            {!isLongDescription && (
-                <Button asChild size="sm" variant="outline">
-                    <Link href={event.readMoreUrl} target="_blank">
-                        {t('event_calendar.read_full_article_button')}
-                    </Link>
-                </Button>
-            )}
+         <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={onReadMoreClick}>
+                {t('event_calendar.read_more_button')}
+            </Button>
         </div>
         <Button
             variant="outline"
@@ -130,7 +122,8 @@ export function EventCalendar() {
               {dayEvents.length > 0 ? (
                 <div className="w-full space-y-4">
                   {dayEvents.map((event, index) => (
-                     <div key={event.id} className={cn("space-y-2", index < dayEvents.length - 1 ? "border-b pb-4" : "")}>
+                     <div key={event.id} className="space-y-2">
+                        {index > 0 && <Separator className="my-4" />}
                         <h3 className="font-semibold">{t(event.titleKey)}</h3>
                         <EventDetail event={event} onReadMoreClick={() => setSelectedEvent(event)} />
                      </div>
