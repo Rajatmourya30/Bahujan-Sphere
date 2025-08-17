@@ -36,7 +36,7 @@ export function EventCalendar() {
       } catch (error) {
         console.error('Error sharing:', error);
       }
-    } else {
+    } else if (navigator.clipboard) {
       try {
         await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
         toast({
@@ -46,6 +46,12 @@ export function EventCalendar() {
       } catch (error) {
         console.error('Error copying to clipboard:', error);
       }
+    } else {
+        toast({
+            title: "Sharing not available",
+            description: "Sharing is only available in a secure context (HTTPS).",
+            variant: 'destructive'
+        })
     }
   };
 
