@@ -16,6 +16,7 @@ import { MoreHorizontal } from "lucide-react";
 import { Button } from "../ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { EditRoleDialog } from './EditRoleDialog';
+import { RemoveMemberDialog } from './RemoveMemberDialog';
 
 
 export interface TeamMember {
@@ -29,6 +30,7 @@ export interface TeamMember {
 interface TeamMemberTableProps {
     members: TeamMember[];
     onUpdateRole: (memberId: number, newRole: TeamMember['role']) => void;
+    onRemoveMember: (memberId: number) => void;
 }
 
 const roleVariant: Record<TeamMember['role'], 'default' | 'secondary' | 'outline'> = {
@@ -37,8 +39,9 @@ const roleVariant: Record<TeamMember['role'], 'default' | 'secondary' | 'outline
     'Contributor': 'outline',
 }
 
-export function TeamMemberTable({ members, onUpdateRole }: TeamMemberTableProps) {
+export function TeamMemberTable({ members, onUpdateRole, onRemoveMember }: TeamMemberTableProps) {
     const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
+    const [removingMember, setRemovingMember] = useState<TeamMember | null>(null);
 
     return (
         <>
@@ -79,7 +82,12 @@ export function TeamMemberTable({ members, onUpdateRole }: TeamMemberTableProps)
                                                 <DropdownMenuItem onClick={() => setEditingMember(member)}>
                                                     Edit Role
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem className="text-destructive">Remove Member</DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                  className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                                                  onClick={() => setRemovingMember(member)}
+                                                >
+                                                  Remove Member
+                                                </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </TableCell>
@@ -96,6 +104,16 @@ export function TeamMemberTable({ members, onUpdateRole }: TeamMemberTableProps)
                     onSave={(newRole) => {
                         onUpdateRole(editingMember.id, newRole);
                         setEditingMember(null);
+                    }}
+                />
+            )}
+            {removingMember && (
+                <RemoveMemberDialog
+                    member={removingMember}
+                    onOpenChange={(isOpen) => !isOpen && setRemovingMember(null)}
+                    onConfirm={() => {
+                        onRemoveMember(removingMember.id);
+                        setRemovingMember(null);
                     }}
                 />
             )}

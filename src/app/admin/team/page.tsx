@@ -39,6 +39,12 @@ export default function TeamManagementPage() {
     );
   };
 
+  const handleRemoveMember = (memberId: number) => {
+    setTeamMembers(currentMembers =>
+        currentMembers.filter(member => member.id !== memberId)
+    );
+  };
+
 
   if (!isAuthenticated) {
     return (
@@ -70,7 +76,11 @@ export default function TeamManagementPage() {
       </header>
       
       <section>
-        <TeamMemberTable members={teamMembers} onUpdateRole={handleUpdateRole} />
+        <TeamMemberTable
+          members={teamMembers}
+          onUpdateRole={handleUpdateRole}
+          onRemoveMember={handleRemoveMember}
+        />
       </section>
     </div>
   );
