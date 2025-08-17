@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
-import { Download, FileJson, FileUp, Loader2 } from 'lucide-react';
+import { Download, FileUp, Loader2, Table } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 
 interface StagedEvent {
@@ -30,39 +31,53 @@ export function BulkUploadForm() {
       return;
     }
 
-    if (file.type !== 'application/json') {
-      toast({
-        title: 'Invalid File Type',
-        description: 'Please upload a valid JSON file.',
-        variant: 'destructive',
-      });
-      return;
+    const allowedExtensions = ['.xlsx', '.xls', '.csv'];
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+    
+    if (!fileExtension || !allowedExtensions.includes(`.${fileExtension}`)) {
+        toast({
+            title: 'Invalid File Type',
+            description: 'Please upload a valid Excel or CSV file.',
+            variant: 'destructive',
+        });
+        return;
     }
 
     setFileName(file.name);
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const content = e.target?.result as string;
-        const data = JSON.parse(content);
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const json: any[] = XLSX.utils.sheet_to_json(worksheet);
 
-        // Basic validation
-        if (!Array.isArray(data) || !data.every(item => item.title && item.date && item.summary && item.tags)) {
-            throw new Error('JSON data must be an array of events with required fields (title, date, summary, tags).');
-        }
+        const parsedEvents = json.map(row => {
+            if (!row.title || !row.date || !row.summary || !row.tags) {
+                throw new Error('Each row must have title, date, summary, and tags.');
+            }
+            return {
+                title: String(row.title),
+                date: String(row.date),
+                summary: String(row.summary),
+                readMoreUrl: row.readMoreUrl ? String(row.readMoreUrl) : undefined,
+                tags: String(row.tags).split(',').map(tag => tag.trim()),
+            };
+        });
 
-        setStagedEvents(data);
+        setStagedEvents(parsedEvents);
       } catch (error: any) {
         toast({
           title: 'Error Parsing File',
-          description: error.message || 'There was an issue reading the JSON file.',
+          description: error.message || 'There was an issue reading the file.',
           variant: 'destructive',
         });
         setStagedEvents([]);
         setFileName('');
       }
     };
-    reader.readAsText(file);
+    reader.readAsBinaryString(file);
   };
 
   const handleSubmit = () => {
@@ -82,19 +97,22 @@ export function BulkUploadForm() {
   };
   
   const downloadTemplate = () => {
-    const template = [
+    const headers = ["title", "date", "summary", "readMoreUrl", "tags"];
+    const data = [
       {
         "title": "Sample Event Title",
         "date": "1 January 2025",
         "summary": "This is a short summary of the sample event.",
         "readMoreUrl": "https://example.com/sample-event",
-        "tags": ["sample", "template"]
+        "tags": "sample, template"
       }
     ];
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(template, null, 2));
+    const worksheet = XLSX.utils.json_to_sheet(data, { header: headers });
+    const csv = XLSX.utils.sheet_to_csv(worksheet);
+    const dataStr = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
     const downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "event_template.json");
+    downloadAnchorNode.setAttribute("download", "event_template.csv");
     document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
@@ -105,30 +123,30 @@ export function BulkUploadForm() {
       <CardHeader>
         <CardTitle>Bulk Event Upload</CardTitle>
         <CardDescription>
-          Upload a JSON file containing an array of event objects.
+          Upload an Excel or CSV file with event data.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <Alert>
-            <FileJson className="h-4 w-4" />
+            <Table className="h-4 w-4" />
             <AlertTitle>Instructions</AlertTitle>
             <AlertDescription>
-                The JSON file must be an array of objects, each with `title`, `date`, `summary`, and `tags` (array of strings). `readMoreUrl` is optional.
+                The file must have columns: `title`, `date`, `summary`, and `tags`. `readMoreUrl` is optional. For multiple tags, separate them with a comma (e.g., "tag1, tag2").
             </AlertDescription>
             <div className="mt-4">
                 <Button variant="outline" size="sm" onClick={downloadTemplate}>
                     <Download className="mr-2 h-4 w-4" />
-                    Download Template
+                    Download CSV Template
                 </Button>
             </div>
         </Alert>
         
         <div className="space-y-2">
-          <Label htmlFor="json-upload">Upload JSON File</Label>
+          <Label htmlFor="file-upload">Upload Excel/CSV File</Label>
           <div className="flex items-center gap-2">
-            <Input id="json-upload" type="file" accept=".json" onChange={handleFileChange} className="hidden" />
+            <Input id="file-upload" type="file" accept=".xlsx, .xls, .csv" onChange={handleFileChange} className="hidden" />
             <Button asChild variant="outline">
-                <label htmlFor="json-upload" className="cursor-pointer">
+                <label htmlFor="file-upload" className="cursor-pointer">
                     <FileUp className="mr-2 h-4 w-4" /> Choose File
                 </label>
             </Button>
