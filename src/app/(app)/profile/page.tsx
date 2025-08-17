@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -6,11 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Globe, LogOut, Palette } from 'lucide-react';
+import { Globe, LogOut, Palette, Heart } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { LanguageSwitcher } from '@/components/shared/LanguageSwitcher';
 import { Label } from '@/components/ui/label';
 import { ThemeSwitcher } from '@/components/shared/ThemeSwitcher';
+import { DonationDialog } from '@/components/profile/DonationDialog';
 
 interface UserProfile {
     name: string;
@@ -26,6 +28,7 @@ export default function ProfilePage() {
   const { t } = useLanguage();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [isDonationDialogOpen, setIsDonationDialogOpen] = useState(false);
 
   useEffect(() => {
     const authStatus = localStorage.getItem('isUserAuthenticated');
@@ -63,67 +66,82 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="space-y-6">
-        <Card>
-            <CardHeader className="flex flex-row items-center gap-4 space-y-0">
-                <Avatar className="h-16 w-16">
-                    <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
-                        {user.name.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                </Avatar>
-                <div>
-                    <CardTitle className="text-2xl font-headline">{user.name}</CardTitle>
-                    <CardDescription>{user.email}</CardDescription>
-                </div>
-            </CardHeader>
-            <CardContent>
-                <div className="grid grid-cols-2 gap-4 text-sm">
+    <>
+        <div className="space-y-6">
+            <Card>
+                <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+                    <Avatar className="h-16 w-16">
+                        <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
+                            {user.name.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                    </Avatar>
                     <div>
-                        <p className="font-medium text-muted-foreground">{t('profile_page.country')}</p>
-                        <p>{user.country}</p>
+                        <CardTitle className="text-2xl font-headline">{user.name}</CardTitle>
+                        <CardDescription>{user.email}</CardDescription>
                     </div>
-                     <div>
-                        <p className="font-medium text-muted-foreground">{t('profile_page.state')}</p>
-                        <p>{user.state}</p>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <p className="font-medium text-muted-foreground">{t('profile_page.country')}</p>
+                            <p>{user.country}</p>
+                        </div>
+                         <div>
+                            <p className="font-medium text-muted-foreground">{t('profile_page.state')}</p>
+                            <p>{user.state}</p>
+                        </div>
+                         <div>
+                            <p className="font-medium text-muted-foreground">{t('profile_page.city')}</p>
+                            <p>{user.city}</p>
+                        </div>
+                         <div>
+                            <p className="font-medium text-muted-foreground">{t('profile_page.birth_year')}</p>
+                            <p>{user.birthYear}</p>
+                        </div>
                     </div>
-                     <div>
-                        <p className="font-medium text-muted-foreground">{t('profile_page.city')}</p>
-                        <p>{user.city}</p>
-                    </div>
-                     <div>
-                        <p className="font-medium text-muted-foreground">{t('profile_page.birth_year')}</p>
-                        <p>{user.birthYear}</p>
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
-        
-        <Card>
-            <CardHeader>
-                <CardTitle className="text-xl font-headline">{t('profile_page.settings_title')}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
-                    <Label className="flex items-center gap-2">
-                        <Globe className="h-5 w-5 text-muted-foreground" />
-                        <span>{t('profile_page.language_label')}</span>
-                    </Label>
-                    <LanguageSwitcher />
-                </div>
-                <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                        <Palette className="h-5 w-5 text-muted-foreground" />
-                        <span>Theme</span>
-                    </Label>
-                    <ThemeSwitcher />
-                </div>
-            </CardContent>
-        </Card>
+                </CardContent>
+            </Card>
 
-        <Button onClick={handleLogout} variant="outline" className="w-full">
-            <LogOut className="mr-2 h-4 w-4" />
-            {t('profile_page.logout_button')}
-        </Button>
-    </div>
+            <Button onClick={() => setIsDonationDialogOpen(true)} size="lg" className="w-full">
+                <Heart className="mr-2" />
+                {t('profile_page.support_button')}
+            </Button>
+            
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-xl font-headline">{t('profile_page.settings_title')}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="flex items-center justify-between">
+                        <Label className="flex items-center gap-2">
+                            <Globe className="h-5 w-5 text-muted-foreground" />
+                            <span>{t('profile_page.language_label')}</span>
+                        </Label>
+                        <LanguageSwitcher />
+                    </div>
+                    <div className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                            <Palette className="h-5 w-5 text-muted-foreground" />
+                            <span>Theme</span>
+                        </Label>
+                        <ThemeSwitcher />
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Button onClick={handleLogout} variant="outline" className="w-full">
+                <LogOut className="mr-2 h-4 w-4" />
+                {t('profile_page.logout_button')}
+            </Button>
+        </div>
+        
+        {isDonationDialogOpen && (
+            <DonationDialog
+                isOpen={isDonationDialogOpen}
+                onOpenChange={setIsDonationDialogOpen}
+                userName={user.name}
+            />
+        )}
+    </>
   );
 }
