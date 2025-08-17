@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
-import { Eye, LogOut, Users, Activity, Clock, Percent, Calendar, CheckCircle, BarChart, Share2, Store, ExternalLink, MousePointerClick, TrendingUp } from 'lucide-react';
+import { Eye, LogOut, Users, Activity, Clock, Percent, Calendar, CheckCircle, BarChart, Share2, Store, ExternalLink, MousePointerClick, TrendingUp, Heart, Repeat, UserCheck, Banknote } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import dynamic from 'next/dynamic';
 import { DonationsTrendChart } from '@/components/admin/DonationsTrendChart';
@@ -20,6 +20,7 @@ import { TopEventsTable } from '@/components/admin/TopEventsTable';
 import { EventEngagementByLanguageChart } from '@/components/admin/EventEngagementByLanguageChart';
 import { TopStoresTable } from '@/components/admin/TopStoresTable';
 import { StoreCategoryChart } from '@/components/admin/StoreCategoryChart';
+import { TopDonorLocationsChart } from '@/components/admin/TopDonorLocationsChart';
 
 
 const UserGrowthChart = dynamic(
@@ -261,6 +262,56 @@ export default function AdminDashboardPage() {
          <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
             <TopStoresTable />
             <StoreCategoryChart />
+        </div>
+      </section>
+      
+      <section className="space-y-8">
+        <h2 className="font-headline text-2xl font-bold border-b pb-2">Donations Analytics</h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Donations</CardTitle>
+                    <Heart className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">₹10,850</div>
+                    <p className="text-xs text-muted-foreground">From 5 donations</p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Average Donation</CardTitle>
+                    <Banknote className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">₹2,170</div>
+                    <p className="text-xs text-muted-foreground">Per contribution</p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
+                    <UserCheck className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">2.4%</div>
+                    <p className="text-xs text-muted-foreground">From users who see the option</p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Repeat Donors</CardTitle>
+                    <Repeat className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">20%</div>
+                    <p className="text-xs text-muted-foreground">Percentage of repeat donors</p>
+                </CardContent>
+            </Card>
+        </div>
+         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+            <DonationsTrendChart />
+            <TopDonorLocationsChart />
         </div>
       </section>
 
