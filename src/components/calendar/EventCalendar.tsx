@@ -22,24 +22,24 @@ export function EventCalendar() {
   const dayEvents = useMemo(() => {
     if (!date) return [];
     // The key in mockEventsByDay is the day of the month as a string (e.g., '14').
-    // We use getUTCDate() to avoid timezone issues.
-    const dayKey = date.getUTCDate().toString();
+    // We use getDate() which returns the day of the month for the local time.
+    const dayKey = date.getDate().toString();
     return mockEventsByDay[dayKey as keyof typeof mockEventsByDay] || [];
   }, [date]);
 
 
   const eventCounts = useMemo(() => {
     const counts = new Map<string, number>();
-    const currentMonth = displayMonth.getUTCMonth();
-    const currentYear = displayMonth.getUTCFullYear();
+    const currentMonth = displayMonth.getMonth();
+    const currentYear = displayMonth.getFullYear();
 
     for (const day in mockEventsByDay) {
         const eventsOnDay = mockEventsByDay[day as keyof typeof mockEventsByDay];
         if (eventsOnDay) {
             // Note: This logic assumes events repeat monthly.
             // For a real app, the mockEventsByDay structure would need to include month/year.
-            const date = new Date(Date.UTC(currentYear, currentMonth, parseInt(day)));
-            const key = `${date.getUTCFullYear()}-${date.getUTCMonth()}-${date.getUTCDate()}`;
+            const eventDate = new Date(currentYear, currentMonth, parseInt(day));
+            const key = `${eventDate.getFullYear()}-${eventDate.getMonth()}-${eventDate.getDate()}`;
             counts.set(key, eventsOnDay.length);
         }
     }
