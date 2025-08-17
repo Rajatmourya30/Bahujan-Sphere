@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, UserPlus } from 'lucide-react';
 import { TeamMember, TeamMemberTable } from '@/components/admin/TeamMemberTable';
+import { AddMemberDialog } from '@/components/admin/AddMemberDialog';
 
 const sampleTeamMembers: TeamMember[] = [
     { id: 1, name: 'Admin User', email: 'admin@bahujansphere.com', role: 'Admin', joinedAt: '2024-01-15T10:00:00Z' },
@@ -21,6 +22,7 @@ export default function TeamManagementPage() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [teamMembers, setTeamMembers] = useState(sampleTeamMembers);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
   useEffect(() => {
     const authStatus = localStorage.getItem('isAdminAuthenticated');
@@ -45,6 +47,17 @@ export default function TeamManagementPage() {
     );
   };
 
+  const handleAddMember = (newMember: Omit<TeamMember, 'id' | 'joinedAt'>) => {
+    setTeamMembers(currentMembers => [
+        ...currentMembers,
+        {
+            ...newMember,
+            id: Date.now(), // simple unique id for demo purposes
+            joinedAt: new Date().toISOString(),
+        }
+    ]);
+  };
+
 
   if (!isAuthenticated) {
     return (
@@ -67,11 +80,11 @@ export default function TeamManagementPage() {
                     </Link>
                 </Button>
                 <h1 className="font-headline text-3xl font-bold">Team Management</h1>
-                <p className="text-muted-foreground">Invite and manage your team members.</p>
+                <p className="text-muted-foreground">Add and manage your team members.</p>
             </div>
-            <Button>
+            <Button onClick={() => setIsAddDialogOpen(true)}>
                 <UserPlus className="mr-2 h-4 w-4" />
-                Invite Team Member
+                Add Team Member
             </Button>
       </header>
       
@@ -82,6 +95,16 @@ export default function TeamManagementPage() {
           onRemoveMember={handleRemoveMember}
         />
       </section>
+
+      {isAddDialogOpen && (
+        <AddMemberDialog
+          onOpenChange={setIsAddDialogOpen}
+          onSave={(newMember) => {
+            handleAddMember(newMember);
+            setIsAddDialogOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }
