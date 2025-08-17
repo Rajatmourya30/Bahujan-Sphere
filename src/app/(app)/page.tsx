@@ -11,7 +11,7 @@ export default function Home() {
       <header className="text-center pb-4 border-b">
         <div className="flex justify-center items-center gap-2">
             <Logo className="dark:text-primary-foreground" />
-            <h1 className="font-headline text-3xl font-bold text-primary">BahujanSphere</h1>
+            <h1 className="font-headline text-3xl font-bold text-primary dark:text-primary-foreground">BahujanSphere</h1>
         </div>
         <p className="mt-2 text-md text-muted-foreground max-w-3xl mx-auto">
           {t('home.tagline')}
