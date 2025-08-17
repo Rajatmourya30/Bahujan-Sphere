@@ -3,10 +3,9 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Download, DollarSign, Users, Gift } from 'lucide-react';
+import { Download, DollarSign, Users, Gift } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { DonationTable, type Donation } from '@/components/admin/DonationTable';
@@ -74,12 +73,6 @@ export default function DonationsDashboardPage() {
     <div className="space-y-8">
       <header className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
-          <Button asChild variant="ghost" className="mb-2 -ml-4">
-            <Link href="/admin">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Dashboard
-            </Link>
-          </Button>
           <h1 className="font-headline text-3xl font-bold">Donations Dashboard</h1>
           <p className="text-muted-foreground">Track and manage all donations.</p>
         </div>

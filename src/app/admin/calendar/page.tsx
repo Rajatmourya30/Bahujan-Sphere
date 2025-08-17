@@ -3,10 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
 import { allEvents, CalendarEvent } from '@/lib/events';
 import { EventManagementTable } from '@/components/admin/EventManagementTable';
 import { ManageEventDialog } from '@/components/admin/ManageEventDialog';
@@ -83,12 +80,6 @@ export default function ManageCalendarPage() {
   return (
     <div className="space-y-8">
       <header>
-        <Button asChild variant="ghost" className="mb-2 -ml-4">
-          <Link href="/admin">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Dashboard
-          </Link>
-        </Button>
         <h1 className="font-headline text-3xl font-bold">Manage Calendar</h1>
         <p className="text-muted-foreground">Add, edit, review, and manage all calendar events.</p>
       </header>

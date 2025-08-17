@@ -3,10 +3,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, UserPlus } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
 import { TeamMember, TeamMemberTable } from '@/components/admin/TeamMemberTable';
 import { AddMemberDialog } from '@/components/admin/AddMemberDialog';
 
@@ -74,12 +73,6 @@ export default function TeamManagementPage() {
     <div className="space-y-8">
         <header className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
             <div>
-                <Button asChild variant="ghost" className="mb-2 -ml-4">
-                    <Link href="/admin">
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to Dashboard
-                    </Link>
-                </Button>
                 <h1 className="font-headline text-3xl font-bold">Team Management</h1>
                 <p className="text-muted-foreground">Add and manage your team members.</p>
             </div>
