@@ -8,7 +8,7 @@ import { EventSubmissionForm } from '@/components/submit/EventSubmissionForm';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
-import { Eye, LogOut, Users, UserCog, HeartHandshake, Library, Store } from 'lucide-react';
+import { Eye, LogOut, Users, UserCog, HeartHandshake, Library, Store, Calendar } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BulkUploadForm } from '@/components/submit/BulkUploadForm';
 import { ReviewSubmissionsTab } from '@/components/admin/ReviewSubmissionsTab';
@@ -77,6 +77,12 @@ export default function AdminDashboardPage() {
         <div className="flex flex-wrap gap-2">
             {permissions.canManageContent && (
               <>
+                 <Button asChild variant="outline">
+                    <Link href="/admin/calendar">
+                        <Calendar className="mr-2 h-4 w-4" />
+                        Manage Calendar
+                    </Link>
+                </Button>
                  <Button asChild variant="outline">
                     <Link href="/admin/knowledge-hub">
                         <Library className="mr-2 h-4 w-4" />
