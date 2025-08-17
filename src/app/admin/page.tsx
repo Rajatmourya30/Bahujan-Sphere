@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -7,7 +8,7 @@ import { EventSubmissionForm } from '@/components/submit/EventSubmissionForm';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
-import { Eye } from 'lucide-react';
+import { Eye, LogOut } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BulkUploadForm } from '@/components/submit/BulkUploadForm';
 
@@ -25,6 +26,11 @@ export default function AdminDashboardPage() {
       setIsAuthenticated(true);
     }
   }, [router]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('isAdminAuthenticated');
+    router.push('/admin/login');
+  };
 
   if (!isAuthenticated) {
     // Show a loading state while we check authentication.
@@ -45,12 +51,18 @@ export default function AdminDashboardPage() {
             <h1 className="font-headline text-3xl font-bold">{t('admin_dashboard.title')}</h1>
             <p className="text-muted-foreground">{t('admin_dashboard.description')}</p>
         </div>
-        <Button asChild variant="outline">
-            <Link href="/">
-                <Eye className="mr-2 h-4 w-4" />
-                View App
-            </Link>
-        </Button>
+        <div className="flex gap-2">
+            <Button asChild variant="outline">
+                <Link href="/">
+                    <Eye className="mr-2 h-4 w-4" />
+                    View App
+                </Link>
+            </Button>
+            <Button onClick={handleLogout} variant="outline">
+                <LogOut className="mr-2 h-4 w-4" />
+                Logout
+            </Button>
+        </div>
       </header>
       
       <Tabs defaultValue="single-event">
