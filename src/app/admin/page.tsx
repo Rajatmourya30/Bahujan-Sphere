@@ -7,15 +7,25 @@ import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
-import { Eye, LogOut, Users, Activity, Bookmark, Gift } from 'lucide-react';
+import { Eye, LogOut, Users, Activity, Clock, Percent } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import dynamic from 'next/dynamic';
 import { DonationsTrendChart } from '@/components/admin/DonationsTrendChart';
+import { LanguageDemographicsChart } from '@/components/admin/LanguageDemographicsChart';
+import { RetentionRateChart } from '@/components/admin/RetentionRateChart';
+import { FeatureUsageChart } from '@/components/admin/FeatureUsageChart';
+import { DeviceBreakdownChart } from '@/components/admin/DeviceBreakdownChart';
 
 const UserGrowthChart = dynamic(
   () => import('@/components/admin/UserGrowthChart').then((mod) => mod.UserGrowthChart),
   { ssr: false }
 );
+
+const UserDemographicsChart = dynamic(
+  () => import('@/components/admin/UserDemographicsChart').then((mod) => mod.UserDemographicsChart),
+  { ssr: false }
+);
+
 
 type UserRole = 'Admin' | 'Editor' | 'Reviewer' | 'Contributor' | null;
 
@@ -106,29 +116,40 @@ export default function AdminDashboardPage() {
         </Card>
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Donations</CardTitle>
-                <Gift className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Avg. Session</CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold">5</div>
-                <p className="text-xs text-muted-foreground">Total of ₹1,950</p>
+                <div className="text-2xl font-bold">8m 42s</div>
+                <p className="text-xs text-muted-foreground">Average session duration</p>
             </CardContent>
         </Card>
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Bookmarks</CardTitle>
-                <Bookmark className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Retention (7-Day)</CardTitle>
+                <Percent className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold">128</div>
-                <p className="text-xs text-muted-foreground">Across all users</p>
+                <div className="text-2xl font-bold">42.5%</div>
+                <p className="text-xs text-muted-foreground">Users returning after 7 days</p>
             </CardContent>
         </Card>
       </section>
 
       <section className="grid grid-cols-1 gap-8 lg:grid-cols-2">
         <UserGrowthChart />
+        <RetentionRateChart />
+      </section>
+
+      <section className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <UserDemographicsChart />
+        <LanguageDemographicsChart />
+        <FeatureUsageChart />
+      </section>
+
+       <section className="grid grid-cols-1 gap-8 lg:grid-cols-2">
         <DonationsTrendChart />
+        <DeviceBreakdownChart />
       </section>
 
     </div>
