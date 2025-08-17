@@ -1,5 +1,4 @@
 import { EventCalendar } from "@/components/calendar/EventCalendar";
-import { EventList } from "@/components/events/EventList";
 import { Logo } from "@/components/shared/Logo";
 
 export default function Home() {
@@ -15,7 +14,6 @@ export default function Home() {
         </p>
       </header>
       <EventCalendar />
-      <EventList />
     </div>
   );
 }

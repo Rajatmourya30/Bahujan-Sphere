@@ -2,11 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Calendar, Bookmark, PlusCircle } from 'lucide-react';
+import { Calendar, Home, Bookmark, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { href: '/', label: 'Calendar', icon: Calendar },
+  { href: '/', label: 'Calendar', icon: Home },
   { href: '/submit', label: 'Submit', icon: PlusCircle },
   { href: '/bookmarks', label: 'Bookmarks', icon: Bookmark },
 ];

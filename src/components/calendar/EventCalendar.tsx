@@ -20,45 +20,42 @@ export function EventCalendar() {
   const dayEvents = selectedDay ? mockEvents[selectedDay as keyof typeof mockEvents] || [] : [];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-      <div className="md:col-span-2">
-        <Card>
-          <CardContent className="p-0">
-            <Calendar
-              mode="single"
-              selected={date}
-              onSelect={setDate}
-              className="p-4 w-full"
-            />
-          </CardContent>
-        </Card>
-      </div>
+    <div className="flex flex-col gap-8">
+      <Card>
+        <CardContent className="p-0 flex justify-center">
+          <Calendar
+            mode="single"
+            selected={date}
+            onSelect={setDate}
+            className="p-4"
+          />
+        </CardContent>
+      </Card>
+      
       <div className="md:col-span-1">
-        <Card className="h-full">
-          <CardHeader>
-            <CardTitle className="font-headline">
-              Events on {date ? date.toLocaleDateString() : 'selected date'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {dayEvents.length > 0 ? (
-              <ul className="space-y-4">
-                {dayEvents.map((event, index) => (
-                  <li key={index} className="p-4 bg-secondary/50 rounded-lg">
-                    <p className="font-bold">{event.title}</p>
-                    <div className="mt-2">
-                      {event.tags.map((tag) => (
-                        <Badge key={tag} variant="secondary">{tag}</Badge>
-                      ))}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-muted-foreground">No events for this day.</p>
-            )}
-          </CardContent>
-        </Card>
+        <h2 className="font-headline text-2xl font-bold mb-4">
+            Events on {date ? date.toLocaleDateString() : 'selected date'}
+        </h2>
+        {dayEvents.length > 0 ? (
+          <ul className="space-y-4">
+            {dayEvents.map((event, index) => (
+              <li key={index}>
+                <Card className="bg-card hover:bg-muted/50 transition-colors">
+                    <CardContent className="p-4">
+                        <p className="font-bold">{event.title}</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                        {event.tags.map((tag) => (
+                            <Badge key={tag} variant="secondary">{tag}</Badge>
+                        ))}
+                        </div>
+                    </CardContent>
+                </Card>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-muted-foreground text-center py-8">No events for this day.</p>
+        )}
       </div>
     </div>
   );
