@@ -90,14 +90,7 @@ const en = {
   "tag_ambedkarite": "Ambedkarite",
   "tag_buddhist": "Buddhist",
   "tag_social_reform": "Social Reform",
-  "tag_constitutional": "Constitutional",
-  
-  "share.button_text": "Share",
-  "share.footer": "Shared from BahujanSphere",
-  "share.copied_title": "Copied to Clipboard",
-  "share.copied_description": "Event details have been copied to your clipboard.",
-  "share.unavailable_title": "Sharing Not Available",
-  "share.unavailable_description": "Direct sharing is only available on secure (HTTPS) connections or compatible browsers.",
+  "tag_constitutional": "Constitutional"
 };
 
 const hi = {
@@ -188,14 +181,7 @@ const hi = {
   "tag_ambedkarite": "अम्बेडकरवादी",
   "tag_buddhist": "बौद्ध",
   "tag_social_reform": "समाज सुधार",
-  "tag_constitutional": "संवैधानिक",
-
-  "share.button_text": "शेयर करें",
-  "share.footer": "बहुजनस्फेयर से साझा किया गया",
-  "share.copied_title": "क्लिपबोर्ड पर कॉपी किया गया",
-  "share.copied_description": "कार्यक्रम का विवरण आपके क्लिपबोर्ड पर कॉपी कर लिया गया है।",
-  "share.unavailable_title": "शेयरिंग उपलब्ध नहीं है",
-  "share.unavailable_description": "सीधा शेयरिंग केवल सुरक्षित (HTTPS) कनेक्शन और संगत ब्राउज़रों पर उपलब्ध है।",
+  "tag_constitutional": "संवैधानिक"
 };
 
 export const translations = { en, hi };

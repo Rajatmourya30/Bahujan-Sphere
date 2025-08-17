@@ -8,19 +8,9 @@ import { Button } from '../ui/button';
 import Link from 'next/link';
 import { useLanguage } from '@/hooks/use-language';
 import { mockEventsByDay, type CalendarEvent } from '@/lib/events';
-import { Share2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 import { Badge } from '../ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
 
-function EventDetail({ event, onShare }: { event: CalendarEvent; onShare: () => void }) {
+function EventDetail({ event }: { event: CalendarEvent }) {
   const { t } = useLanguage();
 
   return (
@@ -34,10 +24,6 @@ function EventDetail({ event, onShare }: { event: CalendarEvent; onShare: () => 
         {t(event.descriptionKey)}
       </p>
       <div className="flex gap-2">
-        <Button variant="outline" size="sm" onClick={onShare}>
-          <Share2 className="mr-2 h-4 w-4" />
-          {t('share.button_text')}
-        </Button>
         <Button asChild size="sm">
           <Link href={event.readMoreUrl} target="_blank">
             {t('event_calendar.read_more_button')}
@@ -51,7 +37,6 @@ function EventDetail({ event, onShare }: { event: CalendarEvent; onShare: () => 
 export function EventCalendar() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const { t } = useLanguage();
-  const { toast } = useToast();
 
   const eventDates = useMemo(() => {
     // In a real app, you'd fetch events for the visible months.
@@ -75,31 +60,6 @@ export function EventCalendar() {
     const dayKey = date.getDate().toString();
     return mockEventsByDay[dayKey as keyof typeof mockEventsByDay] || [];
   }, [date]);
-
-  const handleShare = async (event: CalendarEvent) => {
-    const eventTitle = t(event.titleKey);
-    const eventDescription = t(event.descriptionKey);
-    const shareText = `${eventTitle}\n\n${eventDescription}\n\n${t('share.footer')}`;
-    const shareUrl = event.readMoreUrl;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: eventTitle,
-          text: shareText,
-          url: shareUrl,
-        });
-      } catch (error) {
-        console.log('Share action was cancelled or failed.', error);
-      }
-    } else {
-        toast({
-            title: t('share.unavailable_title'),
-            description: t('share.unavailable_description'),
-            variant: 'destructive',
-        });
-    }
-  };
 
   return (
     <div className="flex flex-col gap-8">
@@ -130,7 +90,7 @@ export function EventCalendar() {
                 {dayEvents.map((event) => (
                    <div key={event.id} className="border-b pb-4 last:border-b-0 last:pb-0">
                       <h3 className="font-semibold">{t(event.titleKey)}</h3>
-                      <EventDetail event={event} onShare={() => handleShare(event)} />
+                      <EventDetail event={event} />
                    </div>
                 ))}
               </div>
