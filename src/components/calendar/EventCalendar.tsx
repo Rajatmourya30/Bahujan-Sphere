@@ -2,7 +2,6 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '../ui/button';
@@ -21,9 +20,9 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 
-function EventDetail({ event, onShare }: { event: CalendarEvent, onShare: () => void }) {
+function EventDetail({ event, onShare }: { event: CalendarEvent; onShare: () => void }) {
   const { t } = useLanguage();
-  
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
@@ -53,14 +52,26 @@ export function EventCalendar() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const { t } = useLanguage();
   const { toast } = useToast();
-  const [dialogEvent, setDialogEvent] = useState<CalendarEvent | null>(null);
 
-  const eventDays = useMemo(() => {
-    return Object.keys(mockEventsByDay).map(day => parseInt(day, 10));
+  const eventDates = useMemo(() => {
+    // In a real app, you'd fetch events for the visible months.
+    // For this mock data, we'll just create dates for the current year.
+    const year = new Date().getFullYear();
+    const dates: Date[] = [];
+    // Note: This is a simplified approach for mock data.
+    // A real implementation should handle events spanning multiple years.
+    Object.keys(mockEventsByDay).forEach(day => {
+        // We need to iterate through months, as the day doesn't specify one.
+        for (let month = 0; month < 12; month++) {
+           dates.push(new Date(year, month, parseInt(day, 10)));
+        }
+    });
+    return dates;
   }, []);
 
   const dayEvents = useMemo(() => {
     if (!date) return [];
+    // We only use the day of the month for our mock data key.
     const dayKey = date.getDate().toString();
     return mockEventsByDay[dayKey as keyof typeof mockEventsByDay] || [];
   }, [date]);
@@ -79,8 +90,6 @@ export function EventCalendar() {
           url: shareUrl,
         });
       } catch (error) {
-        // This will happen if the user cancels the share dialog.
-        // It's not necessarily an error, so we won't show a toast.
         console.log('Share action was cancelled or failed.', error);
       }
     } else {
@@ -101,7 +110,7 @@ export function EventCalendar() {
             selected={date}
             onSelect={setDate}
             className="p-4"
-            eventDays={eventDays}
+            eventDates={eventDates}
           />
         </CardContent>
       </Card>
@@ -117,16 +126,14 @@ export function EventCalendar() {
         <Card>
           <CardContent className="p-4">
             {dayEvents.length > 0 ? (
-              <Accordion type="single" collapsible className="w-full">
-                {dayEvents.map((event, index) => (
-                  <AccordionItem value={`item-${index}`} key={event.id}>
-                    <AccordionTrigger>{t(event.titleKey)}</AccordionTrigger>
-                    <AccordionContent>
+              <div className="w-full space-y-4">
+                {dayEvents.map((event) => (
+                   <div key={event.id} className="border-b pb-4 last:border-b-0 last:pb-0">
+                      <h3 className="font-semibold">{t(event.titleKey)}</h3>
                       <EventDetail event={event} onShare={() => handleShare(event)} />
-                    </AccordionContent>
-                  </AccordionItem>
+                   </div>
                 ))}
-              </Accordion>
+              </div>
             ) : (
               <p className="py-8 text-center text-muted-foreground">{t('event_calendar.no_events')}</p>
             )}

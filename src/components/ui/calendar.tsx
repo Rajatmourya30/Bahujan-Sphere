@@ -4,38 +4,51 @@
 import * as React from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { DayPicker } from "react-day-picker"
+import { isSameDay } from "date-fns"
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker> & {
-  eventDays?: number[];
+  eventDates?: Date[];
 }
 
 function Calendar({
   className,
   classNames,
   showOutsideDays = true,
-  eventDays = [],
+  eventDates = [],
   ...props
 }: CalendarProps) {
-  const EventDay = ({ date, ...dayProps }: { date: Date, [key: string]: any }) => {
-    const isEventDay = eventDays.includes(date.getDate());
-    return (
-      <div
-        className={cn(
-          buttonVariants({ variant: "ghost" }),
-          "h-9 w-9 p-0 font-normal relative",
-           dayProps.classNames?.day
-        )}
-      >
-        <span>{date.getDate()}</span>
-        {isEventDay && <div className="absolute bottom-1 h-1 w-1 rounded-full bg-primary" />}
-      </div>
-    );
+
+  const modifiers = {
+    ...props.modifiers,
+    event: (date: Date) => eventDates.some(eventDate => isSameDay(date, eventDate)),
+  };
+
+  const modifiersClassNames = {
+    ...props.modifiersClassNames,
+    event: 'event-day',
   };
 
   return (
+    <>
+    <style>{`
+      .event-day div:first-child {
+        position: relative;
+      }
+      .event-day div:first-child::after {
+        content: '';
+        position: absolute;
+        bottom: 4px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background-color: hsl(var(--primary));
+      }
+    `}</style>
     <DayPicker
       showOutsideDays={showOutsideDays}
       className={cn("p-3", className)}
@@ -57,7 +70,10 @@ function Calendar({
           "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
         row: "flex w-full mt-2",
         cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-        day: "h-9 w-9 p-0", // Removed default styling from day
+        day: cn(
+          buttonVariants({ variant: "ghost" }),
+          "h-9 w-9 p-0 font-normal aria-selected:opacity-100"
+        ),
         day_range_end: "day-range-end",
         day_selected:
           "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
@@ -70,13 +86,15 @@ function Calendar({
         day_hidden: "invisible",
         ...classNames,
       }}
+      modifiers={modifiers}
+      modifiersClassNames={modifiersClassNames}
       components={{
         IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
         IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
-        Day: EventDay,
       }}
       {...props}
     />
+    </>
   )
 }
 Calendar.displayName = "Calendar"
