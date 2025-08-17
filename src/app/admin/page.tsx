@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { EventSubmissionForm } from '@/components/submit/EventSubmissionForm';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLanguage } from '@/hooks/use-language';
+import { Button } from '@/components/ui/button';
+import { Eye } from 'lucide-react';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -35,9 +38,17 @@ export default function AdminDashboardPage() {
 
   return (
     <div>
-      <header className="mb-8">
-        <h1 className="font-headline text-3xl font-bold">{t('admin_dashboard.title')}</h1>
-        <p className="text-muted-foreground">{t('admin_dashboard.description')}</p>
+      <header className="mb-8 flex justify-between items-center">
+        <div>
+            <h1 className="font-headline text-3xl font-bold">{t('admin_dashboard.title')}</h1>
+            <p className="text-muted-foreground">{t('admin_dashboard.description')}</p>
+        </div>
+        <Button asChild variant="outline">
+            <Link href="/">
+                <Eye className="mr-2 h-4 w-4" />
+                View App
+            </Link>
+        </Button>
       </header>
       <EventSubmissionForm />
     </div>
