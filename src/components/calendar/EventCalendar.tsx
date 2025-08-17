@@ -21,9 +21,9 @@ export function EventCalendar() {
   
   const dayEvents = useMemo(() => {
     if (!date) return [];
-    // Use UTC date to avoid timezone issues
-    const selectedDay = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-    const dayKey = selectedDay.getUTCDate().toString();
+    // The key in mockEventsByDay is the day of the month as a string (e.g., '14').
+    // We use getUTCDate() to avoid timezone issues.
+    const dayKey = date.getUTCDate().toString();
     return mockEventsByDay[dayKey as keyof typeof mockEventsByDay] || [];
   }, [date]);
 
@@ -36,6 +36,8 @@ export function EventCalendar() {
     for (const day in mockEventsByDay) {
         const eventsOnDay = mockEventsByDay[day as keyof typeof mockEventsByDay];
         if (eventsOnDay) {
+            // Note: This logic assumes events repeat monthly.
+            // For a real app, the mockEventsByDay structure would need to include month/year.
             const date = new Date(Date.UTC(currentYear, currentMonth, parseInt(day)));
             const key = `${date.getUTCFullYear()}-${date.getUTCMonth()}-${date.getUTCDate()}`;
             counts.set(key, eventsOnDay.length);
@@ -87,7 +89,7 @@ export function EventCalendar() {
       
       <div>
         <h2 className="font-headline text-2xl font-bold mb-4">
-            {t('event_calendar.events_on_date', { date: date ? date.toLocaleDateString() : t('event_calendar.selected_date') })}
+            {t('event_calendar.events_on_date', { date: date ? new Intl.DateTimeFormat(t('locale_code')).format(date) : t('event_calendar.selected_date') })}
         </h2>
         {dayEvents.length > 0 ? (
           <Accordion type="single" collapsible className="w-full">

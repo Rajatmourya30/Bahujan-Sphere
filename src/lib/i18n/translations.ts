@@ -3,6 +3,7 @@
 // In a real app, you would have a more robust system.
 
 const en = {
+  "locale_code": "en-US",
   "home.tagline": "Exploring the moments and movements that shape the Bahujan legacy.",
   "nav.calendar": "Calendar",
   "nav.profile": "Profile",
@@ -100,6 +101,7 @@ const en = {
 };
 
 const hi = {
+  "locale_code": "hi-IN",
   "home.tagline": "बहुजन विरासत को आकार देने वाले क्षणों और आंदोलनों की खोज।",
   "nav.calendar": "कैलेंडर",
   "nav.profile": "प्रोफ़ाइल",
