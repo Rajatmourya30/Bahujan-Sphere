@@ -4,7 +4,6 @@
 import { useMemo, useState } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '../ui/button';
 import Link from 'next/link';
@@ -12,6 +11,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { mockEventsByDay, type CalendarEvent } from '@/lib/events';
 import { Share2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Badge } from '../ui/badge';
 
 export function EventCalendar() {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -21,7 +21,9 @@ export function EventCalendar() {
   
   const dayEvents = useMemo(() => {
     if (!date) return [];
-    const dayKey = date.getUTCDate().toString();
+    // Use UTC date to avoid timezone issues
+    const selectedDay = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayKey = selectedDay.getUTCDate().toString();
     return mockEventsByDay[dayKey as keyof typeof mockEventsByDay] || [];
   }, [date]);
 
@@ -35,7 +37,7 @@ export function EventCalendar() {
         const eventsOnDay = mockEventsByDay[day as keyof typeof mockEventsByDay];
         if (eventsOnDay) {
             const date = new Date(Date.UTC(currentYear, currentMonth, parseInt(day)));
-            const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+            const key = `${date.getUTCFullYear()}-${date.getUTCMonth()}-${date.getUTCDate()}`;
             counts.set(key, eventsOnDay.length);
         }
     }
@@ -48,7 +50,6 @@ export function EventCalendar() {
     const shareText = `${eventTitle}\n\n${eventDescription}\n\n${t('share.footer')}`;
     const shareUrl = event.readMoreUrl;
     
-    // Check for secure context and navigator.share support
     if (window.isSecureContext && navigator.share) {
       try {
         await navigator.share({
