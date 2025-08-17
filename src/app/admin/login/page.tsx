@@ -1,13 +1,21 @@
+
 'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/use-language';
+
+const rolesByEmail: Record<string, string> = {
+    'admin@example.com': 'Admin',
+    'editor@example.com': 'Editor',
+    'reviewer@example.com': 'Reviewer',
+    'contributor@example.com': 'Contributor',
+};
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -17,11 +25,10 @@ export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
 
   const handleLogin = () => {
-    // In a real app, you'd have proper authentication.
-    // Here, we'll use a simple check.
-    if (password === 'admin123') {
-      // Simulate a session by storing a value in localStorage.
+    const userRole = rolesByEmail[email];
+    if (password === 'admin123' && userRole) {
       localStorage.setItem('isAdminAuthenticated', 'true');
+      localStorage.setItem('adminUserRole', userRole);
       router.push('/admin');
     } else {
       toast({
@@ -37,6 +44,13 @@ export default function AdminLoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle className="text-2xl font-headline">{t('admin_login.title')}</CardTitle>
+          <CardDescription>
+            Log in with different emails to test roles (password: admin123).
+            <br />- admin@example.com
+            <br />- editor@example.com
+            <br />- reviewer@example.com
+            <br />- contributor@example.com
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
