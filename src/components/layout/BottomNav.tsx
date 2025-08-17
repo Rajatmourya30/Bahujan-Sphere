@@ -2,16 +2,20 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, PlusCircle } from 'lucide-react';
+import { Home } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/', label: 'Calendar', icon: Home },
-  { href: '/submit', label: 'Submit', icon: PlusCircle },
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
+
+  // Hide nav on admin pages
+  if (pathname.startsWith('/admin')) {
+    return null;
+  }
 
   return (
     <nav className="sticky bottom-0 z-50 mt-auto w-full border-t border-border bg-background/80 backdrop-blur-sm">
