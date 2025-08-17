@@ -5,9 +5,9 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/ui/use-language';
 import { Button } from '@/components/ui/button';
-import { Eye, LogOut, Users, Activity, Clock, Percent, Calendar, CheckCircle, BarChart, Share2 } from 'lucide-react';
+import { Eye, LogOut, Users, Activity, Clock, Percent, Calendar, CheckCircle, BarChart, Share2, Store, ExternalLink, MousePointerClick, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import dynamic from 'next/dynamic';
 import { DonationsTrendChart } from '@/components/admin/DonationsTrendChart';
@@ -18,6 +18,9 @@ import { DeviceBreakdownChart } from '@/components/admin/DeviceBreakdownChart';
 import { EventsAddedChart } from '@/components/admin/EventsAddedChart';
 import { TopEventsTable } from '@/components/admin/TopEventsTable';
 import { EventEngagementByLanguageChart } from '@/components/admin/EventEngagementByLanguageChart';
+import { TopStoresTable } from '@/components/admin/TopStoresTable';
+import { StoreCategoryChart } from '@/components/admin/StoreCategoryChart';
+
 
 const UserGrowthChart = dynamic(
   () => import('@/components/admin/UserGrowthChart').then((mod) => mod.UserGrowthChart),
@@ -208,6 +211,56 @@ export default function AdminDashboardPage() {
         </div>
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
             <EventEngagementByLanguageChart />
+        </div>
+      </section>
+
+      <section className="space-y-8">
+        <h2 className="font-headline text-2xl font-bold border-b pb-2">Bahujan Store Analytics</h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Stores</CardTitle>
+                    <Store className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">24</div>
+                    <p className="text-xs text-muted-foreground">Stores listed in directory</p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total External Clicks</CardTitle>
+                    <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">4,892</div>
+                    <p className="text-xs text-muted-foreground">+8% this week</p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Average CTR</CardTitle>
+                    <MousePointerClick className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">4.65%</div>
+                    <p className="text-xs text-muted-foreground">Click-Through Rate</p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Bounce Rate</CardTitle>
+                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">32.1%</div>
+                    <p className="text-xs text-muted-foreground">After clicking external link</p>
+                </CardContent>
+            </Card>
+        </div>
+         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+            <TopStoresTable />
+            <StoreCategoryChart />
         </div>
       </section>
 
