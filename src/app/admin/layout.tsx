@@ -62,7 +62,7 @@ export default function AdminLayout({
   return (
     <SidebarProvider defaultOpen={true}>
       <Sidebar collapsible="icon" variant="inset">
-        <SidebarHeader>
+        <SidebarHeader className="pt-4">
           <div className="flex items-center gap-2">
             <Logo />
             <span className="text-lg font-semibold">Admin Panel</span>

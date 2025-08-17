@@ -63,7 +63,7 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pt-4">
       <header className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
             <h1 className="font-headline text-3xl font-bold">{t('admin_dashboard.title')}</h1>
