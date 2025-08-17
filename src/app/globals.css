@@ -87,3 +87,31 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+.day-with-event > div::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: hsl(var(--primary));
+}
+
+.day-with-event[aria-selected=true] > div::after {
+  background-color: hsl(var(--primary-foreground));
+}
+
+.day-with-event.day-today > div::after {
+  background-color: hsl(var(--accent-foreground));
+}
+
+.day-with-event.day-outside > div::after {
+    background-color: hsl(var(--muted-foreground));
+}
+
+.day-with-event.day-outside[aria-selected=true] > div::after {
+  background-color: hsl(var(--muted-foreground));
+}

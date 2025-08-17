@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,14 @@ export function EventCalendar() {
   const selectedDay = date ? date.getDate().toString() : null;
   const dayEvents = selectedDay ? mockEventsByDay[selectedDay as keyof typeof mockEventsByDay] || [] : [];
 
+  const eventDates = useMemo(() => {
+    const currentMonth = (date || new Date()).getMonth();
+    const currentYear = (date || new Date()).getFullYear();
+    return Object.keys(mockEventsByDay).map(day => {
+        return new Date(currentYear, currentMonth, parseInt(day));
+    });
+  }, [date]);
+
   const handleShare = async (event: CalendarEvent) => {
     const eventTitle = t(event.titleKey);
     const eventDescription = t(event.descriptionKey);
@@ -34,16 +42,12 @@ export function EventCalendar() {
           url: shareUrl,
         });
       } catch (error) {
-        // This catch block will trigger if the user cancels the share dialog.
-        // We can ignore it or log it, but we don't need to show a toast.
         console.log('Share action was cancelled or failed.', error);
       }
     } else {
-        // If navigator.share is not available, inform the user.
         toast({
             title: t('share.unavailable_title'),
             description: t('share.unavailable_description'),
-            variant: 'destructive',
         });
     }
   };
@@ -58,6 +62,7 @@ export function EventCalendar() {
             selected={date}
             onSelect={setDate}
             className="p-4"
+            eventDays={eventDates}
           />
         </CardContent>
       </Card>
