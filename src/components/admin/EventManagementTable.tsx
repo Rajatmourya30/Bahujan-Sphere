@@ -1,6 +1,7 @@
 
 'use client';
 
+import { useMemo, useState } from "react";
 import {
     Table,
     TableBody,
@@ -10,12 +11,15 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { MoreHorizontal, PlusCircle } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Search } from "lucide-react";
 import { Button } from "../ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { useLanguage } from "@/hooks/use-language";
 import type { CalendarEvent } from "@/lib/events";
 import { Badge } from "../ui/badge";
+import { Input } from "../ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { mockEventsByDay } from "@/lib/events";
 
 interface EventManagementTableProps {
     events: CalendarEvent[];
@@ -24,75 +28,145 @@ interface EventManagementTableProps {
     onAdd: () => void;
 }
 
+const getMonthFromEvent = (event: CalendarEvent): number | null => {
+    // This is a simplified way to get a month for mock data.
+    // A real implementation would parse a real date string.
+    for (const day in mockEventsByDay) {
+        if (mockEventsByDay[day as keyof typeof mockEventsByDay].some(e => e.id === event.id)) {
+            // Find the first date in the year this event occurs on
+            const year = new Date().getFullYear();
+            for (let month = 0; month < 12; month++) {
+                const date = new Date(year, month, parseInt(day, 10));
+                if (date.getDate() === parseInt(day, 10)) {
+                    return month;
+                }
+            }
+        }
+    }
+    return null;
+}
+
 export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventManagementTableProps) {
     const { t } = useLanguage();
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedMonth, setSelectedMonth] = useState<string>('all');
+
+    const months = Array.from({ length: 12 }, (_, i) => ({
+        value: i.toString(),
+        label: new Date(0, i).toLocaleString('default', { month: 'long' }),
+    }));
+
+    const filteredEvents = useMemo(() => {
+        return events.filter(event => {
+            const title = t(event.titleKey).toLowerCase();
+            const matchesSearch = title.includes(searchTerm.toLowerCase());
+
+            const eventMonth = getMonthFromEvent(event);
+            const matchesMonth = selectedMonth === 'all' || (eventMonth !== null && eventMonth.toString() === selectedMonth);
+
+            return matchesSearch && matchesMonth;
+        });
+    }, [events, searchTerm, selectedMonth, t]);
 
     return (
         <Card>
-            <CardHeader className="flex flex-row justify-between items-center">
-                <div>
-                    <CardTitle>Existing Events</CardTitle>
-                    <CardDescription>View, edit, or remove current events.</CardDescription>
-                </div>
-                <Button onClick={onAdd} size="sm">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Add Event
-                </Button>
+            <CardHeader>
+                <CardTitle>Existing Events</CardTitle>
+                <CardDescription>View, edit, or remove current events.</CardDescription>
             </CardHeader>
-            <CardContent className="p-0">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Title</TableHead>
-                            <TableHead>Tags</TableHead>
-                            <TableHead>Description</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {events.map((event) => (
-                            <TableRow key={event.id}>
-                                <TableCell className="font-medium">
-                                    <span className="font-bold">{t(event.titleKey)}</span>
-                                </TableCell>
-                                <TableCell>
-                                    <div className="flex flex-wrap gap-1">
-                                        {event.tagKeys.map(tagKey => (
-                                            <Badge key={tagKey} variant="secondary">{t(tagKey)}</Badge>
-                                        ))}
-                                    </div>
-                                </TableCell>
-                                <TableCell className="max-w-md">
-                                    <p className="text-sm text-muted-foreground truncate">
-                                        {t(event.descriptionKey)}
-                                    </p>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                                <span className="sr-only">Open menu</span>
-                                                <MoreHorizontal className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                            <DropdownMenuItem onClick={() => onEdit(event)}>
-                                                Edit
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                                className="text-destructive focus:text-destructive focus:bg-destructive/10"
-                                                onClick={() => onRemove(event.id)}
-                                            >
-                                                Remove
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </TableCell>
+            <CardContent className="space-y-4">
+                <div className="flex flex-col sm:flex-row gap-4 justify-between">
+                    <div className="relative w-full sm:max-w-xs">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input
+                            placeholder="Search by event name..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10"
+                        />
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                            <SelectTrigger className="w-full sm:w-[180px]">
+                                <SelectValue placeholder="Filter by month" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Months</SelectItem>
+                                {months.map(month => (
+                                    <SelectItem key={month.value} value={month.value}>
+                                        {month.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Button onClick={onAdd} className="w-full sm:w-auto">
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Add Event
+                        </Button>
+                    </div>
+                </div>
+
+                <div className="rounded-md border">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Title</TableHead>
+                                <TableHead>Tags</TableHead>
+                                <TableHead>Description</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredEvents.length > 0 ? filteredEvents.map((event) => (
+                                <TableRow key={event.id}>
+                                    <TableCell className="font-medium">
+                                        <span className="font-bold">{t(event.titleKey)}</span>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-wrap gap-1">
+                                            {event.tagKeys.map(tagKey => (
+                                                <Badge key={tagKey} variant="secondary">{t(tagKey)}</Badge>
+                                            ))}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="max-w-[200px] sm:max-w-md">
+                                        <p className="text-sm text-muted-foreground truncate">
+                                            {t(event.descriptionKey)}
+                                        </p>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                                    <span className="sr-only">Open menu</span>
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                <DropdownMenuItem onClick={() => onEdit(event)}>
+                                                    Edit
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                                                    onClick={() => onRemove(event.id)}
+                                                >
+                                                    Remove
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                </TableRow>
+                            )) : (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="h-24 text-center">
+                                        No results found.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
             </CardContent>
         </Card>
     );
