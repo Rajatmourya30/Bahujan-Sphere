@@ -21,7 +21,7 @@ export function EventCard({ event }: EventCardProps) {
   };
 
   return (
-    <Card className="flex flex-col overflow-hidden h-full shadow-md hover:shadow-lg transition-shadow duration-300">
+    <Card className="flex flex-col overflow-hidden h-full shadow-md hover:shadow-lg transition-shadow duration-300 border-border bg-card">
       <CardHeader className="p-0">
         <div className="relative h-48 w-full">
           <Image
