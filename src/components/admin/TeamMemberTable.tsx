@@ -40,6 +40,14 @@ const roleVariant: Record<TeamMember['role'], 'default' | 'secondary' | 'outline
     'Contributor': 'destructive',
 }
 
+const rolePermissions: Record<TeamMember['role'], string[]> = {
+    'Admin': ['Full Access'],
+    'Editor': ['Submit Events', 'Approve Submissions', 'Edit Events'],
+    'Reviewer': ['Review Submissions', 'Suggest Edits'],
+    'Contributor': ['Submit Events for Review'],
+};
+
+
 export function TeamMemberTable({ members, onUpdateRole, onRemoveMember }: TeamMemberTableProps) {
     const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
     const [removingMember, setRemovingMember] = useState<TeamMember | null>(null);
@@ -53,6 +61,7 @@ export function TeamMemberTable({ members, onUpdateRole, onRemoveMember }: TeamM
                             <TableRow>
                                 <TableHead>Name</TableHead>
                                 <TableHead>Role</TableHead>
+                                <TableHead>Permissions</TableHead>
                                 <TableHead>Joined</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
@@ -66,6 +75,15 @@ export function TeamMemberTable({ members, onUpdateRole, onRemoveMember }: TeamM
                                     </TableCell>
                                     <TableCell>
                                         <Badge variant={roleVariant[member.role]}>{member.role}</Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-wrap gap-1 max-w-xs">
+                                            {rolePermissions[member.role].map(permission => (
+                                                <Badge key={permission} variant="outline" className="font-normal">
+                                                    {permission}
+                                                </Badge>
+                                            ))}
+                                        </div>
                                     </TableCell>
                                     <TableCell>
                                         {new Date(member.joinedAt).toLocaleDateString()}
