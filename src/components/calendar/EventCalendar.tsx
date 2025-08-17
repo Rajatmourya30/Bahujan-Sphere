@@ -13,8 +13,9 @@ import { Bookmark } from 'lucide-react';
 import { useBookmarks } from '@/hooks/use-bookmarks';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { EventDetailModal } from './EventDetailModal';
 
-function EventDetail({ event }: { event: CalendarEvent }) {
+function EventDetail({ event, onReadMoreClick }: { event: CalendarEvent, onReadMoreClick: () => void }) {
   const { t } = useLanguage();
   const { isBookmarked, toggleBookmark } = useBookmarks();
   const router = useRouter();
@@ -28,6 +29,12 @@ function EventDetail({ event }: { event: CalendarEvent }) {
     }
   }
 
+  const descriptionText = t(event.descriptionKey);
+  const isLongDescription = descriptionText.length > 150;
+  const displayDescription = isLongDescription
+    ? `${descriptionText.substring(0, 150)}...`
+    : descriptionText;
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
@@ -36,14 +43,21 @@ function EventDetail({ event }: { event: CalendarEvent }) {
         ))}
       </div>
       <p className="text-sm text-muted-foreground">
-        {t(event.descriptionKey)}
+        {displayDescription}
+        {isLongDescription && (
+            <Button variant="link" className="p-1 h-auto ml-1" onClick={onReadMoreClick}>
+                {t('event_calendar.read_more_button')}
+            </Button>
+        )}
       </p>
       <div className="flex gap-2 items-center">
-        <Button asChild size="sm">
-          <Link href={event.readMoreUrl} target="_blank">
-            {t('event_calendar.read_more_button')}
-          </Link>
-        </Button>
+        {!isLongDescription && (
+            <Button asChild size="sm" variant="outline">
+                <Link href={event.readMoreUrl} target="_blank">
+                    {t('event_calendar.read_full_article_button')}
+                </Link>
+            </Button>
+        )}
         <Button
             variant="ghost"
             size="icon"
@@ -60,6 +74,7 @@ function EventDetail({ event }: { event: CalendarEvent }) {
 export function EventCalendar() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const { t } = useLanguage();
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 
   const eventDates = useMemo(() => {
     // In a real app, you'd fetch events for the visible months.
@@ -85,44 +100,54 @@ export function EventCalendar() {
   }, [date]);
 
   return (
-    <div className="flex flex-col gap-8">
-      <Card>
-        <CardContent className="flex justify-center p-0">
-          <Calendar
-            mode="single"
-            selected={date}
-            onSelect={setDate}
-            className="p-4"
-            eventDates={eventDates}
-          />
-        </CardContent>
-      </Card>
-
-      <div>
-        <h2 className="font-headline mb-4 text-2xl font-bold">
-          {t('event_calendar.events_on_date', {
-            date: date
-              ? new Intl.DateTimeFormat(t('locale_code')).format(date)
-              : t('event_calendar.selected_date'),
-          })}
-        </h2>
+    <>
+      <div className="flex flex-col gap-8">
         <Card>
-          <CardContent className="p-4">
-            {dayEvents.length > 0 ? (
-              <div className="w-full space-y-4">
-                {dayEvents.map((event) => (
-                   <div key={event.id} className="border-b pb-4 last:border-b-0 last:pb-0">
-                      <h3 className="font-semibold">{t(event.titleKey)}</h3>
-                      <EventDetail event={event} />
-                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="py-8 text-center text-muted-foreground">{t('event_calendar.no_events')}</p>
-            )}
+          <CardContent className="flex justify-center p-0">
+            <Calendar
+              mode="single"
+              selected={date}
+              onSelect={setDate}
+              className="p-4"
+              eventDates={eventDates}
+            />
           </CardContent>
         </Card>
+
+        <div>
+          <h2 className="font-headline mb-4 text-2xl font-bold">
+            {t('event_calendar.events_on_date', {
+              date: date
+                ? new Intl.DateTimeFormat(t('locale_code')).format(date)
+                : t('event_calendar.selected_date'),
+            })}
+          </h2>
+          <Card>
+            <CardContent className="p-4">
+              {dayEvents.length > 0 ? (
+                <div className="w-full space-y-4">
+                  {dayEvents.map((event) => (
+                     <div key={event.id} className="border-b pb-4 last:border-b-0 last:pb-0">
+                        <h3 className="font-semibold">{t(event.titleKey)}</h3>
+                        <EventDetail event={event} onReadMoreClick={() => setSelectedEvent(event)} />
+                     </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="py-8 text-center text-muted-foreground">{t('event_calendar.no_events')}</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
+      
+      {selectedEvent && (
+        <EventDetailModal
+            event={selectedEvent}
+            isOpen={!!selectedEvent}
+            onClose={() => setSelectedEvent(null)}
+        />
+      )}
+    </>
   );
 }
