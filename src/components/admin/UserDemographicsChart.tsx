@@ -60,3 +60,4 @@ export function UserDemographicsChart() {
         </Card>
     )
 }
+export default UserDemographicsChart;

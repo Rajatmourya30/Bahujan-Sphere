@@ -51,3 +51,4 @@ export function UserGrowthChart() {
         </Card>
     )
 }
+export default UserGrowthChart;

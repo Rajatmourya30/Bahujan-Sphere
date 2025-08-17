@@ -10,8 +10,17 @@ import { ArrowLeft, Download, Users, Activity, UserPlus } from 'lucide-react';
 import { UserTable } from '@/components/admin/UserTable';
 import * as XLSX from 'xlsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { UserGrowthChart } from '@/components/admin/UserGrowthChart';
-import { UserDemographicsChart } from '@/components/admin/UserDemographicsChart';
+import dynamic from 'next/dynamic';
+
+const UserGrowthChart = dynamic(
+  () => import('@/components/admin/UserGrowthChart').then((mod) => mod.UserGrowthChart),
+  { ssr: false }
+);
+
+const UserDemographicsChart = dynamic(
+  () => import('@/components/admin/UserDemographicsChart').then((mod) => mod.UserDemographicsChart),
+  { ssr: false }
+);
 
 const sampleUsers = [
     { id: 1, name: 'Ambedkar Fan', email: 'fan@example.com', country: 'India', state: 'Maharashtra', city: 'Nagpur', birthYear: 1991, createdAt: '2024-05-01T10:00:00Z', lastSeen: '2024-07-20T15:30:00Z' },
