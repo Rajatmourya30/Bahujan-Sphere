@@ -1,9 +1,8 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import { BottomNav } from '@/components/layout/BottomNav';
-import { LanguageGate } from '@/components/layout/LanguageGate';
 import { LanguageProvider } from '@/hooks/use-language';
+import { LanguageGate } from '@/components/layout/LanguageGate';
 
 export const metadata: Metadata = {
   title: 'BahujanSphere',
@@ -25,12 +24,7 @@ export default function RootLayout({
       <body className="font-body antialiased bg-muted">
         <LanguageProvider>
           <LanguageGate>
-            <div className="relative mx-auto flex h-screen max-w-md flex-col overflow-hidden border-x bg-background shadow-lg">
-              <main className="flex-grow overflow-y-auto p-4 pt-8">
-                {children}
-              </main>
-              <BottomNav />
-            </div>
+            {children}
           </LanguageGate>
         </LanguageProvider>
         <Toaster />
