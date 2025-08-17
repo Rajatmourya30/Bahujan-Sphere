@@ -26,9 +26,7 @@ export function EventCalendar() {
     const shareText = `${eventTitle}\n\n${eventDescription}\n\n${t('share.footer')}`;
     const shareUrl = event.readMoreUrl;
 
-    const isSecureContext = window.isSecureContext;
-
-    if (isSecureContext && navigator.share) {
+    if (navigator.share) {
       try {
         await navigator.share({
           title: eventTitle,
@@ -36,36 +34,16 @@ export function EventCalendar() {
           url: shareUrl,
         });
       } catch (error) {
-        console.error('Error sharing:', error);
-        // Fallback to clipboard if sharing fails
-        if (navigator.clipboard) {
-          await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
-          toast({
-            title: t('share.copied_title'),
-            description: t('share.copied_description'),
-          });
-        }
-      }
-    } else if (isSecureContext && navigator.clipboard) {
-      try {
-        await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
-        toast({
-          title: t('share.copied_title'),
-          description: t('share.copied_description'),
-        });
-      } catch (error) {
-        console.error('Error copying to clipboard:', error);
-        toast({
-          title: "Could not copy to clipboard",
-          description: "There was an error trying to copy the event details.",
-          variant: 'destructive',
-        });
+        // This catch block will trigger if the user cancels the share dialog.
+        // We can ignore it or log it, but we don't need to show a toast.
+        console.log('Share action was cancelled or failed.', error);
       }
     } else {
+        // If navigator.share is not available, inform the user.
         toast({
-            title: "Sharing not available",
-            description: "Sharing is only available on a secure connection (HTTPS).",
-            variant: 'destructive'
+            title: t('share.unavailable_title'),
+            description: t('share.unavailable_description'),
+            variant: 'destructive',
         });
     }
   };
