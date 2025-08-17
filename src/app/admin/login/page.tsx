@@ -29,6 +29,7 @@ export default function AdminLoginPage() {
     if (password === 'admin123' && userRole) {
       localStorage.setItem('isAdminAuthenticated', 'true');
       localStorage.setItem('adminUserRole', userRole);
+      localStorage.setItem('adminUserEmail', email);
       router.push('/admin');
     } else {
       toast({

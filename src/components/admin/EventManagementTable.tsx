@@ -9,8 +9,8 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
-import { Card, CardContent } from "@/components/ui/card";
-import { MoreHorizontal } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { MoreHorizontal, PlusCircle } from "lucide-react";
 import { Button } from "../ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { useLanguage } from "@/hooks/use-language";
@@ -21,13 +21,24 @@ interface EventManagementTableProps {
     events: CalendarEvent[];
     onEdit: (event: CalendarEvent) => void;
     onRemove: (eventId: string) => void;
+    onAdd: () => void;
 }
 
-export function EventManagementTable({ events, onEdit, onRemove }: EventManagementTableProps) {
+export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventManagementTableProps) {
     const { t } = useLanguage();
 
     return (
         <Card>
+            <CardHeader className="flex flex-row justify-between items-center">
+                <div>
+                    <CardTitle>Existing Events</CardTitle>
+                    <CardDescription>View, edit, or remove current events.</CardDescription>
+                </div>
+                <Button onClick={onAdd} size="sm">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Event
+                </Button>
+            </CardHeader>
             <CardContent className="p-0">
                 <Table>
                     <TableHeader>
