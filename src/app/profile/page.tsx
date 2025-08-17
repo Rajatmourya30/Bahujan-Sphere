@@ -6,8 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { LogOut, User } from 'lucide-react';
+import { Globe, LogOut } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
+import { LanguageSwitcher } from '@/components/shared/LanguageSwitcher';
+import { Label } from '@/components/ui/label';
 
 interface UserProfile {
     name: string;
@@ -95,6 +97,21 @@ export default function ProfilePage() {
             </CardContent>
         </Card>
         
+        <Card>
+            <CardHeader>
+                <CardTitle className="text-xl font-headline">{t('profile_page.settings_title')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="flex items-center justify-between">
+                    <Label className="flex items-center gap-2">
+                        <Globe className="h-5 w-5 text-muted-foreground" />
+                        <span>{t('profile_page.language_label')}</span>
+                    </Label>
+                    <LanguageSwitcher />
+                </div>
+            </CardContent>
+        </Card>
+
         <Button onClick={handleLogout} variant="outline" className="w-full">
             <LogOut className="mr-2 h-4 w-4" />
             {t('profile_page.logout_button')}
