@@ -65,6 +65,16 @@ export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventM
             return matchesSearch && matchesMonth && matchesYear && matchesDate;
         });
     }, [events, searchTerm, selectedMonth, selectedYear, selectedDate, t]);
+    
+    const clearFilters = () => {
+        setSearchTerm('');
+        setSelectedMonth('all');
+        setSelectedYear('all');
+        setSelectedDate(undefined);
+    };
+
+    const hasActiveFilters = searchTerm || selectedMonth !== 'all' || selectedYear !== 'all' || selectedDate;
+
 
     return (
         <Card>
@@ -73,82 +83,77 @@ export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventM
                 <CardDescription>View, edit, or remove current events.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-                <div className="flex flex-col sm:flex-row gap-4 justify-between items-start">
-                    <div className="relative w-full sm:max-w-xs">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <Input
-                            placeholder="Search by event name..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10"
-                        />
+                <div className="flex flex-col sm:flex-row gap-4 justify-between">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <div className="relative w-full sm:w-auto">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                            <Input
+                                placeholder="Search by name..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-10 sm:w-48"
+                            />
+                        </div>
+                        <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                            <SelectTrigger className="w-full sm:w-[150px]">
+                                <SelectValue placeholder="Filter by month" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Months</SelectItem>
+                                {months.map(month => (
+                                    <SelectItem key={month.value} value={month.value}>
+                                        {month.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Select value={selectedYear} onValueChange={setSelectedYear}>
+                            <SelectTrigger className="w-full sm:w-[120px]">
+                                <SelectValue placeholder="Filter by year" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Years</SelectItem>
+                                {years.map(year => (
+                                    <SelectItem key={year} value={year.toString()}>
+                                        {year}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                    "w-full sm:w-auto justify-start text-left font-normal",
+                                    !selectedDate && "text-muted-foreground"
+                                    )}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {selectedDate ? format(selectedDate, "PPP") : <span>By date</span>}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                                <Calendar
+                                    mode="single"
+                                    selected={selectedDate}
+                                    onSelect={setSelectedDate}
+                                    initialFocus
+                                />
+                            </PopoverContent>
+                        </Popover>
+                        {hasActiveFilters && (
+                            <Button variant="ghost" onClick={clearFilters}>
+                                Clear
+                            </Button>
+                        )}
                     </div>
                      <Button onClick={onAdd} className="w-full sm:w-auto">
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Add Event
                     </Button>
                 </div>
-                <div className="flex flex-col sm:flex-row items-center gap-2">
-                    <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                        <SelectTrigger className="w-full sm:w-[150px]">
-                            <SelectValue placeholder="Filter by month" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Months</SelectItem>
-                            {months.map(month => (
-                                <SelectItem key={month.value} value={month.value}>
-                                    {month.label}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                     <Select value={selectedYear} onValueChange={setSelectedYear}>
-                        <SelectTrigger className="w-full sm:w-[120px]">
-                            <SelectValue placeholder="Filter by year" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Years</SelectItem>
-                            {years.map(year => (
-                                <SelectItem key={year} value={year.toString()}>
-                                    {year}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant={"outline"}
-                                className={cn(
-                                "w-full sm:w-auto justify-start text-left font-normal",
-                                !selectedDate && "text-muted-foreground"
-                                )}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {selectedDate ? format(selectedDate, "PPP") : <span>Filter by date</span>}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                            <Calendar
-                                mode="single"
-                                selected={selectedDate}
-                                onSelect={setSelectedDate}
-                                initialFocus
-                            />
-                        </PopoverContent>
-                    </Popover>
-                    {(selectedDate || selectedMonth !== 'all' || selectedYear !== 'all') && (
-                        <Button variant="ghost" onClick={() => {
-                            setSelectedMonth('all');
-                            setSelectedYear('all');
-                            setSelectedDate(undefined);
-                        }}>
-                            Clear filters
-                        </Button>
-                    )}
-                </div>
-
-
+                
                 <div className="rounded-md border">
                     <Table>
                         <TableHeader>
