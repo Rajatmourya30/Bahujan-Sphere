@@ -3,50 +3,19 @@
 
 import * as React from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { DayPicker, DayProps } from "react-day-picker"
+import { DayPicker } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 
-export type CalendarProps = React.ComponentProps<typeof DayPicker> & {
-  eventCounts?: Map<string, number>
-}
+export type CalendarProps = React.ComponentProps<typeof DayPicker>
 
 function Calendar({
   className,
   classNames,
   showOutsideDays = true,
-  eventCounts,
   ...props
 }: CalendarProps) {
-  const EventDay = ({ date, ...dayProps }: DayProps) => {
-    const dayKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-    const count = eventCounts?.get(dayKey) ?? 0;
-
-    return (
-      <div
-        {...dayProps.buttonProps}
-        className={cn(
-          buttonVariants({ variant: "ghost" }),
-          "h-9 w-9 p-0 font-normal relative",
-          dayProps.classNames?.day
-        )}
-      >
-        <span>{date.getDate()}</span>
-        {count > 0 && (
-          <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-0.5">
-            {Array.from({ length: Math.min(count, 3) }).map((_, i) => (
-              <span key={i} className={cn(
-                "h-1 w-1 rounded-full",
-                dayProps.selected ? "bg-primary-foreground" : "bg-primary"
-              )} />
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  };
-  
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
@@ -86,13 +55,8 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        Day: EventDay,
-        IconLeft: ({ className, ...props }) => (
-          <ChevronLeft className={cn("h-4 w-4", className)} {...props} />
-        ),
-        IconRight: ({ className, ...props }) => (
-          <ChevronRight className={cn("h-4 w-4", className)} {...props} />
-        ),
+        IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
+        IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
       }}
       {...props}
     />
