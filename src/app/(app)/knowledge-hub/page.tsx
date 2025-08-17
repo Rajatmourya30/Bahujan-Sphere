@@ -1,58 +1,62 @@
 
 'use client';
 
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useMemo } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useLanguage } from '@/hooks/use-language';
-import { allKnowledgeArticles, type KnowledgeArticle } from '@/lib/knowledge-hub';
+import { allKnowledgeOrganizations, type KnowledgeOrganization } from '@/lib/knowledge-hub';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { KnowledgeHubModal } from '@/components/knowledge-hub/KnowledgeHubModal';
+import { Input } from '@/components/ui/input';
+import { Globe, Search } from 'lucide-react';
+import Link from 'next/link';
 
-function KnowledgeCard({ article }: { article: KnowledgeArticle }) {
+function OrganizationCard({ organization }: { organization: KnowledgeOrganization }) {
     const { t } = useLanguage();
-    const [isModalOpen, setIsModalOpen] = useState(false);
-
-    const shortDescription = t(article.descriptionKey).substring(0, 150) + '...';
 
     return (
-        <>
-            <Card className="flex flex-col">
-                <CardHeader>
-                    {article.imageUrl && (
-                         <div className="relative aspect-video w-full overflow-hidden rounded-t-lg">
-                            <Image
-                                src={article.imageUrl}
-                                alt={t(article.titleKey)}
-                                fill
-                                className="object-cover"
-                                data-ai-hint={article.imageAiHint}
-                            />
-                        </div>
-                    )}
-                    <CardTitle className="font-headline pt-4 text-xl">{t(article.titleKey)}</CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-grow flex-col">
-                    <p className="flex-grow text-sm text-muted-foreground">{shortDescription}</p>
-                    <Button variant="outline" className="mt-4 w-full" onClick={() => setIsModalOpen(true)}>
-                        {t('knowledge_hub.read_more_button')}
-                    </Button>
-                </CardContent>
-            </Card>
-            {isModalOpen && (
-                <KnowledgeHubModal
-                    article={article}
-                    isOpen={isModalOpen}
-                    onClose={() => setIsModalOpen(false)}
-                />
-            )}
-        </>
+        <Card>
+            <CardHeader className="flex flex-row items-start gap-4">
+                 <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-md border">
+                    <Image
+                        src={organization.logoUrl}
+                        alt={t(organization.nameKey)}
+                        fill
+                        className="object-contain p-1"
+                        data-ai-hint={organization.imageAiHint}
+                    />
+                </div>
+                <div className="flex-grow">
+                    <CardTitle className="font-headline text-lg">{t(organization.nameKey)}</CardTitle>
+                    <CardDescription className="mt-1 text-sm">{t(organization.descriptionKey)}</CardDescription>
+                </div>
+            </CardHeader>
+            <CardFooter>
+                 <Button asChild variant="outline" className="w-full">
+                    <Link href={organization.websiteUrl} target="_blank">
+                        <Globe className="mr-2" />
+                        {t('knowledge_hub.visit_website_button')}
+                    </Link>
+                </Button>
+            </CardFooter>
+        </Card>
     )
 }
 
 
 export default function KnowledgeHubPage() {
     const { t } = useLanguage();
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredOrganizations = useMemo(() => {
+        if (!searchTerm) {
+            return allKnowledgeOrganizations;
+        }
+        return allKnowledgeOrganizations.filter(org => 
+            t(org.nameKey).toLowerCase().includes(searchTerm.toLowerCase()) ||
+            t(org.descriptionKey).toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [searchTerm, t]);
 
     return (
         <div className="space-y-8">
@@ -62,11 +66,26 @@ export default function KnowledgeHubPage() {
                     {t('knowledge_hub.description')}
                 </p>
             </header>
+
+            <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input
+                    type="search"
+                    placeholder={t('knowledge_hub.search_placeholder')}
+                    className="pl-10"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
             
             <div className="grid grid-cols-1 gap-6">
-                {allKnowledgeArticles.map(article => (
-                    <KnowledgeCard key={article.id} article={article} />
-                ))}
+                {filteredOrganizations.length > 0 ? (
+                    filteredOrganizations.map(org => (
+                        <OrganizationCard key={org.id} organization={org} />
+                    ))
+                ) : (
+                    <p className="text-center text-muted-foreground py-8">{t('knowledge_hub.no_results')}</p>
+                )}
             </div>
         </div>
     );

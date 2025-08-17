@@ -1,38 +1,38 @@
 
 import type { TranslationKey } from './i18n/translations';
 
-export interface KnowledgeArticle {
+export interface KnowledgeOrganization {
   id: string;
-  titleKey: TranslationKey;
+  nameKey: TranslationKey;
   descriptionKey: TranslationKey;
-  imageUrl?: string;
-  imageAiHint?: string;
-  fullArticleUrl: string;
+  logoUrl: string;
+  imageAiHint: string;
+  websiteUrl: string;
 }
 
-export const allKnowledgeArticles: KnowledgeArticle[] = [
+export const allKnowledgeOrganizations: KnowledgeOrganization[] = [
   {
-    id: 'article-1',
-    titleKey: 'knowledge_article_1_title',
-    descriptionKey: 'knowledge_article_1_desc',
-    imageUrl: 'https://placehold.co/600x400.png',
-    imageAiHint: 'book library',
-    fullArticleUrl: 'https://en.wikipedia.org/wiki/Ambedkarite',
+    id: 'org-1',
+    nameKey: 'org_1_name',
+    descriptionKey: 'org_1_desc',
+    logoUrl: 'https://placehold.co/400x400.png',
+    imageAiHint: 'organization logo',
+    websiteUrl: 'https://en.wikipedia.org/wiki/Scheduled_Castes_Federation',
   },
   {
-    id: 'article-2',
-    titleKey: 'knowledge_article_2_title',
-    descriptionKey: 'knowledge_article_2_desc',
-    imageUrl: 'https://placehold.co/600x400.png',
-    imageAiHint: 'protest march',
-    fullArticleUrl: 'https://en.wikipedia.org/wiki/Dalit',
+    id: 'org-2',
+    nameKey: 'org_2_name',
+    descriptionKey: 'org_2_desc',
+    logoUrl: 'https://placehold.co/400x400.png',
+    imageAiHint: 'student organization logo',
+    websiteUrl: 'https://en.wikipedia.org/wiki/Bahujan_Vidyarthi_Sangh',
   },
   {
-    id: 'article-3',
-    titleKey: 'knowledge_article_3_title',
-    descriptionKey: 'knowledge_article_3_desc',
-    imageUrl: 'https://placehold.co/600x400.png',
-    imageAiHint: 'ancient statue',
-    fullArticleUrl: 'https://en.wikipedia.org/wiki/History_of_the_Indian_caste_system',
+    id: 'org-3',
+    nameKey: 'org_3_name',
+    descriptionKey: 'org_3_desc',
+    logoUrl: 'https://placehold.co/400x400.png',
+    imageAiHint: 'social organization logo',
+    websiteUrl: 'https://en.wikipedia.org/wiki/Samata_Sainik_Dal',
   },
 ];
