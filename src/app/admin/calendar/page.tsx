@@ -93,42 +93,40 @@ export default function ManageCalendarPage() {
         <p className="text-muted-foreground">Add, edit, review, and manage all calendar events.</p>
       </header>
 
-      <Tabs defaultValue={defaultTab} orientation="vertical" className="grid grid-cols-4 gap-6 items-start">
-        <TabsList className="flex flex-col h-auto w-full">
+      <Tabs defaultValue={defaultTab} className="space-y-6">
+        <TabsList>
           {availableTabs.map(tab => (
-            <TabsTrigger key={tab.value} value={tab.value} className="w-full justify-start">{tab.label}</TabsTrigger>
+            <TabsTrigger key={tab.value} value={tab.value}>{tab.label}</TabsTrigger>
           ))}
         </TabsList>
 
-        <div className="col-span-3">
-            {permissions.canManage && (
-                <TabsContent value="manage" className="mt-0">
-                    <EventManagementTable
-                      events={events}
-                      onEdit={handleOpenDialog}
-                      onRemove={handleRemove}
-                      onAdd={() => handleOpenDialog()}
-                    />
+        {permissions.canManage && (
+            <TabsContent value="manage">
+                <EventManagementTable
+                  events={events}
+                  onEdit={handleOpenDialog}
+                  onRemove={handleRemove}
+                  onAdd={() => handleOpenDialog()}
+                />
+            </TabsContent>
+        )}
+        
+        {permissions.canSubmit && (
+            <>
+                <TabsContent value="single-event">
+                  <EventSubmissionForm />
                 </TabsContent>
-            )}
-            
-            {permissions.canSubmit && (
-                <>
-                    <TabsContent value="single-event" className="mt-0">
-                      <EventSubmissionForm />
-                    </TabsContent>
-                    <TabsContent value="bulk-upload" className="mt-0">
-                      <BulkUploadForm />
-                    </TabsContent>
-                </>
-            )}
-            
-            {permissions.canReview && (
-                <TabsContent value="review" className="mt-0">
-                    <ReviewSubmissionsTab />
+                <TabsContent value="bulk-upload">
+                  <BulkUploadForm />
                 </TabsContent>
-            )}
-        </div>
+            </>
+        )}
+        
+        {permissions.canReview && (
+            <TabsContent value="review">
+                <ReviewSubmissionsTab />
+            </TabsContent>
+        )}
       </Tabs>
 
 
