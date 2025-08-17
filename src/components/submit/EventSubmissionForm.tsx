@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -27,6 +28,7 @@ const formSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters long.'),
   date: z.string().min(1, 'Date is required.'),
   summary: z.string().min(20, 'Summary needs to be at least 20 characters.'),
+  readMoreUrl: z.string().url('Please enter a valid URL.').optional().or(z.literal('')),
   body: z.string().optional(),
   tags: z.array(z.string()).min(1, 'At least one tag is required.'),
 });
@@ -42,6 +44,7 @@ export function EventSubmissionForm() {
       title: '',
       date: '',
       summary: '',
+      readMoreUrl: '',
       tags: [],
     },
   });
@@ -138,6 +141,23 @@ export function EventSubmissionForm() {
                   </FormControl>
                   <FormDescription>
                     This summary will be used to suggest tags.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="readMoreUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Read More Link</FormLabel>
+                  <FormControl>
+                    <Input type="url" placeholder="https://example.com/source-of-information" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    A link to a webpage with more information about the event (optional).
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
