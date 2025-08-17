@@ -12,6 +12,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "../ui/badge";
 import { formatDistanceToNow } from 'date-fns';
+import { languages } from "@/lib/i18n/languages";
 
 
 interface User {
@@ -24,10 +25,17 @@ interface User {
     birthYear: number;
     createdAt: string;
     lastSeen: string;
+    language?: string;
 }
 
 interface UserTableProps {
     users: User[];
+}
+
+const getLanguageName = (code?: string) => {
+    if (!code) return 'Unknown';
+    const lang = languages.find(l => l.code === code);
+    return lang ? lang.name.split('(')[0].trim() : code;
 }
 
 export function UserTable({ users }: UserTableProps) {
@@ -39,6 +47,7 @@ export function UserTable({ users }: UserTableProps) {
                         <TableRow>
                             <TableHead>Name</TableHead>
                             <TableHead>Location</TableHead>
+                            <TableHead>Language</TableHead>
                             <TableHead>Joined</TableHead>
                             <TableHead className="text-right">Last Seen</TableHead>
                         </TableRow>
@@ -53,6 +62,9 @@ export function UserTable({ users }: UserTableProps) {
                                 <TableCell>
                                     <div>{user.city}, {user.state}</div>
                                     <Badge variant="outline" className="mt-1">{user.country}</Badge>
+                                </TableCell>
+                                <TableCell>
+                                    {getLanguageName(user.language)}
                                 </TableCell>
                                 <TableCell>
                                     {new Date(user.createdAt).toLocaleDateString()}
