@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
-import { Eye, LogOut, Users, Activity, Clock, Percent, Calendar, CheckCircle, BarChart, Share2, Store, ExternalLink, MousePointerClick, TrendingUp, Heart, Repeat, UserCheck, Banknote } from 'lucide-react';
+import { Eye, LogOut, Users, Activity, Clock, Percent, Calendar, CheckCircle, BarChart, Share2, Store, ExternalLink, MousePointerClick, TrendingUp, Heart, Repeat, UserCheck, Banknote, Library, BarChart3 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import dynamic from 'next/dynamic';
 import { DonationsTrendChart } from '@/components/admin/DonationsTrendChart';
@@ -21,6 +21,8 @@ import { EventEngagementByLanguageChart } from '@/components/admin/EventEngageme
 import { TopStoresTable } from '@/components/admin/TopStoresTable';
 import { StoreCategoryChart } from '@/components/admin/StoreCategoryChart';
 import { TopDonorLocationsChart } from '@/components/admin/TopDonorLocationsChart';
+import { TopOrgsTable } from '@/components/admin/TopOrgsTable';
+import { KnowledgeHubEngagementChart } from '@/components/admin/KnowledgeHubEngagementChart';
 
 
 const UserGrowthChart = dynamic(
@@ -266,6 +268,56 @@ export default function AdminDashboardPage() {
       </section>
       
       <section className="space-y-8">
+        <h2 className="font-headline text-2xl font-bold border-b pb-2">Knowledge Hub Analytics</h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Organizations</CardTitle>
+                    <Library className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">12</div>
+                    <p className="text-xs text-muted-foreground">Organizations listed</p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">External Clicks</CardTitle>
+                    <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">2,140</div>
+                    <p className="text-xs text-muted-foreground">+5% this week</p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Top Viewed Org</CardTitle>
+                    <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-lg font-bold">Samata Sainik Dal</div>
+                    <p className="text-xs text-muted-foreground">480 views this month</p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Shares</CardTitle>
+                    <Share2 className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">489</div>
+                    <p className="text-xs text-muted-foreground">Across all organizations</p>
+                </CardContent>
+            </Card>
+        </div>
+         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+            <TopOrgsTable />
+            <KnowledgeHubEngagementChart />
+        </div>
+      </section>
+
+      <section className="space-y-8">
         <h2 className="font-headline text-2xl font-bold border-b pb-2">Donations Analytics</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card>
@@ -318,3 +370,5 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
+
+    
