@@ -25,7 +25,8 @@ export function EventCalendar() {
     const currentMonth = displayMonth.getMonth();
     const currentYear = displayMonth.getFullYear();
     return Object.keys(mockEventsByDay).map(day => {
-        return new Date(currentYear, currentMonth, parseInt(day));
+        // Create date in UTC to avoid timezone issues
+        return new Date(Date.UTC(currentYear, currentMonth, parseInt(day)));
     });
   }, [displayMonth]);
 
