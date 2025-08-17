@@ -5,12 +5,15 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Download, Users, Activity, UserPlus, Eye, Bookmark } from 'lucide-react';
+import { Download, Users, Activity, UserPlus, Eye, Bookmark, Clock, Percent, BarChart3, Smartphone } from 'lucide-react';
 import { UserTable } from '@/components/admin/UserTable';
 import * as XLSX from 'xlsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import dynamic from 'next/dynamic';
 import { LanguageDemographicsChart } from '@/components/admin/LanguageDemographicsChart';
+import { RetentionRateChart } from '@/components/admin/RetentionRateChart';
+import { FeatureUsageChart } from '@/components/admin/FeatureUsageChart';
+import { DeviceBreakdownChart } from '@/components/admin/DeviceBreakdownChart';
 
 const UserGrowthChart = dynamic(
   () => import('@/components/admin/UserGrowthChart').then((mod) => mod.UserGrowthChart),
@@ -80,7 +83,7 @@ export default function UserDashboardPage() {
         <header className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
             <div>
                 <h1 className="font-headline text-3xl font-bold">User Dashboard</h1>
-                <p className="text-muted-foreground">Key metrics and user data for the BahujanSphere app.</p>
+                <p className="text-muted-foreground">Global app-wide performance metrics.</p>
             </div>
             <Button onClick={handleDownload}>
                 <Download className="mr-2 h-4 w-4" />
@@ -88,7 +91,7 @@ export default function UserDashboardPage() {
             </Button>
       </header>
       
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -106,45 +109,44 @@ export default function UserDashboardPage() {
             </CardHeader>
             <CardContent>
                 <div className="text-2xl font-bold">5</div>
-                <p className="text-xs text-muted-foreground">+2 since yesterday (sample data)</p>
+                <p className="text-xs text-muted-foreground">+2 since yesterday</p>
             </CardContent>
         </Card>
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">New Users</CardTitle>
-                <UserPlus className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Avg. Session</CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold">+4</div>
-                <p className="text-xs text-muted-foreground">In the last 7 days (sample data)</p>
+                <div className="text-2xl font-bold">8m 42s</div>
+                <p className="text-xs text-muted-foreground">Average session duration</p>
             </CardContent>
         </Card>
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Avg. Event Views</CardTitle>
-                <Eye className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Retention (7-Day)</CardTitle>
+                <Percent className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold">8.2</div>
-                <p className="text-xs text-muted-foreground">Per active user daily</p>
-            </CardContent>
-        </Card>
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Bookmarks</CardTitle>
-                <Bookmark className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold">128</div>
-                <p className="text-xs text-muted-foreground">Across all users</p>
+                <div className="text-2xl font-bold">42.5%</div>
+                <p className="text-xs text-muted-foreground">Users returning after 7 days</p>
             </CardContent>
         </Card>
       </section>
 
+      <section className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+          <UserGrowthChart />
+          <RetentionRateChart />
+      </section>
+
       <section className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-        <UserGrowthChart />
         <UserDemographicsChart />
         <LanguageDemographicsChart />
+        <FeatureUsageChart />
+      </section>
+
+      <section className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <DeviceBreakdownChart />
       </section>
 
       <section>
