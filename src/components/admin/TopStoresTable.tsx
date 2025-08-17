@@ -24,7 +24,7 @@ export function TopStoresTable() {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Top 10 Most Clicked Stores</CardTitle>
+                <CardTitle>Top 5 Most Clicked Stores</CardTitle>
                 <CardDescription>Stores with the highest external link clicks.</CardDescription>
             </CardHeader>
             <CardContent className="p-0">
