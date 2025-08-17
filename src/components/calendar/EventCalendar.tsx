@@ -9,9 +9,24 @@ import Link from 'next/link';
 import { useLanguage } from '@/hooks/use-language';
 import { mockEventsByDay, type CalendarEvent } from '@/lib/events';
 import { Badge } from '../ui/badge';
+import { Bookmark } from 'lucide-react';
+import { useBookmarks } from '@/hooks/use-bookmarks';
+import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 function EventDetail({ event }: { event: CalendarEvent }) {
   const { t } = useLanguage();
+  const { isBookmarked, toggleBookmark } = useBookmarks();
+  const router = useRouter();
+  
+  const handleBookmarkClick = () => {
+    const isAuthenticated = localStorage.getItem('isUserAuthenticated') === 'true';
+    if (isAuthenticated) {
+        toggleBookmark(event.id);
+    } else {
+        router.push('/login');
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -23,11 +38,19 @@ function EventDetail({ event }: { event: CalendarEvent }) {
       <p className="text-sm text-muted-foreground">
         {t(event.descriptionKey)}
       </p>
-      <div className="flex gap-2">
+      <div className="flex gap-2 items-center">
         <Button asChild size="sm">
           <Link href={event.readMoreUrl} target="_blank">
             {t('event_calendar.read_more_button')}
           </Link>
+        </Button>
+        <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleBookmarkClick}
+            aria-label={t('event_calendar.bookmark_button')}
+        >
+            <Bookmark className={cn("h-5 w-5", isBookmarked(event.id) ? "fill-primary text-primary" : "text-muted-foreground")} />
         </Button>
       </div>
     </div>

@@ -1,3 +1,4 @@
+
 import type { TranslationKey } from './i18n/translations';
 
 export interface CalendarEvent {
@@ -44,3 +45,6 @@ export const mockEventsByDay: Record<string, CalendarEvent[]> = {
     }
   ],
 };
+
+// A flat array of all events for easy lookup
+export const allEvents: CalendarEvent[] = Object.values(mockEventsByDay).flat();

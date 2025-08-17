@@ -1,8 +1,9 @@
+
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, User } from 'lucide-react';
+import { Home, User, Bookmark } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/hooks/use-language';
@@ -13,7 +14,8 @@ export function BottomNav() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   const navItems = [
-    { href: '/', label: t('nav.calendar'), icon: Home },
+    { href: '/', label: t('nav.calendar'), icon: Home, auth: false },
+    { href: '/bookmarks', label: t('nav.bookmarks'), icon: Bookmark, auth: true },
     { href: '/profile', label: t('nav.profile'), icon: User, auth: true },
   ];
 

@@ -1,4 +1,5 @@
 
+
 // This is a minimal set of translations to get started.
 // In a real app, you would have a more robust system.
 
@@ -6,6 +7,7 @@ const en = {
   "locale_code": "en-US",
   "home.tagline": "Exploring the moments and movements that shape the Bahujan legacy.",
   "nav.calendar": "Calendar",
+  "nav.bookmarks": "Bookmarks",
   "nav.profile": "Profile",
   "calendar_page.title": "Event Calendar",
   "calendar_page.description": "Explore events by date. Click on a day to see what happened.",
@@ -13,6 +15,13 @@ const en = {
   "event_calendar.selected_date": "selected date",
   "event_calendar.no_events": "No events for this day.",
   "event_calendar.read_more_button": "Read More",
+  "event_calendar.bookmark_button": "Bookmark event",
+  "bookmarks_page.title": "My Bookmarks",
+  "bookmarks_page.description": "Events you have saved for later.",
+  "bookmarks_page.no_bookmarks_title": "No Bookmarks Yet",
+  "bookmarks_page.no_bookmarks_description": "You haven't saved any events. Browse the calendar to find events that interest you.",
+  "bookmarks_page.browse_events_button": "Browse Events",
+  "bookmarks_page.remove_button": "Remove",
   "login_page.title": "Login",
   "login_page.description": "Enter your email below to login to your account.",
   "login_page.email_label": "Email",
@@ -97,6 +106,7 @@ const hi = {
   "locale_code": "hi-IN",
   "home.tagline": "बहुजन विरासत को आकार देने वाले क्षणों और आंदोलनों की खोज।",
   "nav.calendar": "कैलेंडर",
+  "nav.bookmarks": "बुकमार्क",
   "nav.profile": "प्रोफ़ाइल",
   "calendar_page.title": "कार्यक्रम कैलेंडर",
   "calendar_page.description": "दिनांक के अनुसार कार्यक्रम खोजें। क्या हुआ यह देखने के लिए किसी दिन पर क्लिक करें।",
@@ -104,6 +114,13 @@ const hi = {
   "event_calendar.selected_date": "चयनित दिनांक",
   "event_calendar.no_events": "इस दिन के लिए कोई कार्यक्रम नहीं है।",
   "event_calendar.read_more_button": " और पढ़ें",
+  "event_calendar.bookmark_button": "कार्यक्रम बुकमार्क करें",
+  "bookmarks_page.title": "मेरे बुकमार्क",
+  "bookmarks_page.description": "बाद के लिए सहेजे गए कार्यक्रम।",
+  "bookmarks_page.no_bookmarks_title": "अभी तक कोई बुकमार्क नहीं",
+  "bookmarks_page.no_bookmarks_description": "आपने कोई कार्यक्रम नहीं सहेजा है। अपनी रुचि के कार्यक्रम खोजने के लिए कैलेंडर ब्राउज़ करें।",
+  "bookmarks_page.browse_events_button": "कार्यक्रम ब्राउज़ करें",
+  "bookmarks_page.remove_button": "हटाएं",
   "login_page.title": "लॉग इन करें",
   "login_page.description": "अपने खाते में लॉग इन करने के लिए नीचे अपना ईमेल दर्ज करें।",
   "login_page.email_label": "ईमेल",
