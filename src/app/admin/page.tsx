@@ -8,6 +8,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
 import { Eye } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { BulkUploadForm } from '@/components/submit/BulkUploadForm';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -50,7 +52,19 @@ export default function AdminDashboardPage() {
             </Link>
         </Button>
       </header>
-      <EventSubmissionForm />
+      
+      <Tabs defaultValue="single-event">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="single-event">Single Event</TabsTrigger>
+          <TabsTrigger value="bulk-upload">Bulk Upload</TabsTrigger>
+        </TabsList>
+        <TabsContent value="single-event">
+          <EventSubmissionForm />
+        </TabsContent>
+        <TabsContent value="bulk-upload">
+          <BulkUploadForm />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
