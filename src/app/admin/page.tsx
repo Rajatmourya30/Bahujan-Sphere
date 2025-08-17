@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Eye, LogOut, Users, UserCog } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BulkUploadForm } from '@/components/submit/BulkUploadForm';
+import { ReviewSubmissionsTab } from '@/components/admin/ReviewSubmissionsTab';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -78,15 +79,19 @@ export default function AdminDashboardPage() {
       </header>
       
       <Tabs defaultValue="single-event">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="single-event">Single Event</TabsTrigger>
-          <TabsTrigger value="bulk-upload">Bulk Upload</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="single-event">Submit Single Event</TabsTrigger>
+          <TabsTrigger value="bulk-upload">Submit Bulk Upload</TabsTrigger>
+          <TabsTrigger value="review">Review Submissions</TabsTrigger>
         </TabsList>
         <TabsContent value="single-event">
           <EventSubmissionForm />
         </TabsContent>
         <TabsContent value="bulk-upload">
           <BulkUploadForm />
+        </TabsContent>
+        <TabsContent value="review">
+            <ReviewSubmissionsTab />
         </TabsContent>
       </Tabs>
     </div>
