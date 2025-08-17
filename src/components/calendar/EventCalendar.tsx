@@ -50,19 +50,22 @@ function EventDetail({ event, onReadMoreClick }: { event: CalendarEvent, onReadM
             </Button>
         )}
       </p>
-      <div className="flex gap-2 items-center">
-        {!isLongDescription && (
-            <Button asChild size="sm" variant="outline">
-                <Link href={event.readMoreUrl} target="_blank">
-                    {t('event_calendar.read_full_article_button')}
-                </Link>
-            </Button>
-        )}
+      <div className="flex justify-between items-center">
+         <div className="flex-grow">
+            {!isLongDescription && (
+                <Button asChild size="sm" variant="outline">
+                    <Link href={event.readMoreUrl} target="_blank">
+                        {t('event_calendar.read_full_article_button')}
+                    </Link>
+                </Button>
+            )}
+        </div>
         <Button
-            variant="ghost"
+            variant="outline"
             size="icon"
             onClick={handleBookmarkClick}
             aria-label={t('event_calendar.bookmark_button')}
+            className="shrink-0"
         >
             <Bookmark className={cn("h-5 w-5", isBookmarked(event.id) ? "fill-primary text-primary" : "text-muted-foreground")} />
         </Button>
@@ -126,8 +129,8 @@ export function EventCalendar() {
             <CardContent className="p-4">
               {dayEvents.length > 0 ? (
                 <div className="w-full space-y-4">
-                  {dayEvents.map((event) => (
-                     <div key={event.id} className="border-b pb-4 last:border-b-0 last:pb-0">
+                  {dayEvents.map((event, index) => (
+                     <div key={event.id} className={cn("space-y-2", index < dayEvents.length - 1 ? "border-b pb-4" : "")}>
                         <h3 className="font-semibold">{t(event.titleKey)}</h3>
                         <EventDetail event={event} onReadMoreClick={() => setSelectedEvent(event)} />
                      </div>
