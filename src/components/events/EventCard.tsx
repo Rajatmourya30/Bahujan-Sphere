@@ -5,21 +5,13 @@ import Image from 'next/image';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Bookmark } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import Link from 'next/link';
 
 interface EventCardProps {
   event: Event;
 }
 
 export function EventCard({ event }: EventCardProps) {
-  const [isBookmarked, setIsBookmarked] = useState(event.isBookmarked);
-
-  const toggleBookmark = () => {
-    setIsBookmarked(!isBookmarked);
-  };
-
   return (
     <Card className="flex flex-col overflow-hidden h-full shadow-md hover:shadow-lg transition-shadow duration-300 border-border bg-card">
       <CardHeader className="p-0">
@@ -38,7 +30,7 @@ export function EventCard({ event }: EventCardProps) {
         <CardTitle className="mt-1 font-headline text-xl leading-tight">{event.title}</CardTitle>
         <p className="mt-2 text-sm text-foreground/80">{event.summary}</p>
       </CardContent>
-      <CardFooter className="p-4 flex flex-col items-start">
+      <CardFooter className="p-4 flex flex-col items-start w-full">
         <div className="flex flex-wrap gap-2 mb-4">
           {event.tags.map((tag) => (
             <Badge key={tag} variant="secondary">
@@ -46,15 +38,13 @@ export function EventCard({ event }: EventCardProps) {
             </Badge>
           ))}
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start gap-2 text-muted-foreground hover:text-primary"
-          onClick={toggleBookmark}
-        >
-          <Bookmark className={cn('size-4', isBookmarked && 'fill-primary text-primary')} />
-          {isBookmarked ? 'Bookmarked' : 'Bookmark'}
-        </Button>
+        {event.readMoreUrl && (
+          <Button asChild size="sm" className="w-full">
+            <Link href={event.readMoreUrl} target="_blank">
+              Read More
+            </Link>
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );

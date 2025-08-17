@@ -7,5 +7,4 @@ export interface Event {
   readMoreUrl?: string;
   tags: string[];
   imageUrl: string;
-  isBookmarked: boolean;
 }

@@ -14,7 +14,6 @@ const mockEvents: Event[] = [
     readMoreUrl: 'https://en.wikipedia.org/wiki/B._R._Ambedkar',
     tags: ['Ambedkarite', 'Constitutional'],
     imageUrl: 'https://placehold.co/600x400.png',
-    isBookmarked: false,
   },
   {
     id: '2',
@@ -25,7 +24,6 @@ const mockEvents: Event[] = [
     readMoreUrl: 'https://en.wikipedia.org/wiki/Savitribai_Phule',
     tags: ['Social Reform', 'Education'],
     imageUrl: 'https://placehold.co/600x400.png',
-    isBookmarked: true,
   },
   {
     id: '3',
@@ -36,7 +34,6 @@ const mockEvents: Event[] = [
     readMoreUrl: 'https://en.wikipedia.org/wiki/Birsa_Munda',
     tags: ['Tribal Leaders', 'Freedom Fighter'],
     imageUrl: 'https://placehold.co/600x400.png',
-    isBookmarked: false,
   },
   {
     id: '4',
@@ -47,7 +44,6 @@ const mockEvents: Event[] = [
     readMoreUrl: 'https://en.wikipedia.org/wiki/Dhamma_Chakra_Pravartan_Din',
     tags: ['Buddhist', 'Ambedkarite'],
     imageUrl: 'https://placehold.co/600x400.png',
-    isBookmarked: false,
   },
   {
     id: '5',
@@ -58,7 +54,6 @@ const mockEvents: Event[] = [
     readMoreUrl: 'https://en.wikipedia.org/wiki/Ayyankali',
     tags: ['Social Reform', 'Dalit History'],
     imageUrl: 'https://placehold.co/600x400.png',
-    isBookmarked: false,
   },
   {
     id: '6',
@@ -69,7 +64,6 @@ const mockEvents: Event[] = [
     readMoreUrl: 'https://en.wikipedia.org/wiki/Constitution_Day_(India)',
     tags: ['Constitutional', 'Ambedkarite'],
     imageUrl: 'https://placehold.co/600x400.png',
-    isBookmarked: true,
   },
 ];
 
