@@ -7,9 +7,9 @@ import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, UserPlus } from 'lucide-react';
-import { TeamMemberTable } from '@/components/admin/TeamMemberTable';
+import { TeamMember, TeamMemberTable } from '@/components/admin/TeamMemberTable';
 
-const sampleTeamMembers = [
+const sampleTeamMembers: TeamMember[] = [
     { id: 1, name: 'Admin User', email: 'admin@bahujansphere.com', role: 'Admin', joinedAt: '2024-01-15T10:00:00Z' },
     { id: 2, name: 'Content Editor', email: 'editor@bahujansphere.com', role: 'Editor', joinedAt: '2024-02-20T11:30:00Z' },
     { id: 3, name: 'Community Contributor', email: 'contributor1@example.com', role: 'Contributor', joinedAt: '2024-05-10T18:00:00Z' },
@@ -20,6 +20,7 @@ const sampleTeamMembers = [
 export default function TeamManagementPage() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [teamMembers, setTeamMembers] = useState(sampleTeamMembers);
 
   useEffect(() => {
     const authStatus = localStorage.getItem('isAdminAuthenticated');
@@ -29,6 +30,14 @@ export default function TeamManagementPage() {
       setIsAuthenticated(true);
     }
   }, [router]);
+  
+  const handleUpdateRole = (memberId: number, newRole: TeamMember['role']) => {
+    setTeamMembers(currentMembers =>
+        currentMembers.map(member =>
+            member.id === memberId ? { ...member, role: newRole } : member
+        )
+    );
+  };
 
 
   if (!isAuthenticated) {
@@ -61,7 +70,7 @@ export default function TeamManagementPage() {
       </header>
       
       <section>
-        <TeamMemberTable members={sampleTeamMembers} />
+        <TeamMemberTable members={teamMembers} onUpdateRole={handleUpdateRole} />
       </section>
     </div>
   );
