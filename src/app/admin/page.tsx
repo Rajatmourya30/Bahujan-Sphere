@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
-import { Eye, LogOut, Users, Activity, Clock, Percent, Calendar, CheckCircle, BarChart, Share2, Store, ExternalLink, MousePointerClick, TrendingUp, Heart, Repeat, UserCheck, Banknote, Library, BarChart3 } from 'lucide-react';
+import { Eye, LogOut, Users, Activity, Clock, Percent, Calendar, CheckCircle, BarChart, Share2, Store, ExternalLink, MousePointerClick, TrendingUp, Heart, Repeat, UserCheck, Banknote, Library, BarChart3, Presentation, DollarSign, Target, Radio } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import dynamic from 'next/dynamic';
 import { DonationsTrendChart } from '@/components/admin/DonationsTrendChart';
@@ -23,6 +23,9 @@ import { StoreCategoryChart } from '@/components/admin/StoreCategoryChart';
 import { TopDonorLocationsChart } from '@/components/admin/TopDonorLocationsChart';
 import { TopOrgsTable } from '@/components/admin/TopOrgsTable';
 import { KnowledgeHubEngagementChart } from '@/components/admin/KnowledgeHubEngagementChart';
+import { AdRevenueChart } from '@/components/admin/AdRevenueChart';
+import { RevenueByCategoryChart } from '@/components/admin/RevenueByCategoryChart';
+import { TopAdPlacementsChart } from '@/components/admin/TopAdPlacementsChart';
 
 
 const UserGrowthChart = dynamic(
@@ -367,8 +370,57 @@ export default function AdminDashboardPage() {
         </div>
       </section>
 
+      <section className="space-y-8">
+        <h2 className="font-headline text-2xl font-bold border-b pb-2">Google Ads Analytics</h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Ad Impressions</CardTitle>
+                    <Presentation className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">2,458,234</div>
+                    <p className="text-xs text-muted-foreground">Across all categories</p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Ad Revenue (Month)</CardTitle>
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">₹42,500</div>
+                    <p className="text-xs text-muted-foreground">+5.2% from last month</p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Average Ad CTR</CardTitle>
+                    <Target className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">1.85%</div>
+                    <p className="text-xs text-muted-foreground">Click-Through Rate</p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">eCPM</CardTitle>
+                    <Radio className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">₹17.29</div>
+                    <p className="text-xs text-muted-foreground">Effective cost per mille</p>
+                </CardContent>
+            </Card>
+        </div>
+         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+            <AdRevenueChart />
+            <RevenueByCategoryChart />
+            <TopAdPlacementsChart />
+        </div>
+      </section>
+
     </div>
   );
 }
-
-    
