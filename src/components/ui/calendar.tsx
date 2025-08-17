@@ -29,7 +29,7 @@ function Calendar({
         className={cn(
           buttonVariants({ variant: "ghost" }),
           "h-9 w-9 p-0 font-normal relative",
-          dayProps.classNames.day
+          dayProps.classNames?.day
         )}
       >
         <span>{date.getDate()}</span>
