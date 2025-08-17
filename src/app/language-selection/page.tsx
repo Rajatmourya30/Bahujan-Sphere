@@ -21,7 +21,7 @@ export default function LanguageSelectionPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <div className="flex justify-center items-center gap-2 mb-4">
-            <Logo />
+            <Logo className="dark:text-primary-foreground" />
             <CardTitle className="text-2xl font-headline">Welcome</CardTitle>
           </div>
           <CardDescription>Please select your language.</CardDescription>
