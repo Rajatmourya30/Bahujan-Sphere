@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { EventDetailModal } from './EventDetailModal';
 import { Separator } from '../ui/separator';
+import { isSameDay } from 'date-fns';
 
 function EventDetail({ event, onReadMoreClick }: { event: CalendarEvent, onReadMoreClick: () => void }) {
   const { t } = useLanguage();
@@ -71,29 +72,12 @@ export function EventCalendar() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 
   const eventDates = useMemo(() => {
-    // In a real app, you'd fetch events for the visible months.
-    // For this mock data, we'll just create dates for the current year.
-    const year = new Date().getFullYear();
-    const dates: Date[] = [];
-    // Note: This is a simplified approach for mock data.
-    // A real implementation should handle events spanning multiple years.
-    allEvents.forEach(event => {
-        // We need to iterate through months, as the day doesn't specify one.
-        for (let month = 0; month < 12; month++) {
-           const eventDate = new Date(year, month, event.day);
-           // check if the date is valid for that month
-           if (eventDate.getDate() === event.day) {
-               dates.push(eventDate);
-           }
-        }
-    });
-    return dates;
+    return allEvents.map(event => event.date);
   }, []);
 
   const dayEvents = useMemo(() => {
     if (!date) return [];
-    const dayOfMonth = date.getDate();
-    return allEvents.filter(event => event.day === dayOfMonth);
+    return allEvents.filter(event => isSameDay(event.date, date));
   }, [date]);
 
   return (

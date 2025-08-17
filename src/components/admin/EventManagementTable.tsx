@@ -19,20 +19,7 @@ import type { CalendarEvent } from "@/lib/events";
 import { Badge } from "../ui/badge";
 import { Input } from "../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-
-const getMonthFromEvent = (event: CalendarEvent): number | null => {
-    // This is a simplified way to get a month for mock data.
-    // A real implementation would parse a real date string.
-    // Find the first date in the year this event occurs on
-    const year = new Date().getFullYear();
-    for (let month = 0; month < 12; month++) {
-        const date = new Date(year, month, event.day);
-        if (date.getDate() === event.day) {
-            return month;
-        }
-    }
-    return null;
-}
+import { format } from "date-fns";
 
 interface EventManagementTableProps {
     events: CalendarEvent[];
@@ -56,9 +43,9 @@ export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventM
         return events.filter(event => {
             const title = t(event.titleKey).toLowerCase();
             const matchesSearch = title.includes(searchTerm.toLowerCase());
-
-            const eventMonth = getMonthFromEvent(event);
-            const matchesMonth = selectedMonth === 'all' || (eventMonth !== null && eventMonth.toString() === selectedMonth);
+            
+            const eventMonth = event.date.getMonth();
+            const matchesMonth = selectedMonth === 'all' || (eventMonth.toString() === selectedMonth);
 
             return matchesSearch && matchesMonth;
         });
@@ -107,7 +94,7 @@ export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventM
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Title</TableHead>
-                                <TableHead>Day</TableHead>
+                                <TableHead>Date</TableHead>
                                 <TableHead>Tags</TableHead>
                                 <TableHead>Description</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
@@ -119,7 +106,7 @@ export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventM
                                     <TableCell className="font-medium">
                                         <span className="font-bold">{t(event.titleKey)}</span>
                                     </TableCell>
-                                    <TableCell>{event.day}</TableCell>
+                                    <TableCell>{format(event.date, 'PPP')}</TableCell>
                                     <TableCell>
                                         <div className="flex flex-wrap gap-1">
                                             {event.tagKeys.map(tagKey => (

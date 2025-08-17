@@ -93,15 +93,15 @@ export default function ManageCalendarPage() {
         <p className="text-muted-foreground">Add, edit, review, and manage all calendar events.</p>
       </header>
 
-      <Tabs defaultValue={defaultTab} className="space-y-6">
+      <Tabs defaultValue={defaultTab} className="w-full">
         <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
-          {availableTabs.map(tab => (
+           {availableTabs.map(tab => (
             <TabsTrigger key={tab.value} value={tab.value} className="hover:bg-background/80">{tab.label}</TabsTrigger>
           ))}
         </TabsList>
 
         {permissions.canManage && (
-            <TabsContent value="manage">
+            <TabsContent value="manage" className="mt-6">
                 <EventManagementTable
                   events={events}
                   onEdit={handleOpenDialog}
@@ -113,17 +113,17 @@ export default function ManageCalendarPage() {
         
         {permissions.canSubmit && (
             <>
-                <TabsContent value="single-event">
+                <TabsContent value="single-event" className="mt-6">
                   <EventSubmissionForm />
                 </TabsContent>
-                <TabsContent value="bulk-upload">
+                <TabsContent value="bulk-upload" className="mt-6">
                   <BulkUploadForm />
                 </TabsContent>
             </>
         )}
         
         {permissions.canReview && (
-            <TabsContent value="review">
+            <TabsContent value="review" className="mt-6">
                 <ReviewSubmissionsTab />
             </TabsContent>
         )}
