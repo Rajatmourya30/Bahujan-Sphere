@@ -8,41 +8,13 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Button } from '../ui/button';
 import Link from 'next/link';
 import { useLanguage } from '@/hooks/use-language';
-
-const mockEvents = {
-  '14': [
-    { 
-      title: 'Birth of Dr. B. R. Ambedkar', 
-      tags: ['Ambedkarite'],
-      description: 'The birth of Bhimrao Ramji Ambedkar, a pivotal figure in Indian history, jurist, economist, politician and social reformer.',
-      readMoreUrl: 'https://en.wikipedia.org/wiki/B._R._Ambedkar'
-    },
-    { 
-      title: 'Dhamma Chakra Pravartan Din', 
-      tags: ['Buddhist'],
-      description: 'Dr. Ambedkar, along with his 365,000 followers, converted to Buddhism at Deekshabhoomi in Nagpur.',
-      readMoreUrl: 'https://en.wikipedia.org/wiki/Dhamma_Chakra_Pravartan_Din'
-    },
-  ],
-  '3': [{ 
-    title: 'Birth of Savitribai Phule', 
-    tags: ['Social Reform'],
-    description: 'Savitribai Phule, a social reformer, educationalist, and poet from Maharashtra, is regarded as the first female teacher of India.',
-    readMoreUrl: 'https://en.wikipedia.org/wiki/Savitribai_Phule'
-  }],
-  '26': [{ 
-    title: 'Constitution Day', 
-    tags: ['Constitutional'],
-    description: 'On this day, the Constituent Assembly of India adopted the Constitution of India, and it came into effect on 26 January 1950.',
-    readMoreUrl: 'https://en.wikipedia.org/wiki/Constitution_Day_(India)'
-  }],
-};
+import { mockEventsByDay } from '@/lib/events';
 
 export function EventCalendar() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const { t } = useLanguage();
   const selectedDay = date ? date.getDate().toString() : null;
-  const dayEvents = selectedDay ? mockEvents[selectedDay as keyof typeof mockEvents] || [] : [];
+  const dayEvents = selectedDay ? mockEventsByDay[selectedDay as keyof typeof mockEventsByDay] || [] : [];
 
   return (
     <div className="flex flex-col gap-8">
@@ -67,16 +39,16 @@ export function EventCalendar() {
               <AccordionItem value={`item-${index}`} key={index}>
                 <AccordionTrigger>
                   <div className="flex flex-col items-start text-left">
-                    <p className="font-bold">{event.title}</p>
+                    <p className="font-bold">{t(event.titleKey)}</p>
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {event.tags.map((tag) => (
-                        <Badge key={tag} variant="secondary">{tag}</Badge>
+                      {event.tagKeys.map((tagKey) => (
+                        <Badge key={tagKey} variant="secondary">{t(tagKey)}</Badge>
                       ))}
                     </div>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <p className="mb-4">{event.description}</p>
+                  <p className="mb-4">{t(event.descriptionKey)}</p>
                   <Button asChild size="sm">
                     <Link href={event.readMoreUrl} target="_blank">
                       {t('event_calendar.read_more_button')}

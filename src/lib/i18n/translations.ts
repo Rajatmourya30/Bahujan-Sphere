@@ -73,6 +73,20 @@ const en = {
   "event_submission.toast_error_title": "Error",
   "event_submission.toast_success_title": "Event Submitted!",
   "event_submission.toast_success_description": "Thank you for your contribution. It is now pending review.",
+
+  "event_ambedkar_birth_title": "Birth of Dr. B. R. Ambedkar",
+  "event_ambedkar_birth_desc": "The birth of Bhimrao Ramji Ambedkar, a pivotal figure in Indian history, jurist, economist, politician and social reformer.",
+  "event_dhamma_chakra_title": "Dhamma Chakra Pravartan Din",
+  "event_dhamma_chakra_desc": "Dr. Ambedkar, along with his 365,000 followers, converted to Buddhism at Deekshabhoomi in Nagpur.",
+  "event_phule_birth_title": "Birth of Savitribai Phule",
+  "event_phule_birth_desc": "Savitribai Phule, a social reformer, educationalist, and poet from Maharashtra, is regarded as the first female teacher of India.",
+  "event_constitution_day_title": "Constitution Day",
+  "event_constitution_day_desc": "On this day, the Constituent Assembly of India adopted the Constitution of India, and it came into effect on 26 January 1950.",
+  
+  "tag_ambedkarite": "Ambedkarite",
+  "tag_buddhist": "Buddhist",
+  "tag_social_reform": "Social Reform",
+  "tag_constitutional": "Constitutional",
 };
 
 const hi = {
@@ -147,6 +161,20 @@ const hi = {
   "event_submission.toast_error_title": "त्रुटि",
   "event_submission.toast_success_title": "कार्यक्रम सबमिट किया गया!",
   "event_submission.toast_success_description": "आपके योगदान के लिए धन्यवाद। यह अब समीक्षा के लिए लंबित है।",
+
+  "event_ambedkar_birth_title": "डॉ. बी. आर. अम्बेडकर का जन्म",
+  "event_ambedkar_birth_desc": "भीमराव रामजी अम्बेडकर का जन्म, जो भारतीय इतिहास में एक महत्वपूर्ण व्यक्ति, विधिवेत्ता, अर्थशास्त्री, राजनीतिज्ञ और समाज सुधारक थे।",
+  "event_dhamma_chakra_title": "धम्म चक्र प्रवर्तन दिन",
+  "event_dhamma_chakra_desc": "डॉ. अम्बेडकर ने अपने 365,000 अनुयायियों के साथ नागपुर के दीक्षाभूमि में बौद्ध धर्म ग्रहण किया।",
+  "event_phule_birth_title": "सावित्रीबाई फुले का जन्म",
+  "event_phule_birth_desc": "सावित्रीबाई फुले, महाराष्ट्र की एक समाज सुधारक, शिक्षाविद् और कवयित्री, भारत की पहली महिला शिक्षिका मानी जाती हैं।",
+  "event_constitution_day_title": "संविधान दिवस",
+  "event_constitution_day_desc": "इस दिन, भारत की संविधान सभा ने भारत के संविधान को अपनाया, और यह 26 जनवरी 1950 को लागू हुआ।",
+  
+  "tag_ambedkarite": "अम्बेडकरवादी",
+  "tag_buddhist": "बौद्ध",
+  "tag_social_reform": "समाज सुधार",
+  "tag_constitutional": "संवैधानिक",
 };
 
 export const translations = { en, hi };
