@@ -52,6 +52,7 @@ export function EventCalendar() {
 
   const dayEvents = useMemo(() => {
     if (!date) return [];
+    // The mock data is keyed by day of the month, regardless of month/year.
     const dayKey = date.getDate().toString();
     return mockEventsByDay[dayKey as keyof typeof mockEventsByDay] || [];
   }, [date]);
@@ -64,6 +65,7 @@ export function EventCalendar() {
     for (const day in mockEventsByDay) {
       const eventsOnDay = mockEventsByDay[day as keyof typeof mockEventsByDay];
       if (eventsOnDay) {
+        // Since mock data is month-agnostic, we create a key for the current viewing month.
         const eventDate = new Date(currentYear, currentMonth, parseInt(day));
         const key = `${eventDate.getFullYear()}-${eventDate.getMonth()}-${eventDate.getDate()}`;
         counts.set(key, eventsOnDay.length);
