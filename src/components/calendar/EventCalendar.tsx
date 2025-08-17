@@ -15,18 +15,19 @@ import { useToast } from '@/hooks/use-toast';
 
 export function EventCalendar() {
   const [date, setDate] = useState<Date | undefined>(new Date());
+  const [displayMonth, setDisplayMonth] = useState<Date>(new Date());
   const { t } = useLanguage();
   const { toast } = useToast();
   const selectedDay = date ? date.getDate().toString() : null;
   const dayEvents = selectedDay ? mockEventsByDay[selectedDay as keyof typeof mockEventsByDay] || [] : [];
 
   const eventDates = useMemo(() => {
-    const currentMonth = (date || new Date()).getMonth();
-    const currentYear = (date || new Date()).getFullYear();
+    const currentMonth = displayMonth.getMonth();
+    const currentYear = displayMonth.getFullYear();
     return Object.keys(mockEventsByDay).map(day => {
         return new Date(currentYear, currentMonth, parseInt(day));
     });
-  }, [date]);
+  }, [displayMonth]);
 
   const handleShare = async (event: CalendarEvent) => {
     const eventTitle = t(event.titleKey);
@@ -61,6 +62,8 @@ export function EventCalendar() {
             mode="single"
             selected={date}
             onSelect={setDate}
+            month={displayMonth}
+            onMonthChange={setDisplayMonth}
             className="p-4"
             eventDays={eventDates}
           />
