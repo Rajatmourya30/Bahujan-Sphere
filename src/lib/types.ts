@@ -3,6 +3,8 @@ export interface Event {
   date: string;
   title: string;
   summary: string;
+  description?: string;
+  readMoreUrl?: string;
   tags: string[];
   imageUrl: string;
   isBookmarked: boolean;
