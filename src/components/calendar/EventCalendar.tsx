@@ -18,8 +18,13 @@ export function EventCalendar() {
   const [displayMonth, setDisplayMonth] = useState<Date>(new Date());
   const { t } = useLanguage();
   const { toast } = useToast();
-  const selectedDay = date ? date.getUTCDate().toString() : null;
-  const dayEvents = selectedDay ? mockEventsByDay[selectedDay as keyof typeof mockEventsByDay] || [] : [];
+  
+  const dayEvents = useMemo(() => {
+    if (!date) return [];
+    const dayKey = date.getUTCDate().toString();
+    return mockEventsByDay[dayKey as keyof typeof mockEventsByDay] || [];
+  }, [date]);
+
 
   const eventCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -42,8 +47,9 @@ export function EventCalendar() {
     const eventDescription = t(event.descriptionKey);
     const shareText = `${eventTitle}\n\n${eventDescription}\n\n${t('share.footer')}`;
     const shareUrl = event.readMoreUrl;
-
-    if (navigator.share) {
+    
+    // Check for secure context and navigator.share support
+    if (window.isSecureContext && navigator.share) {
       try {
         await navigator.share({
           title: eventTitle,
