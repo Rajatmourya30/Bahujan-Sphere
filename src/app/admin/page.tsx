@@ -8,7 +8,7 @@ import { EventSubmissionForm } from '@/components/submit/EventSubmissionForm';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
-import { Eye, LogOut, Users, UserCog, HeartHandshake } from 'lucide-react';
+import { Eye, LogOut, Users, UserCog, HeartHandshake, Library, Store } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BulkUploadForm } from '@/components/submit/BulkUploadForm';
 import { ReviewSubmissionsTab } from '@/components/admin/ReviewSubmissionsTab';
@@ -42,6 +42,7 @@ export default function AdminDashboardPage() {
       canManageDonations: userRole === 'Admin',
       canManageUsers: userRole === 'Admin',
       canManageTeam: userRole === 'Admin' || userRole === 'Editor',
+      canManageContent: userRole === 'Admin' || userRole === 'Editor',
       canSubmit: userRole === 'Admin' || userRole === 'Editor' || userRole === 'Contributor',
       canReview: userRole === 'Admin' || userRole === 'Editor' || userRole === 'Reviewer',
   };
@@ -68,12 +69,28 @@ export default function AdminDashboardPage() {
 
   return (
     <div>
-      <header className="mb-8 flex justify-between items-center">
+      <header className="mb-8 flex flex-col gap-4">
         <div>
             <h1 className="font-headline text-3xl font-bold">{t('admin_dashboard.title')}</h1>
             <p className="text-muted-foreground">Welcome, {userRole}. {t('admin_dashboard.description')}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+            {permissions.canManageContent && (
+              <>
+                 <Button asChild variant="outline">
+                    <Link href="/admin/knowledge-hub">
+                        <Library className="mr-2 h-4 w-4" />
+                        Manage Knowledge Hub
+                    </Link>
+                </Button>
+                 <Button asChild variant="outline">
+                    <Link href="/admin/store">
+                        <Store className="mr-2 h-4 w-4" />
+                        Manage Store
+                    </Link>
+                </Button>
+              </>
+            )}
             {permissions.canManageDonations && (
                  <Button asChild variant="outline">
                     <Link href="/admin/donations">
