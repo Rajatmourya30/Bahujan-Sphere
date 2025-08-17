@@ -6,10 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Globe, LogOut } from 'lucide-react';
+import { Globe, LogOut, Palette } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { LanguageSwitcher } from '@/components/shared/LanguageSwitcher';
 import { Label } from '@/components/ui/label';
+import { ThemeSwitcher } from '@/components/shared/ThemeSwitcher';
 
 interface UserProfile {
     name: string;
@@ -101,13 +102,20 @@ export default function ProfilePage() {
             <CardHeader>
                 <CardTitle className="text-xl font-headline">{t('profile_page.settings_title')}</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
                 <div className="flex items-center justify-between">
                     <Label className="flex items-center gap-2">
                         <Globe className="h-5 w-5 text-muted-foreground" />
                         <span>{t('profile_page.language_label')}</span>
                     </Label>
                     <LanguageSwitcher />
+                </div>
+                <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                        <Palette className="h-5 w-5 text-muted-foreground" />
+                        <span>Theme</span>
+                    </Label>
+                    <ThemeSwitcher />
                 </div>
             </CardContent>
         </Card>
