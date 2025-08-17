@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
 import { Toaster } from '@/components/ui/toaster';
+import { BottomNav } from '@/components/layout/BottomNav';
 
 export const metadata: Metadata = {
   title: 'BahujanSphere',
@@ -21,12 +20,13 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@24..144,400;700&family=PT+Sans:wght@400;700&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-body antialiased min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-grow container mx-auto px-4 py-8">
-          {children}
-        </main>
-        <Footer />
+      <body className="font-body antialiased bg-muted">
+        <div className="relative mx-auto flex h-screen max-w-md flex-col overflow-hidden border-x bg-background shadow-lg">
+          <main className="flex-grow overflow-y-auto p-4 pt-8">
+            {children}
+          </main>
+          <BottomNav />
+        </div>
         <Toaster />
       </body>
     </html>
