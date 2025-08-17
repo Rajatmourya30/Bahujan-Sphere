@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, UserPlus } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { TeamMemberTable } from '@/components/admin/TeamMemberTable';
 
 const sampleTeamMembers = [
@@ -54,10 +54,6 @@ export default function TeamManagementPage() {
                 <h1 className="font-headline text-3xl font-bold">Team Management</h1>
                 <p className="text-muted-foreground">Invite and manage your team members.</p>
             </div>
-            <Button>
-                <UserPlus className="mr-2 h-4 w-4" />
-                Invite Team Member
-            </Button>
       </header>
       
       <section>
