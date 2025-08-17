@@ -18,16 +18,23 @@ export function EventCalendar() {
   const [displayMonth, setDisplayMonth] = useState<Date>(new Date());
   const { t } = useLanguage();
   const { toast } = useToast();
-  const selectedDay = date ? date.getDate().toString() : null;
+  const selectedDay = date ? date.getUTCDate().toString() : null;
   const dayEvents = selectedDay ? mockEventsByDay[selectedDay as keyof typeof mockEventsByDay] || [] : [];
 
-  const eventDates = useMemo(() => {
-    const currentMonth = displayMonth.getMonth();
-    const currentYear = displayMonth.getFullYear();
-    return Object.keys(mockEventsByDay).map(day => {
-        // Create date in UTC to avoid timezone issues
-        return new Date(Date.UTC(currentYear, currentMonth, parseInt(day)));
-    });
+  const eventCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    const currentMonth = displayMonth.getUTCMonth();
+    const currentYear = displayMonth.getUTCFullYear();
+
+    for (const day in mockEventsByDay) {
+        const eventsOnDay = mockEventsByDay[day as keyof typeof mockEventsByDay];
+        if (eventsOnDay) {
+            const date = new Date(Date.UTC(currentYear, currentMonth, parseInt(day)));
+            const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+            counts.set(key, eventsOnDay.length);
+        }
+    }
+    return counts;
   }, [displayMonth]);
 
   const handleShare = async (event: CalendarEvent) => {
@@ -66,7 +73,7 @@ export function EventCalendar() {
             month={displayMonth}
             onMonthChange={setDisplayMonth}
             className="p-4"
-            eventDays={eventDates}
+            eventCounts={eventCounts}
           />
         </CardContent>
       </Card>

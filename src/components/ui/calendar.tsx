@@ -1,33 +1,52 @@
+
 "use client"
 
 import * as React from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { DayPicker } from "react-day-picker"
+import { DayPicker, DayProps } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker> & {
-  eventDays?: Date[]
+  eventCounts?: Map<string, number>
 }
 
 function Calendar({
   className,
   classNames,
   showOutsideDays = true,
-  eventDays,
+  eventCounts,
   ...props
 }: CalendarProps) {
-  const modifiers = {
-    ...props.modifiers,
-    hasEvent: eventDays || [],
-  }
+  const EventDay = ({ date, ...dayProps }: DayProps) => {
+    const dayKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+    const count = eventCounts?.get(dayKey) ?? 0;
 
-  const modifiersClassNames = {
-    ...props.modifiersClassNames,
-    hasEvent: "day-with-event",
-  }
-
+    return (
+      <div
+        {...dayProps.buttonProps}
+        className={cn(
+          buttonVariants({ variant: "ghost" }),
+          "h-9 w-9 p-0 font-normal relative",
+          dayProps.classNames.day
+        )}
+      >
+        <span>{date.getDate()}</span>
+        {count > 0 && (
+          <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-0.5">
+            {Array.from({ length: Math.min(count, 3) }).map((_, i) => (
+              <span key={i} className={cn(
+                "h-1 w-1 rounded-full",
+                dayProps.selected ? "bg-primary-foreground" : "bg-primary"
+              )} />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+  
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
@@ -59,16 +78,15 @@ function Calendar({
           "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
         day_today: "bg-accent text-accent-foreground",
         day_outside:
-          "day-outside text-muted-foreground aria-selected:bg-accent/50 aria-selected:text-muted-foreground",
+          "day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground",
         day_disabled: "text-muted-foreground opacity-50",
         day_range_middle:
           "aria-selected:bg-accent aria-selected:text-accent-foreground",
         day_hidden: "invisible",
         ...classNames,
       }}
-      modifiers={modifiers}
-      modifiersClassNames={modifiersClassNames}
       components={{
+        Day: EventDay,
         IconLeft: ({ className, ...props }) => (
           <ChevronLeft className={cn("h-4 w-4", className)} {...props} />
         ),
