@@ -4,21 +4,15 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/shared/Logo';
-
-const languages = [
-  { code: 'en', name: 'English' },
-  { code: 'hi', name: 'हिन्दी (Hindi)' },
-  { code: 'mr', name: 'मराठी (Marathi)' },
-  { code: 'bn', name: 'বাংলা (Bengali)' },
-  { code: 'ta', name: 'தமிழ் (Tamil)' },
-  { code: 'te', name: 'తెలుగు (Telugu)' },
-];
+import { useLanguage } from '@/hooks/use-language';
+import { languages } from '@/lib/i18n/languages';
 
 export default function LanguageSelectionPage() {
   const router = useRouter();
+  const { setLanguage } = useLanguage();
 
   const handleLanguageSelect = (langCode: string) => {
-    localStorage.setItem('selectedLanguage', langCode);
+    setLanguage(langCode);
     router.push('/');
   };
 

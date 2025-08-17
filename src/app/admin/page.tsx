@@ -4,9 +4,11 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { EventSubmissionForm } from '@/components/submit/EventSubmissionForm';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useLanguage } from '@/hooks/use-language';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
@@ -34,8 +36,8 @@ export default function AdminDashboardPage() {
   return (
     <div>
       <header className="mb-8">
-        <h1 className="font-headline text-3xl font-bold">Admin Dashboard</h1>
-        <p className="text-muted-foreground">Submit a new event to the calendar.</p>
+        <h1 className="font-headline text-3xl font-bold">{t('admin_dashboard.title')}</h1>
+        <p className="text-muted-foreground">{t('admin_dashboard.description')}</p>
       </header>
       <EventSubmissionForm />
     </div>

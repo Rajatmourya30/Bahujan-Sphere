@@ -17,6 +17,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/hooks/use-language';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
@@ -31,6 +32,7 @@ const formSchema = z.object({
 export default function SignupPage() {
     const router = useRouter();
     const { toast } = useToast();
+    const { t } = useLanguage();
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -52,8 +54,8 @@ export default function SignupPage() {
         localStorage.setItem('isUserAuthenticated', 'true');
 
         toast({
-            title: "Account Created!",
-            description: "You have been successfully signed up.",
+            title: t('signup_page.toast_success_title'),
+            description: t('signup_page.toast_success_description'),
         });
         
         router.push('/profile');
@@ -63,8 +65,8 @@ export default function SignupPage() {
     <div className="flex justify-center items-center h-full py-8">
         <Card className="w-full max-w-md">
             <CardHeader>
-                <CardTitle className="text-2xl font-headline">Sign Up</CardTitle>
-                <CardDescription>Create an account to get started.</CardDescription>
+                <CardTitle className="text-2xl font-headline">{t('signup_page.title')}</CardTitle>
+                <CardDescription>{t('signup_page.description')}</CardDescription>
             </CardHeader>
             <CardContent>
                 <Form {...form}>
@@ -74,9 +76,9 @@ export default function SignupPage() {
                             name="name"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Full Name</FormLabel>
+                                    <FormLabel>{t('signup_page.name_label')}</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="Your Name" {...field} />
+                                        <Input placeholder={t('signup_page.name_placeholder')} {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -87,7 +89,7 @@ export default function SignupPage() {
                             name="email"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Email</FormLabel>
+                                    <FormLabel>{t('signup_page.email_label')}</FormLabel>
                                     <FormControl>
                                         <Input type="email" placeholder="m@example.com" {...field} />
                                     </FormControl>
@@ -100,7 +102,7 @@ export default function SignupPage() {
                             name="password"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Password</FormLabel>
+                                    <FormLabel>{t('signup_page.password_label')}</FormLabel>
                                     <FormControl>
                                         <Input type="password" placeholder="******" {...field} />
                                     </FormControl>
@@ -114,9 +116,9 @@ export default function SignupPage() {
                                 name="country"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Country</FormLabel>
+                                        <FormLabel>{t('signup_page.country_label')}</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="e.g. India" {...field} />
+                                            <Input placeholder={t('signup_page.country_placeholder')} {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -127,9 +129,9 @@ export default function SignupPage() {
                                 name="birthYear"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Year of Birth</FormLabel>
+                                        <FormLabel>{t('signup_page.birth_year_label')}</FormLabel>
                                         <FormControl>
-                                            <Input type="number" placeholder="e.g. 1990" {...field} />
+                                            <Input type="number" placeholder={t('signup_page.birth_year_placeholder')} {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -142,9 +144,9 @@ export default function SignupPage() {
                                 name="state"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>State</FormLabel>
+                                        <FormLabel>{t('signup_page.state_label')}</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="e.g. Maharashtra" {...field} />
+                                            <Input placeholder={t('signup_page.state_placeholder')} {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -155,9 +157,9 @@ export default function SignupPage() {
                                 name="city"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>City</FormLabel>
+                                        <FormLabel>{t('signup_page.city_label')}</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="e.g. Mumbai" {...field} />
+                                            <Input placeholder={t('signup_page.city_placeholder')} {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -165,14 +167,14 @@ export default function SignupPage() {
                             />
                         </div>
 
-                        <Button type="submit" className="w-full">Create Account</Button>
+                        <Button type="submit" className="w-full">{t('signup_page.submit_button')}</Button>
                     </form>
                 </Form>
             </CardContent>
             <CardFooter className="text-center text-sm">
-                Already have an account?&nbsp;
+                {t('signup_page.login_prompt')}&nbsp;
                 <Link href="/login" className="underline">
-                    Login
+                    {t('signup_page.login_link')}
                 </Link>
             </CardFooter>
         </Card>

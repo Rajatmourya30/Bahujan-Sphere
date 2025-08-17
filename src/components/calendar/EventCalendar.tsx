@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '../ui/button';
 import Link from 'next/link';
+import { useLanguage } from '@/hooks/use-language';
 
 const mockEvents = {
   '14': [
@@ -39,6 +40,7 @@ const mockEvents = {
 
 export function EventCalendar() {
   const [date, setDate] = useState<Date | undefined>(new Date());
+  const { t } = useLanguage();
   const selectedDay = date ? date.getDate().toString() : null;
   const dayEvents = selectedDay ? mockEvents[selectedDay as keyof typeof mockEvents] || [] : [];
 
@@ -57,7 +59,7 @@ export function EventCalendar() {
       
       <div>
         <h2 className="font-headline text-2xl font-bold mb-4">
-            Events on {date ? date.toLocaleDateString() : 'selected date'}
+            {t('event_calendar.events_on_date', { date: date ? date.toLocaleDateString() : t('event_calendar.selected_date') })}
         </h2>
         {dayEvents.length > 0 ? (
           <Accordion type="single" collapsible className="w-full">
@@ -77,7 +79,7 @@ export function EventCalendar() {
                   <p className="mb-4">{event.description}</p>
                   <Button asChild size="sm">
                     <Link href={event.readMoreUrl} target="_blank">
-                      Read More
+                      {t('event_calendar.read_more_button')}
                     </Link>
                   </Button>
                 </AccordionContent>
@@ -85,7 +87,7 @@ export function EventCalendar() {
             ))}
           </Accordion>
         ) : (
-          <p className="text-muted-foreground text-center py-8">No events for this day.</p>
+          <p className="text-muted-foreground text-center py-8">{t('event_calendar.no_events')}</p>
         )}
       </div>
     </div>

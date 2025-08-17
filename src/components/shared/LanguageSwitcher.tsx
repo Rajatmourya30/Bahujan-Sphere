@@ -8,15 +8,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-
-const languages = [
-  { code: 'en', name: 'English' },
-  { code: 'hi', name: 'हिन्दी' },
-  { code: 'mr', name: 'मराठी' },
-  { code: 'bn', name: 'বাংলা' },
-];
+import { useLanguage } from '@/hooks/use-language';
+import { languages } from '@/lib/i18n/languages';
+import { useRouter } from 'next/navigation';
 
 export function LanguageSwitcher() {
+  const { setLanguage } = useLanguage();
+  const router = useRouter();
+
+  const handleSwitch = (langCode: string) => {
+    setLanguage(langCode);
+    // Optional: force a reload or redirect if needed
+    // router.refresh(); 
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -27,7 +32,9 @@ export function LanguageSwitcher() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {languages.map((lang) => (
-          <DropdownMenuItem key={lang.code}>{lang.name}</DropdownMenuItem>
+          <DropdownMenuItem key={lang.code} onSelect={() => handleSwitch(lang.code)}>
+            {lang.name.split('(')[0].trim()}
+          </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
     </DropdownMenu>

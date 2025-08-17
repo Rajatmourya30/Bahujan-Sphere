@@ -3,28 +3,29 @@
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useLanguage } from '@/hooks/use-language';
 
 export function LanguageGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [isLanguageSet, setIsLanguageSet] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const { language, isLanguageLoading } = useLanguage();
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    const selectedLanguage = localStorage.getItem('selectedLanguage');
-    if (!selectedLanguage) {
-      if (pathname !== '/language-selection') {
-        router.replace('/language-selection');
+    if (!isLanguageLoading) {
+      if (!language) {
+        if (pathname !== '/language-selection') {
+          router.replace('/language-selection');
+        } else {
+          setIsReady(true);
+        }
       } else {
-        setIsLoading(false);
+        setIsReady(true);
       }
-    } else {
-      setIsLanguageSet(true);
-      setIsLoading(false);
     }
-  }, [router, pathname]);
+  }, [router, pathname, language, isLanguageLoading]);
 
-  if (isLoading || (!isLanguageSet && pathname !== '/language-selection')) {
+  if (!isReady || isLanguageLoading) {
     return (
       <div className="relative mx-auto flex h-screen max-w-md flex-col overflow-hidden border-x bg-background p-4 pt-8 shadow-lg">
         <div className="space-y-4">
@@ -36,14 +37,12 @@ export function LanguageGate({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-
-  // Render the language selection page without the main layout
-  if (pathname === '/language-selection' && !isLanguageSet) {
+  
+  if (pathname === '/language-selection' && !language) {
     return <>{children}</>;
   }
-
-  // If language is set, render the app
-  if (isLanguageSet) {
+  
+  if (language) {
     return <>{children}</>;
   }
 

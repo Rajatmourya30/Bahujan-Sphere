@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { LogOut, User } from 'lucide-react';
+import { useLanguage } from '@/hooks/use-language';
 
 interface UserProfile {
     name: string;
@@ -19,6 +20,7 @@ interface UserProfile {
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
 
@@ -74,19 +76,19 @@ export default function ProfilePage() {
             <CardContent>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                        <p className="font-medium text-muted-foreground">Country</p>
+                        <p className="font-medium text-muted-foreground">{t('profile_page.country')}</p>
                         <p>{user.country}</p>
                     </div>
                      <div>
-                        <p className="font-medium text-muted-foreground">State</p>
+                        <p className="font-medium text-muted-foreground">{t('profile_page.state')}</p>
                         <p>{user.state}</p>
                     </div>
                      <div>
-                        <p className="font-medium text-muted-foreground">City</p>
+                        <p className="font-medium text-muted-foreground">{t('profile_page.city')}</p>
                         <p>{user.city}</p>
                     </div>
                      <div>
-                        <p className="font-medium text-muted-foreground">Birth Year</p>
+                        <p className="font-medium text-muted-foreground">{t('profile_page.birth_year')}</p>
                         <p>{user.birthYear}</p>
                     </div>
                 </div>
@@ -95,7 +97,7 @@ export default function ProfilePage() {
         
         <Button onClick={handleLogout} variant="outline" className="w-full">
             <LogOut className="mr-2 h-4 w-4" />
-            Logout
+            {t('profile_page.logout_button')}
         </Button>
     </div>
   );

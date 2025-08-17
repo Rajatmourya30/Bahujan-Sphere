@@ -23,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getTagSuggestions } from '@/lib/actions';
 import { Badge } from '../ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/hooks/use-language';
 
 const formSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters long.'),
@@ -37,6 +38,7 @@ export function EventSubmissionForm() {
   const [isPending, startTransition] = useTransition();
   const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -58,7 +60,7 @@ export function EventSubmissionForm() {
       const result = await getTagSuggestions(eventSummary, currentTags);
       if (result.error) {
         toast({
-          title: "Error",
+          title: t('event_submission.toast_error_title'),
           description: result.error,
           variant: "destructive"
         })
@@ -82,8 +84,8 @@ export function EventSubmissionForm() {
   function onSubmit(values: z.infer<typeof formSchema>) {
     console.log(values);
     toast({
-      title: "Event Submitted!",
-      description: "Thank you for your contribution. It is now pending review.",
+      title: t('event_submission.toast_success_title'),
+      description: t('event_submission.toast_success_description'),
     })
     form.reset();
     setSuggestedTags([]);
@@ -92,7 +94,7 @@ export function EventSubmissionForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-headline">Event Details</CardTitle>
+        <CardTitle className="font-headline">{t('event_submission.title')}</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -102,9 +104,9 @@ export function EventSubmissionForm() {
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Event Title</FormLabel>
+                  <FormLabel>{t('event_submission.event_title_label')}</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Birth of Dr. B. R. Ambedkar" {...field} />
+                    <Input placeholder={t('event_submission.event_title_placeholder')} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -115,12 +117,12 @@ export function EventSubmissionForm() {
               name="date"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Date</FormLabel>
+                  <FormLabel>{t('event_submission.date_label')}</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., 14 April 1891" {...field} />
+                    <Input placeholder={t('event_submission.date_placeholder')} {...field} />
                   </FormControl>
                   <FormDescription>
-                    Please use a descriptive date format.
+                    {t('event_submission.date_description')}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -131,16 +133,16 @@ export function EventSubmissionForm() {
               name="summary"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Summary</FormLabel>
+                  <FormLabel>{t('event_submission.summary_label')}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="A short summary of the event's significance..."
+                      placeholder={t('event_submission.summary_placeholder')}
                       rows={4}
                       {...field}
                     />
                   </FormControl>
                   <FormDescription>
-                    This summary will be used to suggest tags.
+                    {t('event_submission.summary_description')}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -152,12 +154,12 @@ export function EventSubmissionForm() {
               name="readMoreUrl"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Read More Link</FormLabel>
+                  <FormLabel>{t('event_submission.read_more_label')}</FormLabel>
                   <FormControl>
-                    <Input type="url" placeholder="https://example.com/source-of-information" {...field} />
+                    <Input type="url" placeholder={t('event_submission.read_more_placeholder')} {...field} />
                   </FormControl>
                   <FormDescription>
-                    A link to a webpage with more information about the event (optional).
+                    {t('event_submission.read_more_description')}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -169,7 +171,7 @@ export function EventSubmissionForm() {
               name="tags"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Tags</FormLabel>
+                  <FormLabel>{t('event_submission.tags_label')}</FormLabel>
                   <FormControl>
                     <div className="p-3 border rounded-md min-h-[40px] bg-background">
                        {currentTags.length > 0 ? (
@@ -183,13 +185,13 @@ export function EventSubmissionForm() {
                             </Badge>
                           ))}
                          </div>
-                       ) : <p className="text-sm text-muted-foreground">Add tags below or get AI suggestions.</p>}
+                       ) : <p className="text-sm text-muted-foreground">{t('event_submission.tags_placeholder')}</p>}
                     </div>
                   </FormControl>
                    <div className="flex flex-col sm:flex-row gap-2 items-start">
                     <Button type="button" onClick={handleSuggestTags} disabled={isPending || !eventSummary}>
                       <Wand2 className="mr-2 h-4 w-4" />
-                      {isPending ? 'Suggesting...' : 'Suggest Tags with AI'}
+                      {isPending ? t('event_submission.suggest_tags_loading') : t('event_submission.suggest_tags_button')}
                     </Button>
                     <div className="flex flex-wrap gap-2 items-center">
                         {suggestedTags.map(tag => (
@@ -204,7 +206,7 @@ export function EventSubmissionForm() {
               )}
             />
 
-            <Button type="submit" size="lg">Submit for Review</Button>
+            <Button type="submit" size="lg">{t('event_submission.submit_button')}</Button>
           </form>
         </Form>
       </CardContent>

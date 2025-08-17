@@ -8,10 +8,12 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/hooks/use-language';
 
 export default function UserLoginPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
 
@@ -29,8 +31,8 @@ export default function UserLoginPage() {
     }
     
     toast({
-        title: 'Login Failed',
-        description: 'Incorrect email or password. Please try again.',
+        title: t('login_page.toast_failed_title'),
+        description: t('login_page.toast_failed_description'),
         variant: 'destructive',
     });
   };
@@ -39,13 +41,13 @@ export default function UserLoginPage() {
     <div className="flex justify-center items-center h-full">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-2xl font-headline">Login</CardTitle>
-          <CardDescription>Enter your email below to login to your account.</CardDescription>
+          <CardTitle className="text-2xl font-headline">{t('login_page.title')}</CardTitle>
+          <CardDescription>{t('login_page.description')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('login_page.email_label')}</Label>
               <Input
                 id="email"
                 type="email"
@@ -56,7 +58,7 @@ export default function UserLoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t('login_page.password_label')}</Label>
               <Input
                 id="password"
                 type="password"
@@ -66,14 +68,14 @@ export default function UserLoginPage() {
               />
             </div>
             <Button onClick={handleLogin} className="w-full">
-              Login
+              {t('login_page.login_button')}
             </Button>
           </div>
         </CardContent>
         <CardFooter className="text-center text-sm">
-            Don&apos;t have an account?&nbsp;
+            {t('login_page.signup_prompt')}&nbsp;
             <Link href="/signup" className="underline">
-                Sign up
+                {t('login_page.signup_link')}
             </Link>
         </CardFooter>
       </Card>

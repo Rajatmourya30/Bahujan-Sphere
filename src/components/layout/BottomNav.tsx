@@ -5,15 +5,17 @@ import { usePathname } from 'next/navigation';
 import { Home, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
-
-const navItems = [
-  { href: '/', label: 'Calendar', icon: Home },
-  { href: '/profile', label: 'Profile', icon: User, auth: true },
-];
+import { useLanguage } from '@/hooks/use-language';
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { t } = useLanguage();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+  const navItems = [
+    { href: '/', label: t('nav.calendar'), icon: Home },
+    { href: '/profile', label: t('nav.profile'), icon: User, auth: true },
+  ];
 
   useEffect(() => {
     // Check auth status from localStorage on the client side
@@ -28,7 +30,7 @@ export function BottomNav() {
   }
   
   // Hide nav on login/signup pages
-  if (pathname === '/login' || pathname === '/signup') {
+  if (pathname === '/login' || pathname === '/signup' || pathname === '/language-selection') {
       return null;
   }
 

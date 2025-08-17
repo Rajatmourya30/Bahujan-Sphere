@@ -7,10 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/hooks/use-language';
 
 export default function AdminLoginPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
 
@@ -23,8 +25,8 @@ export default function AdminLoginPage() {
       router.push('/admin');
     } else {
       toast({
-        title: 'Login Failed',
-        description: 'Incorrect password. Please try again.',
+        title: t('admin_login.toast_failed_title'),
+        description: t('admin_login.toast_failed_description'),
         variant: 'destructive',
       });
     }
@@ -34,12 +36,12 @@ export default function AdminLoginPage() {
     <div className="flex justify-center items-center h-full">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-2xl font-headline">Admin Login</CardTitle>
+          <CardTitle className="text-2xl font-headline">{t('admin_login.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('admin_login.email_label')}</Label>
               <Input
                 id="email"
                 type="email"
@@ -49,17 +51,17 @@ export default function AdminLoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t('admin_login.password_label')}</Label>
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Hint: admin123"
+                placeholder={t('admin_login.password_hint')}
               />
             </div>
             <Button onClick={handleLogin} className="w-full">
-              Login
+              {t('admin_login.login_button')}
             </Button>
           </div>
         </CardContent>
