@@ -12,12 +12,60 @@ import { mockEventsByDay, type CalendarEvent } from '@/lib/events';
 import { Share2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '../ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
-function EventDetail({ event }: { event: CalendarEvent }) {
+function EventDetail({ event, onShare }: { event: CalendarEvent, onShare: () => void }) {
+  const { t } = useLanguage();
+  
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2">
+        {event.tagKeys.map((tagKey) => (
+          <Badge key={tagKey} variant="secondary">{t(tagKey)}</Badge>
+        ))}
+      </div>
+      <p className="text-sm text-muted-foreground">
+        {t(event.descriptionKey)}
+      </p>
+      <div className="flex gap-2">
+        <Button variant="outline" size="sm" onClick={onShare}>
+          <Share2 className="mr-2 h-4 w-4" />
+          {t('share.button_text')}
+        </Button>
+        <Button asChild size="sm">
+          <Link href={event.readMoreUrl} target="_blank">
+            {t('event_calendar.read_more_button')}
+          </Link>
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+export function EventCalendar() {
+  const [date, setDate] = useState<Date | undefined>(new Date());
   const { t } = useLanguage();
   const { toast } = useToast();
+  const [dialogEvent, setDialogEvent] = useState<CalendarEvent | null>(null);
 
-  const handleShare = async () => {
+  const eventDays = useMemo(() => {
+    return Object.keys(mockEventsByDay).map(day => parseInt(day, 10));
+  }, []);
+
+  const dayEvents = useMemo(() => {
+    if (!date) return [];
+    const dayKey = date.getDate().toString();
+    return mockEventsByDay[dayKey as keyof typeof mockEventsByDay] || [];
+  }, [date]);
+
+  const handleShare = async (event: CalendarEvent) => {
     const eventTitle = t(event.titleKey);
     const eventDescription = t(event.descriptionKey);
     const shareText = `${eventTitle}\n\n${eventDescription}\n\n${t('share.footer')}`;
@@ -31,63 +79,18 @@ function EventDetail({ event }: { event: CalendarEvent }) {
           url: shareUrl,
         });
       } catch (error) {
+        // This will happen if the user cancels the share dialog.
+        // It's not necessarily an error, so we won't show a toast.
         console.log('Share action was cancelled or failed.', error);
       }
     } else {
-        // Fallback for browsers that don't support Web Share API
-        try {
-            await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
-            toast({
-                title: t('share.copied_title'),
-                description: t('share.copied_description'),
-            });
-        } catch (err) {
-            toast({
-                title: t('share.unavailable_title'),
-                description: t('share.unavailable_description'),
-                variant: 'destructive',
-            });
-        }
+        toast({
+            title: t('share.unavailable_title'),
+            description: t('share.unavailable_description'),
+            variant: 'destructive',
+        });
     }
   };
-
-  return (
-    <AccordionContent>
-      <div className="space-y-4">
-        <div className="flex flex-wrap gap-2">
-            {event.tagKeys.map((tagKey) => (
-                <Badge key={tagKey} variant="secondary">{t(tagKey)}</Badge>
-            ))}
-        </div>
-        <p className="text-sm text-muted-foreground">
-          {t(event.descriptionKey)}
-        </p>
-        <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleShare}>
-                <Share2 className="mr-2 h-4 w-4" />
-                {t('share.button_text')}
-            </Button>
-            <Button asChild size="sm">
-                <Link href={event.readMoreUrl} target="_blank">
-                    {t('event_calendar.read_more_button')}
-                </Link>
-            </Button>
-        </div>
-      </div>
-    </AccordionContent>
-  );
-}
-
-export function EventCalendar() {
-  const [date, setDate] = useState<Date | undefined>(new Date());
-  const { t } = useLanguage();
-
-  const dayEvents = useMemo(() => {
-    if (!date) return [];
-    // The mock data is keyed by day of the month, regardless of month/year.
-    const dayKey = date.getDate().toString();
-    return mockEventsByDay[dayKey as keyof typeof mockEventsByDay] || [];
-  }, [date]);
 
   return (
     <div className="flex flex-col gap-8">
@@ -98,6 +101,7 @@ export function EventCalendar() {
             selected={date}
             onSelect={setDate}
             className="p-4"
+            eventDays={eventDays}
           />
         </CardContent>
       </Card>
@@ -117,7 +121,9 @@ export function EventCalendar() {
                 {dayEvents.map((event, index) => (
                   <AccordionItem value={`item-${index}`} key={event.id}>
                     <AccordionTrigger>{t(event.titleKey)}</AccordionTrigger>
-                    <EventDetail event={event} />
+                    <AccordionContent>
+                      <EventDetail event={event} onShare={() => handleShare(event)} />
+                    </AccordionContent>
                   </AccordionItem>
                 ))}
               </Accordion>
