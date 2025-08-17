@@ -7,7 +7,7 @@ export default function AppLayout({
 }) {
   return (
     <div className="relative mx-auto flex h-screen max-w-md flex-col overflow-hidden border-x bg-background shadow-lg">
-      <main className="flex-grow overflow-y-auto p-4 pt-8">
+      <main className="flex-grow overflow-y-auto p-4 pt-6">
         {children}
       </main>
       <BottomNav />

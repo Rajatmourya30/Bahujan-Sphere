@@ -7,8 +7,8 @@ import { useLanguage } from "@/hooks/use-language";
 export default function Home() {
   const { t } = useLanguage();
   return (
-    <div className="space-y-8">
-      <header className="text-center pb-8 border-b">
+    <div className="space-y-6">
+      <header className="text-center pb-6 border-b">
         <div className="flex justify-center items-center gap-2">
             <Logo />
             <h1 className="font-headline text-3xl font-bold text-primary">BahujanSphere</h1>
