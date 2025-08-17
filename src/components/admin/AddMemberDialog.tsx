@@ -31,7 +31,7 @@ import {
 import { Input } from '@/components/ui/input';
 import type { TeamMember } from './TeamMemberTable';
 
-const roles: TeamMember['role'][] = ['Admin', 'Editor', 'Contributor'];
+const roles: TeamMember['role'][] = ['Admin', 'Editor', 'Reviewer', 'Contributor'];
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),

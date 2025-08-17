@@ -23,7 +23,7 @@ export interface TeamMember {
     id: number;
     name: string;
     email: string;
-    role: 'Admin' | 'Editor' | 'Contributor';
+    role: 'Admin' | 'Editor' | 'Reviewer' | 'Contributor';
     joinedAt: string;
 }
 
@@ -33,10 +33,11 @@ interface TeamMemberTableProps {
     onRemoveMember: (memberId: number) => void;
 }
 
-const roleVariant: Record<TeamMember['role'], 'default' | 'secondary' | 'outline'> = {
+const roleVariant: Record<TeamMember['role'], 'default' | 'secondary' | 'outline' | 'destructive'> = {
     'Admin': 'default',
     'Editor': 'secondary',
-    'Contributor': 'outline',
+    'Reviewer': 'outline',
+    'Contributor': 'destructive',
 }
 
 export function TeamMemberTable({ members, onUpdateRole, onRemoveMember }: TeamMemberTableProps) {

@@ -13,8 +13,9 @@ import { AddMemberDialog } from '@/components/admin/AddMemberDialog';
 const sampleTeamMembers: TeamMember[] = [
     { id: 1, name: 'Admin User', email: 'admin@bahujansphere.com', role: 'Admin', joinedAt: '2024-01-15T10:00:00Z' },
     { id: 2, name: 'Content Editor', email: 'editor@bahujansphere.com', role: 'Editor', joinedAt: '2024-02-20T11:30:00Z' },
-    { id: 3, name: 'Community Contributor', email: 'contributor1@example.com', role: 'Contributor', joinedAt: '2024-05-10T18:00:00Z' },
-    { id: 4, name: 'Another Contributor', email: 'contributor2@example.com', role: 'Contributor', joinedAt: '2024-06-01T09:00:00Z' },
+    { id: 3, name: 'Event Reviewer', email: 'reviewer@example.com', role: 'Reviewer', joinedAt: '2024-04-12T14:00:00Z' },
+    { id: 4, name: 'Community Contributor', email: 'contributor1@example.com', role: 'Contributor', joinedAt: '2024-05-10T18:00:00Z' },
+    { id: 5, name: 'Another Contributor', email: 'contributor2@example.com', role: 'Contributor', joinedAt: '2024-06-01T09:00:00Z' },
 ];
 
 

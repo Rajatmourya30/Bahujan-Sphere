@@ -27,7 +27,7 @@ interface EditRoleDialogProps {
   onSave: (newRole: TeamMember['role']) => void;
 }
 
-const roles: TeamMember['role'][] = ['Admin', 'Editor', 'Contributor'];
+const roles: TeamMember['role'][] = ['Admin', 'Editor', 'Reviewer', 'Contributor'];
 
 export function EditRoleDialog({ member, onOpenChange, onSave }: EditRoleDialogProps) {
   const [selectedRole, setSelectedRole] = useState<TeamMember['role']>(member.role);
