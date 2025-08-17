@@ -23,19 +23,19 @@ export default function GoogleAdsPage() {
     } else {
       setIsAuthenticated(true);
       // In a real app, you'd check the connection status from your backend
-      const adMobStatus = localStorage.getItem('adMobConnected') === 'true';
-      setIsConnected(adMobStatus);
+      const adSenseStatus = localStorage.getItem('adSenseConnected') === 'true';
+      setIsConnected(adSenseStatus);
     }
   }, [router]);
   
   const handleConnect = () => {
       // This is a simulation. In a real app, this would trigger an OAuth flow.
-      localStorage.setItem('adMobConnected', 'true');
+      localStorage.setItem('adSenseConnected', 'true');
       setIsConnected(true);
   }
   
   const handleDisconnect = () => {
-      localStorage.removeItem('adMobConnected');
+      localStorage.removeItem('adSenseConnected');
       setIsConnected(false);
   }
 
@@ -72,7 +72,7 @@ export default function GoogleAdsPage() {
           <div className="flex items-center space-x-4 rounded-md border p-4">
             <Megaphone className="h-8 w-8" />
             <div className="flex-1 space-y-1">
-              <p className="text-sm font-medium leading-none">Google AdMob</p>
+              <p className="text-sm font-medium leading-none">Google AdSense</p>
               <p className="text-sm text-muted-foreground">
                 {t('google_ads_page.service_description')}
               </p>

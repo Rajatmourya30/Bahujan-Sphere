@@ -26,7 +26,7 @@ export function AdRevenueChart() {
         <Card>
             <CardHeader>
                 <CardTitle>Ad Revenue Over Time</CardTitle>
-                <CardDescription>Monthly ad revenue from AdMob</CardDescription>
+                <CardDescription>Monthly ad revenue from AdSense</CardDescription>
             </CardHeader>
             <CardContent>
                 <ChartContainer config={chartConfig} className="h-[250px] w-full">
