@@ -17,6 +17,7 @@ import {
   HeartHandshake,
   Home,
   Library,
+  Megaphone,
   Store,
   UserCog,
   Users,
@@ -47,6 +48,7 @@ export default function AdminLayout({
     canManageTeam: userRole === 'Admin' || userRole === 'Editor',
     canManageContent: userRole === 'Admin' || userRole === 'Editor',
     canAccessCalendar: userRole === 'Admin' || userRole === 'Editor' || userRole === 'Contributor' || userRole === 'Reviewer',
+    canManageAds: userRole === 'Admin',
   };
   
   const navItems = [
@@ -57,6 +59,7 @@ export default function AdminLayout({
       { href: '/admin/donations', label: 'Donations', icon: HeartHandshake, visible: permissions.canManageDonations },
       { href: '/admin/users', label: 'Users', icon: Users, visible: permissions.canManageUsers },
       { href: '/admin/team', label: 'Team', icon: UserCog, visible: permissions.canManageTeam },
+      { href: '/admin/google-ads', label: 'Google Ads', icon: Megaphone, visible: permissions.canManageAds },
   ].filter(item => item.visible);
 
   return (
