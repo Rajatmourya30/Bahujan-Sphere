@@ -9,6 +9,13 @@ import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
 import { Eye, LogOut, Users, UserCog, HeartHandshake, Library, Store, Calendar, Activity, UserPlus, Bookmark, Gift } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import dynamic from 'next/dynamic';
+import { DonationsTrendChart } from '@/components/admin/DonationsTrendChart';
+
+const UserGrowthChart = dynamic(
+  () => import('@/components/admin/UserGrowthChart').then((mod) => mod.UserGrowthChart),
+  { ssr: false }
+);
 
 type UserRole = 'Admin' | 'Editor' | 'Reviewer' | 'Contributor' | null;
 
@@ -124,6 +131,11 @@ export default function AdminDashboardPage() {
                 <p className="text-xs text-muted-foreground">Across all users</p>
             </CardContent>
         </Card>
+      </section>
+
+      <section className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+        <UserGrowthChart />
+        <DonationsTrendChart />
       </section>
 
       <section>
