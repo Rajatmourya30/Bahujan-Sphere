@@ -3,39 +3,35 @@
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLanguage } from '@/hooks/use-language';
-import { allStoreItems, type StoreItem } from '@/lib/store';
+import { allBahujanStores, type BahujanStore } from '@/lib/store';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Badge } from '@/components/ui/badge';
 
-function StoreItemCard({ item }: { item: StoreItem }) {
+function StoreCard({ store }: { store: BahujanStore }) {
     const { t } = useLanguage();
 
     return (
-        <Card className="flex flex-col">
-            <CardHeader className="p-0">
-                <div className="relative aspect-square w-full overflow-hidden rounded-t-lg">
+        <Card className="flex flex-col text-center">
+            <CardHeader className="items-center">
+                <div className="relative h-24 w-24 overflow-hidden rounded-full border">
                     <Image
-                        src={item.imageUrl}
-                        alt={t(item.titleKey)}
+                        src={store.imageUrl}
+                        alt={t(store.nameKey)}
                         fill
                         className="object-cover"
-                        data-ai-hint={item.imageAiHint}
+                        data-ai-hint={store.imageAiHint}
                     />
                 </div>
             </CardHeader>
-            <CardContent className="flex-grow p-4">
-                <CardTitle className="text-md font-headline">{t(item.titleKey)}</CardTitle>
-                <p className="mt-2 text-sm text-muted-foreground">{t(item.descriptionKey)}</p>
+            <CardContent className="flex-grow">
+                <CardTitle className="font-headline text-lg">{t(store.nameKey)}</CardTitle>
+                <CardDescription className="mt-2 text-sm">{t(store.descriptionKey)}</CardDescription>
             </CardContent>
-            <CardFooter className="flex flex-col items-start gap-4 p-4 pt-0">
-                <Badge variant="secondary" className="text-lg font-bold">
-                    {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(item.price)}
-                </Badge>
+            <CardFooter>
                 <Button asChild className="w-full">
-                    <Link href={item.storeUrl} target="_blank">
-                        {t('store.buy_now_button')}
+                    <Link href={store.storeUrl} target="_blank">
+                        {t('store.visit_store_button')}
                     </Link>
                 </Button>
             </CardFooter>
@@ -55,9 +51,9 @@ export default function StorePage() {
                 </p>
             </header>
             
-            <div className="grid grid-cols-2 gap-4">
-                {allStoreItems.map(item => (
-                    <StoreItemCard key={item.id} item={item} />
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                {allBahujanStores.map(item => (
+                    <StoreCard key={item.id} store={item} />
                 ))}
             </div>
 

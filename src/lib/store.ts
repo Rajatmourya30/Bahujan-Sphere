@@ -1,51 +1,46 @@
 
 import type { TranslationKey } from './i18n/translations';
 
-export interface StoreItem {
+export interface BahujanStore {
   id: string;
-  titleKey: TranslationKey;
+  nameKey: TranslationKey;
   descriptionKey: TranslationKey;
   imageUrl: string;
   imageAiHint: string;
-  price: number; // in INR
   storeUrl: string;
 }
 
-export const allStoreItems: StoreItem[] = [
+export const allBahujanStores: BahujanStore[] = [
   {
-    id: 'book-1',
-    titleKey: 'store_item_1_title',
-    descriptionKey: 'store_item_1_desc',
+    id: 'store-1',
+    nameKey: 'store_name_1',
+    descriptionKey: 'store_desc_1',
     imageUrl: 'https://placehold.co/400x400.png',
-    imageAiHint: 'book cover',
-    price: 499,
-    storeUrl: 'https://example.com/store/book1',
+    imageAiHint: 'store logo',
+    storeUrl: 'https://www.thedalitstore.com/',
   },
   {
-    id: 'tshirt-1',
-    titleKey: 'store_item_2_title',
-    descriptionKey: 'store_item_2_desc',
+    id: 'store-2',
+    nameKey: 'store_name_2',
+    descriptionKey: 'store_desc_2',
     imageUrl: 'https://placehold.co/400x400.png',
-    imageAiHint: 'blue t-shirt',
-    price: 799,
-    storeUrl: 'https://example.com/store/tshirt1',
+    imageAiHint: 'bookstore logo',
+    storeUrl: 'https://www.navayana.org/',
   },
   {
-    id: 'course-1',
-    titleKey: 'store_item_3_title',
-    descriptionKey: 'store_item_3_desc',
+    id: 'store-3',
+    nameKey: 'store_name_3',
+    descriptionKey: 'store_desc_3',
     imageUrl: 'https://placehold.co/400x400.png',
-    imageAiHint: 'online course',
-    price: 2999,
-    storeUrl: 'https://example.com/store/course1',
+    imageAiHint: 'art logo',
+    storeUrl: 'https://www.instagram.com/bahujanartproject/',
   },
   {
-    id: 'poster-1',
-    titleKey: 'store_item_4_title',
-    descriptionKey: 'store_item_4_desc',
+    id: 'store-4',
+    nameKey: 'store_name_4',
+    descriptionKey: 'store_desc_4',
     imageUrl: 'https://placehold.co/400x400.png',
-    imageAiHint: 'art poster',
-    price: 249,
-    storeUrl: 'https://example.com/store/poster1',
+    imageAiHint: 'tech logo',
+    storeUrl: 'https://www.equalitylabs.org/store',
   },
 ];
