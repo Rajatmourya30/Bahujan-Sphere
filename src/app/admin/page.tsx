@@ -8,7 +8,7 @@ import { EventSubmissionForm } from '@/components/submit/EventSubmissionForm';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
-import { Eye, LogOut } from 'lucide-react';
+import { Eye, LogOut, Users } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BulkUploadForm } from '@/components/submit/BulkUploadForm';
 
@@ -52,6 +52,12 @@ export default function AdminDashboardPage() {
             <p className="text-muted-foreground">{t('admin_dashboard.description')}</p>
         </div>
         <div className="flex gap-2">
+            <Button asChild variant="outline">
+                <Link href="/admin/users">
+                    <Users className="mr-2 h-4 w-4" />
+                    Manage Users
+                </Link>
+            </Button>
             <Button asChild variant="outline">
                 <Link href="/">
                     <Eye className="mr-2 h-4 w-4" />
