@@ -19,7 +19,20 @@ import type { CalendarEvent } from "@/lib/events";
 import { Badge } from "../ui/badge";
 import { Input } from "../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { mockEventsByDay } from "@/lib/events";
+
+const getMonthFromEvent = (event: CalendarEvent): number | null => {
+    // This is a simplified way to get a month for mock data.
+    // A real implementation would parse a real date string.
+    // Find the first date in the year this event occurs on
+    const year = new Date().getFullYear();
+    for (let month = 0; month < 12; month++) {
+        const date = new Date(year, month, event.day);
+        if (date.getDate() === event.day) {
+            return month;
+        }
+    }
+    return null;
+}
 
 interface EventManagementTableProps {
     events: CalendarEvent[];
@@ -28,23 +41,6 @@ interface EventManagementTableProps {
     onAdd: () => void;
 }
 
-const getMonthFromEvent = (event: CalendarEvent): number | null => {
-    // This is a simplified way to get a month for mock data.
-    // A real implementation would parse a real date string.
-    for (const day in mockEventsByDay) {
-        if (mockEventsByDay[day as keyof typeof mockEventsByDay].some(e => e.id === event.id)) {
-            // Find the first date in the year this event occurs on
-            const year = new Date().getFullYear();
-            for (let month = 0; month < 12; month++) {
-                const date = new Date(year, month, parseInt(day, 10));
-                if (date.getDate() === parseInt(day, 10)) {
-                    return month;
-                }
-            }
-        }
-    }
-    return null;
-}
 
 export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventManagementTableProps) {
     const { t } = useLanguage();
@@ -111,6 +107,7 @@ export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventM
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Title</TableHead>
+                                <TableHead>Day</TableHead>
                                 <TableHead>Tags</TableHead>
                                 <TableHead>Description</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
@@ -122,6 +119,7 @@ export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventM
                                     <TableCell className="font-medium">
                                         <span className="font-bold">{t(event.titleKey)}</span>
                                     </TableCell>
+                                    <TableCell>{event.day}</TableCell>
                                     <TableCell>
                                         <div className="flex flex-wrap gap-1">
                                             {event.tagKeys.map(tagKey => (
@@ -159,7 +157,7 @@ export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventM
                                 </TableRow>
                             )) : (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="h-24 text-center">
+                                    <TableCell colSpan={5} className="h-24 text-center">
                                         No results found.
                                     </TableCell>
                                 </TableRow>

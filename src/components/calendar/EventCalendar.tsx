@@ -5,9 +5,8 @@ import { useMemo, useState } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '../ui/button';
-import Link from 'next/link';
 import { useLanguage } from '@/hooks/use-language';
-import { mockEventsByDay, type CalendarEvent } from '@/lib/events';
+import { allEvents, type CalendarEvent } from '@/lib/events';
 import { Badge } from '../ui/badge';
 import { Bookmark } from 'lucide-react';
 import { useBookmarks } from '@/hooks/use-bookmarks';
@@ -78,10 +77,14 @@ export function EventCalendar() {
     const dates: Date[] = [];
     // Note: This is a simplified approach for mock data.
     // A real implementation should handle events spanning multiple years.
-    Object.keys(mockEventsByDay).forEach(day => {
+    allEvents.forEach(event => {
         // We need to iterate through months, as the day doesn't specify one.
         for (let month = 0; month < 12; month++) {
-           dates.push(new Date(year, month, parseInt(day, 10)));
+           const eventDate = new Date(year, month, event.day);
+           // check if the date is valid for that month
+           if (eventDate.getDate() === event.day) {
+               dates.push(eventDate);
+           }
         }
     });
     return dates;
@@ -89,9 +92,8 @@ export function EventCalendar() {
 
   const dayEvents = useMemo(() => {
     if (!date) return [];
-    // We only use the day of the month for our mock data key.
-    const dayKey = date.getDate().toString();
-    return mockEventsByDay[dayKey as keyof typeof mockEventsByDay] || [];
+    const dayOfMonth = date.getDate();
+    return allEvents.filter(event => event.day === dayOfMonth);
   }, [date]);
 
   return (

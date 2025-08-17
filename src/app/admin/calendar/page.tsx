@@ -94,9 +94,9 @@ export default function ManageCalendarPage() {
       </header>
 
       <Tabs defaultValue={defaultTab} className="space-y-6">
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
           {availableTabs.map(tab => (
-            <TabsTrigger key={tab.value} value={tab.value}>{tab.label}</TabsTrigger>
+            <TabsTrigger key={tab.value} value={tab.value} className="hover:bg-background/80">{tab.label}</TabsTrigger>
           ))}
         </TabsList>
 

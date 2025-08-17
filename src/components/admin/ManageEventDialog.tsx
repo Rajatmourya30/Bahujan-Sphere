@@ -31,6 +31,7 @@ const formSchema = z.object({
   descriptionKey: z.string().min(1, 'Key is required') as z.ZodType<TranslationKey>,
   tagKeys: z.string().min(1, 'At least one tag key is required').transform(val => val.split(',').map(s => s.trim()) as TranslationKey[]),
   readMoreUrl: z.string().url('Must be a valid URL'),
+  day: z.coerce.number().min(1, 'Day must be between 1 and 31').max(31, 'Day must be between 1 and 31'),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -49,6 +50,7 @@ export function ManageEventDialog({ event, onOpenChange, onSave }: ManageEventDi
       descriptionKey: event?.descriptionKey || '',
       tagKeys: event?.tagKeys || [],
       readMoreUrl: event?.readMoreUrl || '',
+      day: event?.day || undefined,
     },
   });
 
@@ -76,6 +78,19 @@ export function ManageEventDialog({ event, onOpenChange, onSave }: ManageEventDi
                   <FormLabel>Title Key</FormLabel>
                   <FormControl>
                     <Input placeholder="e.g. event_ambedkar_birth_title" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="day"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Day of Month</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="e.g., 14" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
