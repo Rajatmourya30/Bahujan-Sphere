@@ -2,18 +2,25 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Allow users to manage their own document in the 'users' collection
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    match /readingRoomPdfs/{docId} {
-      allow read: if true;
-      allow write: if request.auth != null;
+    // Allow any authenticated user (admins) to read the list of all users
+    match /users/{document=**} {
+      allow get, list: if request.auth != null;
     }
 
-    match /teamMembers/{docId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null; // In a real app, you'd restrict this to Admins
+    // Allow authenticated users to manage the team members collection
+    match /teamMembers/{memberId} {
+      allow read, create, update, delete: if request.auth != null;
+    }
+
+    // Allow authenticated users to manage the reading room PDFs
+    match /readingRoomPdfs/{pdfId} {
+        allow read, create, update, delete: if request.auth != null;
     }
   }
 }
