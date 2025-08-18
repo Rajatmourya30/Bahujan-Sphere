@@ -30,7 +30,7 @@ const formSchema = z.object({
   titleKey: z.string().min(1, 'Key is required'),
   authorKey: z.string().min(1, 'Key is required'),
   descriptionKey: z.string().min(1, 'Key is required'),
-  imageUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  imageUrl: z.string().url().optional(), // Keep track of existing image
   imageFile: z.any().optional(),
   imageAiHint: z.string().min(1, 'AI Hint is required'),
   affiliateUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
@@ -75,15 +75,28 @@ export function ManageBookDialog({
   const onSubmit = (values: FormValues) => {
     // In a real app, you would handle the file uploads here
     // and set the URLs based on the uploaded file's location.
+    
+    // Create a mutable copy to work with
+    const bookData: Partial<FormValues> & Omit<Book, 'id'> = {
+        titleKey: values.titleKey,
+        authorKey: values.authorKey,
+        descriptionKey: values.descriptionKey,
+        imageAiHint: values.imageAiHint,
+        affiliateUrl: values.affiliateUrl || '',
+        pdfUrl: values.pdfUrl || '',
+        imageUrl: values.imageUrl || '',
+    };
+    
     if (values.pdfFile && values.pdfFile.length > 0) {
         console.log("Uploaded PDF:", values.pdfFile[0].name);
-        values.pdfUrl = `/pdfs/${values.pdfFile[0].name}`;
+        bookData.pdfUrl = `/pdfs/${values.pdfFile[0].name}`; // Simulate URL
     }
     if (values.imageFile && values.imageFile.length > 0) {
         console.log("Uploaded image:", values.imageFile[0].name);
-        values.imageUrl = `https://placehold.co/400x600.png`; // Placeholder URL after upload
+        bookData.imageUrl = `https://placehold.co/400x600.png`; // Placeholder URL after upload
     }
-    onSave(values);
+
+    onSave(bookData);
     onOpenChange(false);
   };
 
@@ -98,7 +111,7 @@ export function ManageBookDialog({
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-             <ScrollArea className="max-h-[70vh] -mr-6 pr-6">
+             <ScrollArea className="max-h-[70vh] -mr-3 pr-4">
                 <div className="space-y-4 py-4 px-1">
                     <FormField
                     control={form.control}
@@ -212,19 +225,9 @@ export function ManageBookDialog({
                             </FormItem>
                             )}
                         />
-                        <FormField
-                            control={form.control}
-                            name="pdfUrl"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Or enter PDF URL</FormLabel>
-                                <FormControl>
-                                <Input type="url" placeholder="https://example.com/book.pdf" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
+                         {book?.pdfUrl && !form.watch('pdfFile') && (
+                            <div className="text-sm text-muted-foreground">Current PDF: <a href={book.pdfUrl} target="_blank" rel="noopener noreferrer" className="underline">View PDF</a></div>
+                        )}
                     </>
                     )}
                 </div>
