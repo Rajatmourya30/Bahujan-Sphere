@@ -61,10 +61,14 @@ export default function SignupPage() {
             const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
             const user = userCredential.user;
 
-            const { password, ...rest } = values;
+            // Explicitly create the data object for Firestore, ensuring birthYear is a number.
             const profileData = {
-              ...rest,
-              birthYear: Number(values.birthYear) // Ensure birthYear is a number
+              name: values.name,
+              email: values.email,
+              country: values.country,
+              state: values.state,
+              city: values.city,
+              birthYear: Number(values.birthYear)
             };
 
             await setDoc(doc(db, "users", user.uid), profileData);
