@@ -16,7 +16,7 @@ import { DonationDialog } from '@/components/profile/DonationDialog';
 import { auth, db, storage } from '@/lib/firebase';
 import { onAuthStateChanged, signOut, deleteUser } from 'firebase/auth';
 import { doc, getDoc, deleteDoc, updateDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { DeleteAccountDialog } from '@/components/profile/DeleteAccountDialog';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
@@ -70,41 +70,41 @@ export default function ProfilePage() {
     }
   };
 
-  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     const firebaseUser = auth.currentUser;
     if (!file || !firebaseUser) return;
 
-    const storageRef = ref(storage, `profile-pictures/${firebaseUser.uid}`);
-    setUploadProgress(0);
-
-    try {
-        if (user?.photoUrl) {
-            const oldPhotoRef = ref(storage, user.photoUrl);
-            await deleteObject(oldPhotoRef).catch(err => console.log("Old photo not found, skipping delete.", err));
-        }
-
-        const snapshot = await uploadBytes(storageRef, file, {
-            contentType: file.type,
-        });
-        
-        // This is a simplified progress simulation, as uploadBytes doesn't provide progress.
-        // For real progress, you would use uploadBytesResumable.
-        setUploadProgress(100); 
-
-        const downloadURL = await getDownloadURL(snapshot.ref);
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
-        await updateDoc(userDocRef, { photoUrl: downloadURL });
-        
-        setUser(prevUser => prevUser ? { ...prevUser, photoUrl: downloadURL } : null);
-
-        toast({ title: "Profile Picture Updated", description: "Your new photo has been saved." });
-    } catch (error) {
-        console.error("Error uploading profile picture:", error);
-        toast({ title: "Upload Failed", description: "Could not upload your profile picture.", variant: "destructive" });
-    } finally {
-        setTimeout(() => setUploadProgress(null), 1000);
+    // Delete old photo first
+    if (user?.photoUrl) {
+        const oldPhotoRef = ref(storage, user.photoUrl);
+        deleteObject(oldPhotoRef).catch(err => console.log("Old photo not found, skipping delete.", err));
     }
+
+    const storageRef = ref(storage, `profile-pictures/${firebaseUser.uid}/${file.name}`);
+    const uploadTask = uploadBytesResumable(storageRef, file);
+
+    uploadTask.on('state_changed',
+        (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            setUploadProgress(progress);
+        },
+        (error) => {
+            console.error("Error uploading profile picture:", error);
+            toast({ title: "Upload Failed", description: "Could not upload your profile picture.", variant: "destructive" });
+            setUploadProgress(null);
+        },
+        async () => {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            const userDocRef = doc(db, 'users', firebaseUser.uid);
+            await updateDoc(userDocRef, { photoUrl: downloadURL });
+
+            setUser(prevUser => prevUser ? { ...prevUser, photoUrl: downloadURL } : null);
+            toast({ title: "Profile Picture Updated", description: "Your new photo has been saved." });
+            
+            setTimeout(() => setUploadProgress(null), 1000);
+        }
+    );
   };
   
   const handleRemovePhoto = async () => {
@@ -122,7 +122,16 @@ export default function ProfilePage() {
           toast({ title: "Profile Picture Removed" });
       } catch (error) {
           console.error("Error removing profile picture:", error);
-          toast({ title: "Removal Failed", description: "Could not remove your profile picture.", variant: "destructive" });
+          let description = "Could not remove your profile picture.";
+          // It's possible the file doesn't exist in storage but the URL is in firestore
+          if (error instanceof Error && 'code' in error && (error as any).code === 'storage/object-not-found') {
+              const userDocRef = doc(db, 'users', firebaseUser.uid);
+              await updateDoc(userDocRef, { photoUrl: '' });
+              setUser(prevUser => prevUser ? { ...prevUser, photoUrl: '' } : null);
+              toast({ title: "Profile Picture Removed" });
+          } else {
+            toast({ title: "Removal Failed", description, variant: "destructive" });
+          }
       }
   };
 
@@ -134,9 +143,16 @@ export default function ProfilePage() {
     }
 
     try {
+        // Also delete profile picture from storage if it exists
+        if (user?.photoUrl) {
+            const photoRef = ref(storage, user.photoUrl);
+            await deleteObject(photoRef).catch(err => console.log("Photo not found, skipping delete.", err));
+        }
+        
         const userDocRef = doc(db, 'users', firebaseUser.uid);
         await deleteDoc(userDocRef);
         await deleteUser(firebaseUser);
+
         toast({ title: 'Account Deleted', description: 'Your account has been permanently deleted.' });
         router.push('/signup');
     } catch (error: any) {
