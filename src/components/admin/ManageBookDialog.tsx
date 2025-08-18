@@ -30,12 +30,17 @@ const formSchema = z.object({
   titleKey: z.string().min(1, 'Key is required'),
   authorKey: z.string().min(1, 'Key is required'),
   descriptionKey: z.string().min(1, 'Key is required'),
-  imageUrl: z.string().url('Must be a valid URL'),
+  imageUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  imageFile: z.any().optional(),
   imageAiHint: z.string().min(1, 'AI Hint is required'),
   affiliateUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   pdfUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   pdfFile: z.any().optional(),
+}).refine(data => data.imageUrl || (data.imageFile && data.imageFile.length > 0), {
+    message: "An image URL or an uploaded image is required.",
+    path: ["imageFile"],
 });
+
 
 type FormValues = z.infer<typeof formSchema>;
 
@@ -68,13 +73,15 @@ export function ManageBookDialog({
   });
 
   const onSubmit = (values: FormValues) => {
-    // In a real app, you would handle the file upload here
-    // and set the pdfUrl based on the uploaded file's location.
-    // For this demo, we'll just log the file name if it exists.
+    // In a real app, you would handle the file uploads here
+    // and set the URLs based on the uploaded file's location.
     if (values.pdfFile && values.pdfFile.length > 0) {
-        console.log("Uploaded file:", values.pdfFile[0].name);
-        // This is where you would set the actual URL after upload
+        console.log("Uploaded PDF:", values.pdfFile[0].name);
         values.pdfUrl = `/pdfs/${values.pdfFile[0].name}`;
+    }
+    if (values.imageFile && values.imageFile.length > 0) {
+        console.log("Uploaded image:", values.imageFile[0].name);
+        values.imageUrl = `https://placehold.co/400x600.png`; // Placeholder URL after upload
     }
     onSave(values);
     onOpenChange(false);
@@ -133,18 +140,28 @@ export function ManageBookDialog({
                     )}
                     />
                     <FormField
-                    control={form.control}
-                    name="imageUrl"
-                    render={({ field }) => (
+                        control={form.control}
+                        name="imageFile"
+                        render={({ field: { onChange, value, ...rest } }) => (
                         <FormItem>
-                        <FormLabel>Image URL</FormLabel>
-                        <FormControl>
-                            <Input type="url" placeholder="https://placehold.co/400x600.png" {...field} />
-                        </FormControl>
-                        <FormMessage />
+                            <FormLabel>Book Cover Image</FormLabel>
+                            <FormControl>
+                            <Input 
+                                type="file" 
+                                accept="image/png, image/jpeg, image/webp"
+                                onChange={(e) => {
+                                    onChange(e.target.files);
+                                }}
+                                {...rest} 
+                            />
+                            </FormControl>
+                            <FormMessage />
                         </FormItem>
-                    )}
+                        )}
                     />
+                     {book?.imageUrl && !form.watch('imageFile') && (
+                        <div className="text-sm text-muted-foreground">Current image: <a href={book.imageUrl} target="_blank" rel="noopener noreferrer" className="underline">View Image</a></div>
+                     )}
                     <FormField
                     control={form.control}
                     name="imageAiHint"
