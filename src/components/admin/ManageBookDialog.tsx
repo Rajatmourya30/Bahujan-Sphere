@@ -62,8 +62,6 @@ export function ManageBookDialog({
     },
   });
   
-  // We need to manage image and PDF URLs outside the form state
-  // as they are handled by a separate component.
   const [imageUrl, setImageUrl] = React.useState(book?.imageUrl || '');
   const [pdfUrl, setPdfUrl] = React.useState(book?.pdfUrl || '');
 

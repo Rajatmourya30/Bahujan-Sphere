@@ -24,6 +24,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import type { BahujanStore } from '@/lib/store';
+import { ScrollArea } from '../ui/scroll-area';
 
 const formSchema = z.object({
   nameKey: z.string().min(1, 'Key is required'),
@@ -68,73 +69,77 @@ export function ManageStoreDialog({ store, onOpenChange, onSave }: ManageStoreDi
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-            <FormField
-              control={form.control}
-              name="nameKey"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name Key</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. store_name_1" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="descriptionKey"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description Key</FormLabel>
-                  <FormControl>
-                     <Textarea placeholder="e.g. store_desc_1" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="imageUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Image URL</FormLabel>
-                  <FormControl>
-                    <Input type="url" placeholder="https://placehold.co/400x400.png" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="storeUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Store URL</FormLabel>
-                  <FormControl>
-                    <Input type="url" placeholder="https://example.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="imageAiHint"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Image AI Hint</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. store logo" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <DialogFooter className="pt-4">
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <ScrollArea className="max-h-[60vh] p-4">
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="nameKey"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name Key</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. store_name_1" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="descriptionKey"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description Key</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="e.g. store_desc_1" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="imageUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Image URL</FormLabel>
+                      <FormControl>
+                        <Input type="url" placeholder="https://placehold.co/400x400.png" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="storeUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Store URL</FormLabel>
+                      <FormControl>
+                        <Input type="url" placeholder="https://example.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="imageAiHint"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Image AI Hint</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. store logo" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </ScrollArea>
+            <DialogFooter className="pt-4 px-6 pb-6">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
