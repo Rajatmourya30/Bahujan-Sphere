@@ -1,4 +1,4 @@
-import { BottomNav } from '@/components/layout/BottomNav';
+import { Header } from '@/components/layout/Header';
 
 export default function AppLayout({
   children,
@@ -6,11 +6,11 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative mx-auto flex h-screen max-w-md flex-col overflow-hidden border-x bg-background shadow-lg">
-      <main className="flex-grow overflow-y-auto p-3 pt-4">
+    <div className="flex min-h-screen flex-col">
+      <Header />
+      <main className="container mx-auto flex-grow p-4 sm:p-6 lg:p-8">
         {children}
       </main>
-      <BottomNav />
     </div>
   );
 }
