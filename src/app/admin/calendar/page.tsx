@@ -11,26 +11,47 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EventSubmissionForm } from '@/components/submit/EventSubmissionForm';
 import { BulkUploadForm } from '@/components/submit/BulkUploadForm';
 import { ReviewSubmissionsTab } from '@/components/admin/ReviewSubmissionsTab';
+import { onAuthStateChanged, type User } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 type UserRole = 'Admin' | 'Editor' | 'Reviewer' | 'Contributor' | null;
 
 export default function ManageCalendarPage() {
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [events, setEvents] = useState(allEvents);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [userRole, setUserRole] = useState<UserRole>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const authStatus = localStorage.getItem('isAdminAuthenticated');
-    const role = localStorage.getItem('adminUserRole') as UserRole;
-    if (authStatus !== 'true' || !role) {
-      router.replace('/admin/login');
-    } else {
-      setIsAuthenticated(true);
-      setUserRole(role);
-    }
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setFirebaseUser(user);
+        
+        const teamQuery = query(collection(db, "teamMembers"), where("email", "==", user.email));
+        const querySnapshot = await getDocs(teamQuery);
+        
+        if (!querySnapshot.empty) {
+          const userDoc = querySnapshot.docs[0].data();
+          const role = userDoc.role as UserRole;
+          setUserRole(role);
+          localStorage.setItem('adminUserRole', role || '');
+        } else {
+          // If not a team member, treat as unauthorized for this page
+          router.replace('/admin/login');
+          return;
+        }
+
+      } else {
+        router.replace('/admin/login');
+      }
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
   }, [router]);
 
   const handleOpenDialog = (event: CalendarEvent | null = null) => {
@@ -58,7 +79,7 @@ export default function ManageCalendarPage() {
       canReview: userRole === 'Admin' || userRole === 'Editor' || userRole === 'Reviewer',
   };
 
-  if (!isAuthenticated || !userRole) {
+  if (isLoading || !userRole) {
     return (
       <div className="space-y-4 p-4">
         <Skeleton className="h-10 w-1/3" />
