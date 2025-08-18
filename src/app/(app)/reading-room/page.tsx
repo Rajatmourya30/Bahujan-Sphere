@@ -1,72 +1,70 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLanguage } from '@/hooks/use-language';
-import { allBooks, type Book } from '@/lib/books';
-import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel } from '@/components/ui/alert-dialog';
+import { db } from '@/lib/firebase';
+import { collection, query, orderBy, onSnapshot, type Timestamp } from 'firebase/firestore';
+import { Loader2 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
-function ReadingRoomBookCard({ book }: { book: Book }) {
+interface ReadingRoomPdf {
+  id: string;
+  title: string;
+  author?: string;
+  url: string;
+  uploadedAt: Timestamp;
+}
+
+function ReadingRoomBookCard({ pdf }: { pdf: ReadingRoomPdf }) {
     const { t } = useLanguage();
-    const [isAlertOpen, setIsAlertOpen] = useState(false);
-
-    const handleReadClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-        if (!book.pdfUrl) {
-            e.preventDefault();
-            setIsAlertOpen(true);
-        }
-    };
 
     return (
-        <>
-            <Card className="flex flex-col">
-                <CardHeader className="flex-row items-start gap-4">
-                    <div className="relative h-32 w-24 flex-shrink-0">
-                        <Image
-                            src={book.imageUrl}
-                            alt={t(book.titleKey)}
-                            fill
-                            className="object-cover rounded-md"
-                            data-ai-hint={book.imageAiHint}
-                        />
-                    </div>
-                    <div className="flex-grow">
-                        <CardTitle className="font-headline text-lg">{t(book.titleKey)}</CardTitle>
-                        <CardDescription className="text-sm font-medium">{t(book.authorKey)}</CardDescription>
-                        <CardDescription className="mt-2 text-sm line-clamp-3">{t(book.descriptionKey)}</CardDescription>
-                    </div>
-                </CardHeader>
-                <CardFooter className="mt-auto">
-                    <Button asChild className="w-full" disabled={!book.pdfUrl}>
-                        <Link href={book.pdfUrl ? `/reading-room/${book.id}` : '#'} onClick={handleReadClick}>
-                            {book.pdfUrl ? t('reading_room.read_now_button') : t('reading_room.coming_soon_button')}
-                        </Link>
-                    </Button>
-                </CardFooter>
-            </Card>
-            <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>{t('reading_room.not_available_title')}</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            {t('reading_room.not_available_desc')}
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Close</AlertDialogCancel>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-        </>
+        <Card className="flex flex-col">
+            <CardHeader>
+                <CardTitle className="font-headline text-lg">{pdf.title}</CardTitle>
+                {pdf.author && <CardDescription className="text-sm font-medium">{pdf.author}</CardDescription>}
+            </CardHeader>
+            <CardContent className="flex-grow">
+                <p className="text-sm text-muted-foreground line-clamp-3">
+                    A publicly available document for reading and study.
+                </p>
+            </CardContent>
+            <CardFooter className="mt-auto">
+                <Button asChild className="w-full">
+                    <Link href={`/reading-room/${pdf.id}`}>
+                        {t('reading_room.read_now_button')}
+                    </Link>
+                </Button>
+            </CardFooter>
+        </Card>
     )
 }
 
 export default function ReadingRoomPage() {
     const { t } = useLanguage();
+    const [pdfs, setPdfs] = useState<ReadingRoomPdf[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const q = query(collection(db, "readingRoomPdfs"), orderBy("uploadedAt", "desc"));
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const fetchedPdfs: ReadingRoomPdf[] = [];
+            querySnapshot.forEach((doc) => {
+                fetchedPdfs.push({ id: doc.id, ...doc.data() } as ReadingRoomPdf);
+            });
+            setPdfs(fetchedPdfs);
+            setIsLoading(false);
+        }, (error) => {
+            console.error("Error fetching PDFs:", error);
+            setIsLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     return (
         <div className="space-y-8">
@@ -77,11 +75,25 @@ export default function ReadingRoomPage() {
                 </p>
             </header>
             
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                {allBooks.map(item => (
-                    <ReadingRoomBookCard key={item.id} book={item} />
-                ))}
-            </div>
+            {isLoading ? (
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <Skeleton className="h-64 w-full" />
+                    <Skeleton className="h-64 w-full" />
+                </div>
+            ) : pdfs.length > 0 ? (
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    {pdfs.map(pdf => (
+                        <ReadingRoomBookCard key={pdf.id} pdf={pdf} />
+                    ))}
+                </div>
+            ) : (
+                <Card className="text-center py-16">
+                    <CardContent>
+                        <h3 className="text-lg font-medium">No Documents Available</h3>
+                        <p className="text-muted-foreground mt-2">Check back later for new additions to the reading room.</p>
+                    </CardContent>
+                </Card>
+            )}
         </div>
     );
 }

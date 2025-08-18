@@ -77,6 +77,13 @@ export default function ManageReadingRoomPage() {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+        if (file.type !== 'application/pdf') {
+            setStatusMessage({ type: 'error', text: 'Please select a valid PDF file.'});
+            setFileToUpload(null);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
+        setStatusMessage({ type: '', text: ''});
         setFileToUpload(file);
     }
   };
@@ -87,7 +94,7 @@ export default function ManageReadingRoomPage() {
         return;
     }
     if (!fileToUpload || !title) {
-        setStatusMessage({ type: 'error', text: 'Please select a file and provide a title.' });
+        setStatusMessage({ type: 'error', text: 'Please select a PDF file and provide a title.' });
         return;
     }
 
@@ -209,7 +216,7 @@ export default function ManageReadingRoomPage() {
                         {pdf.author && <p className="text-sm text-muted-foreground">{pdf.author}</p>}
                       </div>
                       <Button asChild size="sm">
-                        <Link href={pdf.url} target="_blank" rel="noopener noreferrer">
+                        <Link href={`/reading-room/${pdf.id}`} target="_blank" rel="noopener noreferrer">
                           <BookOpen className="mr-2" />
                           View
                         </Link>
