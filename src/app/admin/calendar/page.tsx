@@ -39,12 +39,13 @@ export default function ManageCalendarPage() {
           const role = userDoc.role as UserRole;
           setUserRole(role);
         } else {
-           // If not a team member, they are not authorized for this page.
-           // Redirect them to the main admin dashboard which explains their role.
-           router.replace('/admin');
+            // A non-team member might be logged in. We can treat them as having no role.
+            // The layout already protects against unauthorized access.
+            setUserRole(null); 
         }
 
       } else {
+        // This case is handled by the AdminLayout, but as a fallback:
         router.replace('/admin/login');
       }
       setIsLoading(false);
@@ -79,7 +80,7 @@ export default function ManageCalendarPage() {
       canReview: userRole === 'Admin' || userRole === 'Editor' || userRole === 'Reviewer',
   };
 
-  if (isLoading || !userRole) {
+  if (isLoading) {
     return (
       <div className="space-y-4 p-4">
         <Skeleton className="h-10 w-1/3" />
@@ -103,7 +104,7 @@ export default function ManageCalendarPage() {
         <div className="space-y-8">
             <header>
                 <h1 className="font-headline text-3xl font-bold">Manage Calendar</h1>
-                <p className="text-muted-foreground">You do not have permission to access this page.</p>
+                <p className="text-muted-foreground">You do not have permission to access calendar features.</p>
             </header>
         </div>
     )
