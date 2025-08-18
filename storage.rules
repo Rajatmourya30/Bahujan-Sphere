@@ -2,13 +2,24 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Public read access for any file
-    match /{allPaths=**} {
-      allow read;
-    }
     
-    // Allow authenticated users to write to the 'pdfs' folder
-    match /pdfs/{pdfId} {
+    // Rule for profile pictures: only the owner can upload/delete. Anyone can view.
+    match /profile-pictures/{userId}/{fileName} {
+      allow read;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Rule for book covers: any authenticated user can upload. Anyone can view.
+    // In production, you might restrict this to admin roles.
+    match /book-covers/{fileName} {
+      allow read;
+      allow write: if request.auth != null;
+    }
+
+    // Rule for PDFs: any authenticated user can upload. Anyone can view.
+    // In production, you might restrict this to admin roles.
+    match /pdfs/{fileName} {
+      allow read;
       allow write: if request.auth != null;
     }
   }
