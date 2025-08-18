@@ -11,10 +11,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import type { TeamMember } from './TeamMemberTable';
+import type { TeamMemberWithId } from './TeamMemberTable';
 
 interface RemoveMemberDialogProps {
-  member: TeamMember;
+  member: TeamMemberWithId;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
 }
@@ -27,7 +27,7 @@ export function RemoveMemberDialog({ member, onOpenChange, onConfirm }: RemoveMe
           <AlertDialogTitle>Are you sure?</AlertDialogTitle>
           <AlertDialogDescription>
             This action cannot be undone. This will permanently remove{' '}
-            <span className="font-semibold">{member.name}</span> from the team.
+            <span className="font-semibold">{member.name}</span> from the Firestore team collection.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

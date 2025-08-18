@@ -17,30 +17,37 @@ import { Button } from "../ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { EditRoleDialog } from './EditRoleDialog';
 import { RemoveMemberDialog } from './RemoveMemberDialog';
+import type { Timestamp } from 'firebase/firestore';
 
+
+export type TeamMemberRole = 'Admin' | 'Editor' | 'Reviewer' | 'Contributor';
 
 export interface TeamMember {
-    id: number;
     name: string;
     email: string;
-    role: 'Admin' | 'Editor' | 'Reviewer' | 'Contributor';
-    joinedAt: string;
+    role: TeamMemberRole;
+    joinedAt: Timestamp;
 }
+
+export interface TeamMemberWithId extends TeamMember {
+    id: string;
+}
+
 
 interface TeamMemberTableProps {
-    members: TeamMember[];
-    onUpdateRole: (memberId: number, newRole: TeamMember['role']) => void;
-    onRemoveMember: (memberId: number) => void;
+    members: TeamMemberWithId[];
+    onUpdateRole: (memberId: string, newRole: TeamMemberRole) => void;
+    onRemoveMember: (memberId: string) => void;
 }
 
-const roleVariant: Record<TeamMember['role'], 'default' | 'secondary' | 'outline' | 'destructive'> = {
+const roleVariant: Record<TeamMemberRole, 'default' | 'secondary' | 'outline' | 'destructive'> = {
     'Admin': 'default',
     'Editor': 'secondary',
     'Reviewer': 'outline',
     'Contributor': 'destructive',
 }
 
-const rolePermissions: Record<TeamMember['role'], string[]> = {
+const rolePermissions: Record<TeamMemberRole, string[]> = {
     'Admin': ['Full Access'],
     'Editor': ['Submit Events', 'Approve Submissions', 'Edit Events'],
     'Reviewer': ['Review Submissions', 'Suggest Edits'],
@@ -49,8 +56,8 @@ const rolePermissions: Record<TeamMember['role'], string[]> = {
 
 
 export function TeamMemberTable({ members, onUpdateRole, onRemoveMember }: TeamMemberTableProps) {
-    const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
-    const [removingMember, setRemovingMember] = useState<TeamMember | null>(null);
+    const [editingMember, setEditingMember] = useState<TeamMemberWithId | null>(null);
+    const [removingMember, setRemovingMember] = useState<TeamMemberWithId | null>(null);
 
     return (
         <>
@@ -86,7 +93,7 @@ export function TeamMemberTable({ members, onUpdateRole, onRemoveMember }: TeamM
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        {new Date(member.joinedAt).toLocaleDateString()}
+                                        {member.joinedAt?.toDate().toLocaleDateString() || 'N/A'}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <DropdownMenu>

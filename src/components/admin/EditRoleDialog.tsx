@@ -18,19 +18,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { TeamMember } from './TeamMemberTable';
+import type { TeamMemberRole, TeamMemberWithId } from './TeamMemberTable';
 import { Label } from '../ui/label';
 
 interface EditRoleDialogProps {
-  member: TeamMember;
+  member: TeamMemberWithId;
   onOpenChange: (open: boolean) => void;
-  onSave: (newRole: TeamMember['role']) => void;
+  onSave: (newRole: TeamMemberRole) => void;
 }
 
-const roles: TeamMember['role'][] = ['Admin', 'Editor', 'Reviewer', 'Contributor'];
+const roles: TeamMemberRole[] = ['Admin', 'Editor', 'Reviewer', 'Contributor'];
 
 export function EditRoleDialog({ member, onOpenChange, onSave }: EditRoleDialogProps) {
-  const [selectedRole, setSelectedRole] = useState<TeamMember['role']>(member.role);
+  const [selectedRole, setSelectedRole] = useState<TeamMemberRole>(member.role);
 
   const handleSave = () => {
     onSave(selectedRole);
@@ -47,7 +47,7 @@ export function EditRoleDialog({ member, onOpenChange, onSave }: EditRoleDialogP
         </DialogHeader>
         <div className="py-4">
           <Label htmlFor="role-select">Role</Label>
-          <Select value={selectedRole} onValueChange={(value: TeamMember['role']) => setSelectedRole(value)}>
+          <Select value={selectedRole} onValueChange={(value: TeamMemberRole) => setSelectedRole(value)}>
             <SelectTrigger id="role-select" className="w-full mt-2">
               <SelectValue placeholder="Select a role" />
             </SelectTrigger>

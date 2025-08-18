@@ -8,58 +8,90 @@ import { Button } from '@/components/ui/button';
 import { UserPlus } from 'lucide-react';
 import { TeamMember, TeamMemberTable } from '@/components/admin/TeamMemberTable';
 import { AddMemberDialog } from '@/components/admin/AddMemberDialog';
-
-const sampleTeamMembers: TeamMember[] = [
-    { id: 1, name: 'Admin User', email: 'admin@bahujansphere.com', role: 'Admin', joinedAt: '2024-01-15T10:00:00Z' },
-    { id: 2, name: 'Content Editor', email: 'editor@bahujansphere.com', role: 'Editor', joinedAt: '2024-02-20T11:30:00Z' },
-    { id: 3, name: 'Event Reviewer', email: 'reviewer@example.com', role: 'Reviewer', joinedAt: '2024-04-12T14:00:00Z' },
-    { id: 4, name: 'Community Contributor', email: 'contributor1@example.com', role: 'Contributor', joinedAt: '2024-05-10T18:00:00Z' },
-    { id: 5, name: 'Another Contributor', email: 'contributor2@example.com', role: 'Contributor', joinedAt: '2024-06-01T09:00:00Z' },
-];
-
+import { onAuthStateChanged, type User } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import type { NewTeamMember, TeamMemberWithId } from '@/lib/team';
 
 export default function TeamManagementPage() {
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [teamMembers, setTeamMembers] = useState(sampleTeamMembers);
+  const { toast } = useToast();
+  const [user, setUser] = useState<User | null>(null);
+  const [teamMembers, setTeamMembers] = useState<TeamMemberWithId[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
   useEffect(() => {
-    const authStatus = localStorage.getItem('isAdminAuthenticated');
-    if (authStatus !== 'true') {
-      router.replace('/admin/login');
-    } else {
-      setIsAuthenticated(true);
-    }
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+      } else {
+        router.replace('/admin/login');
+      }
+    });
+
+    return () => unsubscribeAuth();
   }, [router]);
-  
-  const handleUpdateRole = (memberId: number, newRole: TeamMember['role']) => {
-    setTeamMembers(currentMembers =>
-        currentMembers.map(member =>
-            member.id === memberId ? { ...member, role: newRole } : member
-        )
-    );
+
+  useEffect(() => {
+    if (!user) return;
+
+    const q = query(collection(db, "teamMembers"), orderBy("joinedAt", "desc"));
+    const unsubscribeFirestore = onSnapshot(q, (snapshot) => {
+      const members = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as TeamMemberWithId));
+      setTeamMembers(members);
+      setIsLoading(false);
+    }, (error) => {
+      console.error("Error fetching team members:", error);
+      toast({ title: 'Error', description: 'Could not fetch team members.', variant: 'destructive' });
+      setIsLoading(false);
+    });
+
+    return () => unsubscribeFirestore();
+  }, [user, toast]);
+
+  const handleUpdateRole = async (memberId: string, newRole: TeamMember['role']) => {
+    const memberDocRef = doc(db, 'teamMembers', memberId);
+    try {
+      await updateDoc(memberDocRef, { role: newRole });
+      toast({ title: 'Success', description: 'Team member role updated.' });
+    } catch (error) {
+      console.error("Error updating role:", error);
+      toast({ title: 'Error', description: 'Failed to update role.', variant: 'destructive' });
+    }
   };
 
-  const handleRemoveMember = (memberId: number) => {
-    setTeamMembers(currentMembers =>
-        currentMembers.filter(member => member.id !== memberId)
-    );
+  const handleRemoveMember = async (memberId: string) => {
+    const memberDocRef = doc(db, 'teamMembers', memberId);
+    try {
+      await deleteDoc(memberDocRef);
+      toast({ title: 'Success', description: 'Team member removed.' });
+    } catch (error) {
+      console.error("Error removing member:", error);
+      toast({ title: 'Error', description: 'Failed to remove team member.', variant: 'destructive' });
+    }
   };
 
-  const handleAddMember = (newMember: Omit<TeamMember, 'id' | 'joinedAt'>) => {
-    setTeamMembers(currentMembers => [
-        ...currentMembers,
-        {
-            ...newMember,
-            id: Date.now(), // simple unique id for demo purposes
-            joinedAt: new Date().toISOString(),
-        }
-    ]);
+  const handleAddMember = async (newMember: NewTeamMember) => {
+    try {
+      await addDoc(collection(db, 'teamMembers'), {
+        ...newMember,
+        joinedAt: serverTimestamp(),
+      });
+      toast({ title: 'Success', description: 'New team member added.' });
+      setIsAddDialogOpen(false);
+    } catch (error) {
+      console.error("Error adding member:", error);
+      toast({ title: 'Error', description: 'Failed to add team member.', variant: 'destructive' });
+    }
   };
 
 
-  if (!isAuthenticated) {
+  if (isLoading) {
     return (
         <div className="space-y-4 p-4">
             <Skeleton className="h-10 w-1/3" />
@@ -74,7 +106,7 @@ export default function TeamManagementPage() {
         <header className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
             <div>
                 <h1 className="font-headline text-3xl font-bold">Team Management</h1>
-                <p className="text-muted-foreground">Add and manage your team members.</p>
+                <p className="text-muted-foreground">Add and manage your team members in Firestore.</p>
             </div>
             <Button onClick={() => setIsAddDialogOpen(true)}>
                 <UserPlus className="mr-2 h-4 w-4" />
@@ -93,10 +125,7 @@ export default function TeamManagementPage() {
       {isAddDialogOpen && (
         <AddMemberDialog
           onOpenChange={setIsAddDialogOpen}
-          onSave={(newMember) => {
-            handleAddMember(newMember);
-            setIsAddDialogOpen(false);
-          }}
+          onSave={handleAddMember}
         />
       )}
     </div>

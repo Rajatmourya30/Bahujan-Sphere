@@ -29,9 +29,10 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import type { TeamMember } from './TeamMemberTable';
+import type { TeamMemberRole } from './TeamMemberTable';
+import type { NewTeamMember } from '@/lib/team';
 
-const roles: TeamMember['role'][] = ['Admin', 'Editor', 'Reviewer', 'Contributor'];
+const roles: TeamMemberRole[] = ['Admin', 'Editor', 'Reviewer', 'Contributor'];
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
@@ -43,7 +44,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 interface AddMemberDialogProps {
   onOpenChange: (open: boolean) => void;
-  onSave: (newMember: Omit<TeamMember, 'id' | 'joinedAt'>) => void;
+  onSave: (newMember: NewTeamMember) => void;
 }
 
 export function AddMemberDialog({ onOpenChange, onSave }: AddMemberDialogProps) {
@@ -66,7 +67,7 @@ export function AddMemberDialog({ onOpenChange, onSave }: AddMemberDialogProps) 
         <DialogHeader>
           <DialogTitle>Add New Team Member</DialogTitle>
           <DialogDescription>
-            Enter the details of the new team member and assign them a role.
+            Enter the details of the new team member and assign them a role. They will be added to Firestore.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
