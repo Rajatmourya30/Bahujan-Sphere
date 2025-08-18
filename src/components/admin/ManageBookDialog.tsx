@@ -106,7 +106,7 @@ export function ManageBookDialog({
             bookData.imageUrl = await uploadFile(file, imagePath);
         }
 
-        if (values.pdfFile && values.pdfFile.length > 0) {
+        if (managePdfUrl && values.pdfFile && values.pdfFile.length > 0) {
             const file = values.pdfFile[0];
             const pdfPath = `pdfs/${Date.now()}_${file.name}`;
             bookData.pdfUrl = await uploadFile(file, pdfPath);
