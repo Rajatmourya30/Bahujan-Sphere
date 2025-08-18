@@ -82,11 +82,15 @@ export default function TeamManagementPage() {
         ...newMember,
         joinedAt: serverTimestamp(),
       });
-      toast({ title: 'Success', description: 'New team member added.' });
+      toast({ title: 'Success', description: 'New team member added and their login has been created.' });
       setIsAddDialogOpen(false);
     } catch (error) {
-      console.error("Error adding member:", error);
-      toast({ title: 'Error', description: 'Failed to add team member.', variant: 'destructive' });
+      console.error("Error adding member to Firestore:", error);
+      toast({ 
+          title: 'Error Saving Member Details', 
+          description: 'The user login was created, but their details could not be saved to the database.', 
+          variant: 'destructive' 
+      });
     }
   };
 

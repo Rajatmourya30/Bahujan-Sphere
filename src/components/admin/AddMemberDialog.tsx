@@ -31,14 +31,19 @@ import {
 import { Input } from '@/components/ui/input';
 import type { TeamMemberRole } from './TeamMemberTable';
 import type { NewTeamMember } from '@/lib/team';
-import { Alert, AlertTitle, AlertDescription } from '../ui/alert';
-import { Info } from 'lucide-react';
+import { auth } from '@/lib/firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
+
 
 const roles: TeamMemberRole[] = ['Admin', 'Editor', 'Reviewer', 'Contributor'];
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
   email: z.string().email('Please enter a valid email address.'),
+  password: z.string().min(6, 'Password must be at least 6 characters.'),
   role: z.enum(roles),
 });
 
@@ -46,21 +51,51 @@ type FormValues = z.infer<typeof formSchema>;
 
 interface AddMemberDialogProps {
   onOpenChange: (open: boolean) => void;
-  onSave: (newMember: NewTeamMember) => void;
+  onSave: (newMember: NewTeamMember) => Promise<void>;
 }
 
 export function AddMemberDialog({ onOpenChange, onSave }: AddMemberDialogProps) {
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
       email: '',
+      password: '',
       role: 'Contributor',
     },
   });
 
-  const onSubmit = (values: FormValues) => {
-    onSave(values);
+  const onSubmit = async (values: FormValues) => {
+    setIsLoading(true);
+    try {
+      // This is a temporary auth instance to create the user without signing in the admin as the new user.
+      const tempAuth = auth;
+      await createUserWithEmailAndPassword(tempAuth, values.email, values.password);
+
+      // Now save the user's role and name to Firestore
+      await onSave({
+        name: values.name,
+        email: values.email,
+        role: values.role,
+      });
+
+    } catch (error: any) {
+      console.error("Error creating user:", error);
+      let description = "An unexpected error occurred.";
+      if (error.code === 'auth/email-already-in-use') {
+        description = "This email is already registered. Please use a different email.";
+      }
+      toast({
+        title: 'User Creation Failed',
+        description,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -69,21 +104,11 @@ export function AddMemberDialog({ onOpenChange, onSave }: AddMemberDialogProps) 
         <DialogHeader>
           <DialogTitle>Add New Team Member</DialogTitle>
           <DialogDescription>
-            Add the new member's details here to grant them access rights.
+            Enter the new member's details to create their login credentials and grant them access rights.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-            <Alert>
-              <Info className="h-4 w-4" />
-              <AlertTitle>Important: Two-Step Process</AlertTitle>
-              <AlertDescription>
-                <ol className="list-decimal pl-4 space-y-1">
-                  <li>Add the user's details here and click "Add Member".</li>
-                  <li>Then, go to the <strong>Firebase Authentication console</strong> to create their login account with the same email and a password.</li>
-                </ol>
-              </AlertDescription>
-            </Alert>
             <FormField
               control={form.control}
               name="name"
@@ -91,7 +116,7 @@ export function AddMemberDialog({ onOpenChange, onSave }: AddMemberDialogProps) 
                 <FormItem>
                   <FormLabel>Full Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Jane Doe" {...field} />
+                    <Input placeholder="e.g., Jane Doe" {...field} disabled={isLoading}/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -104,7 +129,20 @@ export function AddMemberDialog({ onOpenChange, onSave }: AddMemberDialogProps) 
                 <FormItem>
                   <FormLabel>Email Address</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="name@example.com" {...field} />
+                    <Input type="email" placeholder="name@example.com" {...field} disabled={isLoading}/>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="******" {...field} disabled={isLoading}/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -116,7 +154,7 @@ export function AddMemberDialog({ onOpenChange, onSave }: AddMemberDialogProps) 
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Role</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a role" />
@@ -135,10 +173,13 @@ export function AddMemberDialog({ onOpenChange, onSave }: AddMemberDialogProps) 
               )}
             />
             <DialogFooter className="pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
                 Cancel
               </Button>
-              <Button type="submit">Add Member</Button>
+              <Button type="submit" disabled={isLoading}>
+                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Add Member
+              </Button>
             </DialogFooter>
           </form>
         </Form>
