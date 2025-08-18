@@ -12,10 +12,7 @@ import { EventSubmissionForm } from '@/components/submit/EventSubmissionForm';
 import { BulkUploadForm } from '@/components/submit/BulkUploadForm';
 import { ReviewSubmissionsTab } from '@/components/admin/ReviewSubmissionsTab';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-
-type UserRole = 'Admin' | 'Editor' | 'Reviewer' | 'Contributor' | null;
+import { auth } from '@/lib/firebase';
 
 export default function ManageCalendarPage() {
   const router = useRouter();
@@ -23,29 +20,13 @@ export default function ManageCalendarPage() {
   const [events, setEvents] = useState(allEvents);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
-  const [userRole, setUserRole] = useState<UserRole>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setFirebaseUser(user);
-        
-        const teamQuery = query(collection(db, "teamMembers"), where("email", "==", user.email));
-        const querySnapshot = await getDocs(teamQuery);
-        
-        if (!querySnapshot.empty) {
-          const userDoc = querySnapshot.docs[0].data();
-          const role = userDoc.role as UserRole;
-          setUserRole(role);
-        } else {
-            // A non-team member might be logged in. We can treat them as having no role.
-            // The layout already protects against unauthorized access.
-            setUserRole(null); 
-        }
-
       } else {
-        // This case is handled by the AdminLayout, but as a fallback:
         router.replace('/admin/login');
       }
       setIsLoading(false);
@@ -74,12 +55,6 @@ export default function ManageCalendarPage() {
     setEvents(currentEvents => currentEvents.filter(e => e.id !== eventId));
   };
   
-  const permissions = {
-      canManage: userRole === 'Admin' || userRole === 'Editor',
-      canSubmit: userRole === 'Admin' || userRole === 'Editor' || userRole === 'Contributor',
-      canReview: userRole === 'Admin' || userRole === 'Editor' || userRole === 'Reviewer',
-  };
-
   if (isLoading) {
     return (
       <div className="space-y-4 p-4">
@@ -90,26 +65,6 @@ export default function ManageCalendarPage() {
     );
   }
   
-  const availableTabs = [
-    { value: 'manage', label: 'Manage Events', visible: permissions.canManage },
-    { value: 'single-event', label: 'Submit Single Event', visible: permissions.canSubmit },
-    { value: 'bulk-upload', label: 'Submit Bulk Upload', visible: permissions.canSubmit },
-    { value: 'review', label: 'Review Submissions', visible: permissions.canReview },
-  ].filter(tab => tab.visible);
-  
-  const defaultTab = availableTabs.length > 0 ? availableTabs[0].value : '';
-  
-  if (availableTabs.length === 0) {
-    return (
-        <div className="space-y-8">
-            <header>
-                <h1 className="font-headline text-3xl font-bold">Manage Calendar</h1>
-                <p className="text-muted-foreground">You do not have permission to access calendar features.</p>
-            </header>
-        </div>
-    )
-  }
-
   return (
     <div className="space-y-8">
       <header>
@@ -117,40 +72,33 @@ export default function ManageCalendarPage() {
         <p className="text-muted-foreground">Add, edit, review, and manage all calendar events.</p>
       </header>
 
-      <Tabs defaultValue={defaultTab} className="w-full">
+      <Tabs defaultValue="manage" className="w-full">
         <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
-           {availableTabs.map(tab => (
-            <TabsTrigger key={tab.value} value={tab.value} className="hover:bg-background/80">{tab.label}</TabsTrigger>
-          ))}
+           <TabsTrigger value="manage">Manage Events</TabsTrigger>
+           <TabsTrigger value="single-event">Submit Single Event</TabsTrigger>
+           <TabsTrigger value="bulk-upload">Submit Bulk Upload</TabsTrigger>
+           <TabsTrigger value="review">Review Submissions</TabsTrigger>
         </TabsList>
 
-        {permissions.canManage && (
-            <TabsContent value="manage" className="mt-6">
-                <EventManagementTable
-                  events={events}
-                  onEdit={handleOpenDialog}
-                  onRemove={handleRemove}
-                  onAdd={() => handleOpenDialog()}
-                />
-            </TabsContent>
-        )}
+        <TabsContent value="manage" className="mt-6">
+            <EventManagementTable
+              events={events}
+              onEdit={handleOpenDialog}
+              onRemove={handleRemove}
+              onAdd={() => handleOpenDialog()}
+            />
+        </TabsContent>
         
-        {permissions.canSubmit && (
-            <>
-                <TabsContent value="single-event" className="mt-6">
-                  <EventSubmissionForm />
-                </TabsContent>
-                <TabsContent value="bulk-upload" className="mt-6">
-                  <BulkUploadForm />
-                </TabsContent>
-            </>
-        )}
+        <TabsContent value="single-event" className="mt-6">
+          <EventSubmissionForm />
+        </TabsContent>
+        <TabsContent value="bulk-upload" className="mt-6">
+          <BulkUploadForm />
+        </TabsContent>
         
-        {permissions.canReview && (
-            <TabsContent value="review" className="mt-6">
-                <ReviewSubmissionsTab />
-            </TabsContent>
-        )}
+        <TabsContent value="review" className="mt-6">
+            <ReviewSubmissionsTab />
+        </TabsContent>
       </Tabs>
 
 
