@@ -84,15 +84,24 @@ export function AddMemberDialog({ onOpenChange, onSave }: AddMemberDialogProps) 
 
     } catch (error: any) {
       console.error("Error creating user:", error);
-      let description = "An unexpected error occurred.";
-      if (error.code === 'auth/email-already-in-use') {
-        description = "This email is already registered. Please use a different email.";
+       if (error.code === 'auth/email-already-in-use') {
+        // If user already exists in Auth, just add them to the team collection in Firestore.
+        toast({
+          title: 'User already exists',
+          description: 'Promoting existing user to a team member.',
+        });
+        await onSave({
+          name: values.name,
+          email: values.email,
+          role: values.role,
+        });
+      } else {
+        toast({
+          title: 'User Creation Failed',
+          description: "An unexpected error occurred.",
+          variant: 'destructive',
+        });
       }
-      toast({
-        title: 'User Creation Failed',
-        description,
-        variant: 'destructive',
-      });
     } finally {
       setIsLoading(false);
     }
