@@ -116,7 +116,7 @@ export function ManageBookDialog({
 
         setUploadProgress(0);
 
-        let pdfUrl = book?.pdfUrl;
+        let pdfUrl: string | undefined = book?.pdfUrl;
         if (managePdfUrl && values.pdfFile && values.pdfFile.length > 0) {
             const file = values.pdfFile[0];
             const pdfPath = `pdfs/${Date.now()}_${file.name}`;
@@ -124,31 +124,30 @@ export function ManageBookDialog({
             pdfUrl = await uploadFile(file, pdfPath, setUploadProgress);
         }
         
-        const newBookData: Omit<Book, 'id'> = {
-            titleKey: values.titleKey,
-            authorKey: values.authorKey,
-            descriptionKey: values.descriptionKey,
-            imageAiHint: 'book cover',
-            affiliateUrl: values.affiliateUrl || '',
-            imageUrl: imageUrl,
-            pdfUrl: pdfUrl,
-        };
-        
-        if (book) {
-            // Editing existing book
-             onSave({
+        if (book) { // Editing existing book
+            const updatedBookData: Omit<Book, 'id'> = {
                 ...book,
-                ...newBookData,
-                pdfUrl: pdfUrl !== undefined ? pdfUrl : book.pdfUrl,
-            });
-        } else {
-            // Adding new book
-             onSave({
-                ...newBookData,
+                titleKey: values.titleKey,
+                authorKey: values.authorKey,
+                descriptionKey: values.descriptionKey,
+                affiliateUrl: values.affiliateUrl || '',
+                imageUrl,
+                pdfUrl,
+                imageAiHint: 'book cover'
+            };
+            onSave(updatedBookData);
+        } else { // Adding new book
+            const newBookData: Omit<Book, 'id'> = {
+                titleKey: values.titleKey,
+                authorKey: values.authorKey,
+                descriptionKey: values.descriptionKey,
+                affiliateUrl: values.affiliateUrl || '',
+                imageUrl: imageUrl,
                 pdfUrl: pdfUrl,
-             });
+                imageAiHint: 'book cover'
+            };
+            onSave(newBookData);
         }
-
 
         onOpenChange(false);
 
@@ -258,6 +257,7 @@ export function ManageBookDialog({
                         )}
                     />
                     )}
+                    
                     {managePdfUrl && (
                     <>
                         <FormField
