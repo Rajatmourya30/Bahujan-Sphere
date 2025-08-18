@@ -9,6 +9,7 @@ export interface Book {
   imageUrl: string;
   imageAiHint: string;
   affiliateUrl: string;
+  pdfUrl?: string;
 }
 
 export const allBooks: Book[] = [
@@ -20,6 +21,7 @@ export const allBooks: Book[] = [
     imageUrl: 'https://placehold.co/400x600.png',
     imageAiHint: 'book cover',
     affiliateUrl: 'https://example.com/affiliate-link-1',
+    pdfUrl: 'https://archive.org/download/ambedkar-writings-and-speeches-vol-1/BABASAHEB%20AMBEDKAR%20WRITINGS%20AND%20SPEECHES%20VOL%201.pdf',
   },
   {
     id: 'book-2',

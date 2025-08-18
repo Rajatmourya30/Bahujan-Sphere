@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, User, Bookmark, Library, Store, Book } from 'lucide-react';
+import { Home, User, Bookmark, Library, Store, Book, BookOpenCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/hooks/use-language';
@@ -29,6 +29,7 @@ export function Header() {
     { href: '/knowledge-hub', label: t('nav.knowledge'), icon: Library, auth: false },
     { href: '/store', label: t('nav.store'), icon: Store, auth: false },
     { href: '/books', label: t('nav.books'), icon: Book, auth: false },
+    { href: '/reading-room', label: t('nav.reading_room'), icon: BookOpenCheck, auth: false },
     { href: '/bookmarks', label: t('nav.bookmarks'), icon: Bookmark, auth: true },
   ];
 
@@ -41,7 +42,7 @@ export function Header() {
   
   const getNavItem = (item: typeof navItems[0]) => {
       const href = item.auth && !isAuthenticated ? '/login' : item.href;
-      const isActive = pathname === href;
+      const isActive = pathname.startsWith(href) && (href !== '/' || pathname === '/');
       return (
           <Button key={item.label} asChild variant={isActive ? 'secondary' : 'ghost'}>
               <Link href={href}>
