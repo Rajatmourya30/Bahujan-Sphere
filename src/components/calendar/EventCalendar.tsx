@@ -95,8 +95,8 @@ export function EventCalendar({ events = [] }: EventCalendarProps) {
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-        <div className="lg:col-span-1">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-5">
+        <div className="lg:col-span-2">
             <Card>
               <CardContent className="flex justify-center p-0">
                 <Calendar
@@ -110,7 +110,7 @@ export function EventCalendar({ events = [] }: EventCalendarProps) {
             </Card>
         </div>
         
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-3">
           <h2 className="font-headline mb-4 text-2xl font-bold">
             {t('event_calendar.events_on_date', {
               date: date
