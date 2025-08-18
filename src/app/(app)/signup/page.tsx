@@ -20,11 +20,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/use-language';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { auth, db } from '@/lib/firebase';
+import { auth, db, storage } from '@/lib/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Loader2, UserPlus } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
@@ -41,6 +43,9 @@ export default function SignupPage() {
     const { toast } = useToast();
     const { t } = useLanguage();
     const [isLoading, setIsLoading] = useState(false);
+    const [photoFile, setPhotoFile] = useState<File | null>(null);
+    const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -55,11 +60,30 @@ export default function SignupPage() {
         },
     });
 
+    const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setPhotoFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPhotoPreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsLoading(true);
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
             const user = userCredential.user;
+
+            let photoUrl = '';
+            if (photoFile) {
+                const storageRef = ref(storage, `profilePictures/${user.uid}`);
+                await uploadBytes(storageRef, photoFile);
+                photoUrl = await getDownloadURL(storageRef);
+            }
 
             await setDoc(doc(db, "users", user.uid), {
                 name: values.name,
@@ -68,6 +92,7 @@ export default function SignupPage() {
                 state: values.state,
                 city: values.city,
                 birthYear: Number(values.birthYear),
+                photoUrl: photoUrl || '',
             });
 
             toast({
@@ -104,6 +129,33 @@ export default function SignupPage() {
             <CardContent>
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                        <div className="flex flex-col items-center space-y-2">
+                            <Input
+                                type="file"
+                                accept="image/*"
+                                ref={fileInputRef}
+                                onChange={handlePhotoChange}
+                                className="hidden"
+                            />
+                            <Avatar
+                                className="h-24 w-24 cursor-pointer"
+                                onClick={() => fileInputRef.current?.click()}
+                            >
+                                <AvatarImage src={photoPreview || undefined} alt="Profile picture preview" />
+                                <AvatarFallback>
+                                    <UserPlus className="h-10 w-10 text-muted-foreground" />
+                                </AvatarFallback>
+                            </Avatar>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => fileInputRef.current?.click()}
+                            >
+                                Add Profile Photo
+                            </Button>
+                            <p className="text-xs text-muted-foreground">(Optional)</p>
+                        </div>
                         <FormField
                             control={form.control}
                             name="name"
@@ -231,5 +283,3 @@ export default function SignupPage() {
     </div>
   );
 }
-
-    
