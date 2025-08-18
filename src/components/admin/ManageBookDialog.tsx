@@ -25,12 +25,17 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import type { Book } from '@/lib/books';
 import { ScrollArea } from '../ui/scroll-area';
+import { useState } from 'react';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { storage } from '@/lib/firebase';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
 
 const formSchema = z.object({
   titleKey: z.string().min(1, 'Key is required'),
   authorKey: z.string().min(1, 'Key is required'),
   descriptionKey: z.string().min(1, 'Key is required'),
-  imageUrl: z.string().url().optional(), // Keep track of existing image
+  imageUrl: z.string().url().optional(),
   imageFile: z.any().optional(),
   imageAiHint: z.string().min(1, 'AI Hint is required'),
   affiliateUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
@@ -52,6 +57,13 @@ interface ManageBookDialogProps {
   manageAffiliateUrl?: boolean;
 }
 
+const uploadFile = async (file: File, path: string): Promise<string> => {
+    const storageRef = ref(storage, path);
+    await uploadBytes(storageRef, file);
+    const downloadURL = await getDownloadURL(storageRef);
+    return downloadURL;
+};
+
 export function ManageBookDialog({
     book,
     onOpenChange,
@@ -59,6 +71,8 @@ export function ManageBookDialog({
     managePdfUrl = false,
     manageAffiliateUrl = true
 }: ManageBookDialogProps) {
+  const { toast } = useToast();
+  const [isUploading, setIsUploading] = useState(false);
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -72,32 +86,43 @@ export function ManageBookDialog({
     },
   });
 
-  const onSubmit = (values: FormValues) => {
-    // In a real app, you would handle the file uploads here
-    // and set the URLs based on the uploaded file's location.
-    
-    // Create a mutable copy to work with
-    const bookData: Partial<FormValues> & Omit<Book, 'id'> = {
-        titleKey: values.titleKey,
-        authorKey: values.authorKey,
-        descriptionKey: values.descriptionKey,
-        imageAiHint: values.imageAiHint,
-        affiliateUrl: values.affiliateUrl || '',
-        pdfUrl: values.pdfUrl || '',
-        imageUrl: values.imageUrl || '',
-    };
-    
-    if (values.pdfFile && values.pdfFile.length > 0) {
-        console.log("Uploaded PDF:", values.pdfFile[0].name);
-        bookData.pdfUrl = `/pdfs/${values.pdfFile[0].name}`; // Simulate URL
-    }
-    if (values.imageFile && values.imageFile.length > 0) {
-        console.log("Uploaded image:", values.imageFile[0].name);
-        bookData.imageUrl = `https://placehold.co/400x600.png`; // Placeholder URL after upload
-    }
+  const onSubmit = async (values: FormValues) => {
+    setIsUploading(true);
+    try {
+        const bookData: Omit<Book, 'id'> = {
+            titleKey: values.titleKey,
+            authorKey: values.authorKey,
+            descriptionKey: values.descriptionKey,
+            imageAiHint: values.imageAiHint,
+            affiliateUrl: values.affiliateUrl || '',
+            pdfUrl: values.pdfUrl || book?.pdfUrl || '',
+            imageUrl: values.imageUrl || book?.imageUrl || '',
+        };
 
-    onSave(bookData);
-    onOpenChange(false);
+        if (values.imageFile && values.imageFile.length > 0) {
+            const file = values.imageFile[0];
+            const imagePath = `book-covers/${Date.now()}_${file.name}`;
+            bookData.imageUrl = await uploadFile(file, imagePath);
+        }
+
+        if (values.pdfFile && values.pdfFile.length > 0) {
+            const file = values.pdfFile[0];
+            const pdfPath = `pdfs/${Date.now()}_${file.name}`;
+            bookData.pdfUrl = await uploadFile(file, pdfPath);
+        }
+
+        onSave(bookData);
+        onOpenChange(false);
+    } catch (error) {
+        console.error("Upload failed:", error);
+        toast({
+            title: "Upload Failed",
+            description: "There was an error uploading a file. Please try again.",
+            variant: "destructive",
+        });
+    } finally {
+        setIsUploading(false);
+    }
   };
 
   return (
@@ -233,10 +258,13 @@ export function ManageBookDialog({
                 </div>
             </ScrollArea>
             <DialogFooter className="pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isUploading}>
                 Cancel
               </Button>
-              <Button type="submit">Save Changes</Button>
+              <Button type="submit" disabled={isUploading}>
+                {isUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isUploading ? 'Saving...' : 'Save Changes'}
+              </Button>
             </DialogFooter>
           </form>
         </Form>
