@@ -41,8 +41,6 @@ const formSchema = z.object({
   affiliateUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   pdfFile: z.any().optional(),
 }).refine(data => {
-    // When adding a new book (data.book is null), an image file is required.
-    // When editing an existing book, a new image file is not required.
     return (data.book && data.book.imageUrl) || (data.imageFile && data.imageFile.length > 0);
 }, {
     message: "An image file is required when adding a new book.",
@@ -107,21 +105,24 @@ export function ManageBookDialog({
 
   const onSubmit = async (values: FormValues) => {
     setIsUploading(true);
-    setUploadProgress(0);
     
     try {
         let imageUrl = book?.imageUrl || '';
+        let pdfUrl = book?.pdfUrl;
+
+        // Handle Image Upload
         if (values.imageFile?.[0]) {
             setUploadMessage('Uploading cover image...');
+            setUploadProgress(0);
             const file = values.imageFile[0];
             const imagePath = `book-covers/${Date.now()}_${file.name}`;
             imageUrl = await uploadFile(file, imagePath, setUploadProgress);
         }
 
-        let pdfUrl: string | undefined = book?.pdfUrl;
+        // Handle PDF Upload
         if (managePdfUrl && values.pdfFile?.[0]) {
-            setUploadProgress(0);
             setUploadMessage('Uploading PDF...');
+            setUploadProgress(0);
             const file = values.pdfFile[0];
             const pdfPath = `pdfs/${Date.now()}_${file.name}`;
             pdfUrl = await uploadFile(file, pdfPath, setUploadProgress);
@@ -134,7 +135,7 @@ export function ManageBookDialog({
             affiliateUrl: values.affiliateUrl || '',
             imageUrl,
             pdfUrl,
-            imageAiHint: 'book cover' // Default value since input is removed
+            imageAiHint: 'book cover'
         };
 
         onSave(bookData);
