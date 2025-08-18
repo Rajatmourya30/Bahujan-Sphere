@@ -1,22 +1,19 @@
 
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
-import { BookOpen, UploadCloud, FileText, Loader2, AlertCircle, Trash2, ImageUp } from 'lucide-react';
+import { PlusCircle, Loader2 } from 'lucide-react';
 import { auth, db, storage } from '@/lib/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
-import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, type Timestamp, deleteDoc, doc } from 'firebase/firestore';
-import Link from 'next/link';
+import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, type Timestamp, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { ReadingRoomTable } from '@/components/admin/ReadingRoomTable';
+import { ManageDocumentDialog, type DocumentFormData } from '@/components/admin/ManageDocumentDialog';
 
-interface ReadingRoomPdf {
+export interface ReadingRoomPdf {
   id: string;
   title: string;
   author?: string;
@@ -32,27 +29,17 @@ export default function ManageReadingRoomPage() {
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
 
-  const [fileToUpload, setFileToUpload] = useState<File | null>(null);
-  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
-  const [title, setTitle] = useState('');
-  const [author, setAuthor] = useState('');
-  
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [statusMessage, setStatusMessage] = useState({ type: '', text: '' });
-
   const [availablePdfs, setAvailablePdfs] = useState<ReadingRoomPdf[]>([]);
   const [isLoadingPdfs, setIsLoadingPdfs] = useState(true);
-  
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const coverImageInputRef = useRef<HTMLInputElement>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingDocument, setEditingDocument] = useState<ReadingRoomPdf | null>(null);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-          setUser(currentUser);
-      } else {
+      if (!currentUser) {
         router.replace('/admin/login');
+      } else {
+        setUser(currentUser);
       }
     });
     return () => unsubscribeAuth();
@@ -71,56 +58,26 @@ export default function ManageReadingRoomPage() {
         setIsLoadingPdfs(false);
     }, (error) => {
         console.error("Error fetching PDFs:", error);
-        setStatusMessage({ type: 'error', text: 'Could not load the PDF list.' });
+        toast({ title: "Error", description: "Could not load the PDF list.", variant: "destructive" });
         setIsLoadingPdfs(false);
     });
 
     return () => unsubscribeFirestore();
-  }, [user]);
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-        if (file.type !== 'application/pdf') {
-            setStatusMessage({ type: 'error', text: 'Please select a valid PDF file.'});
-            setFileToUpload(null);
-            if (fileInputRef.current) fileInputRef.current.value = '';
-            return;
-        }
-        setStatusMessage({ type: '', text: ''});
-        setFileToUpload(file);
-    }
+  }, [user, toast]);
+  
+  const handleOpenDialog = (doc: ReadingRoomPdf | null = null) => {
+    setEditingDocument(doc);
+    setIsDialogOpen(true);
   };
 
-  const handleCoverImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-        if (!file.type.startsWith('image/')) {
-            setStatusMessage({ type: 'error', text: 'Please select a valid image file.'});
-            setCoverImageFile(null);
-            if (coverImageInputRef.current) coverImageInputRef.current.value = '';
-            return;
-        }
-        setStatusMessage({ type: '', text: ''});
-        setCoverImageFile(file);
-    }
-  };
-
-  const uploadFile = (file: File, path: string) => {
-    return new Promise<{ downloadURL: string, storagePath: string }>((resolve, reject) => {
+  const uploadFile = (file: File, path: string): Promise<{ downloadURL: string, storagePath: string }> => {
+    return new Promise((resolve, reject) => {
       const storageRef = ref(storage, path);
       const uploadTask = uploadBytesResumable(storageRef, file);
-
       uploadTask.on('state_changed',
-        (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            setUploadProgress(progress);
-            setStatusMessage({ type: 'info', text: `Uploading... ${Math.round(progress)}%` });
-        },
-        (error) => {
-            reject(error);
-        },
-        async () => {
+        () => {}, // Progress
+        (error) => reject(error), // Error
+        async () => { // Complete
             const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
             resolve({ downloadURL, storagePath: path });
         }
@@ -128,63 +85,62 @@ export default function ManageReadingRoomPage() {
     });
   };
 
-  const handleUpload = async () => {
+  const handleSave = async (data: DocumentFormData) => {
     if (!user) {
-        setStatusMessage({ type: 'error', text: 'You must be signed in to upload files.' });
+        toast({ title: "Not Authenticated", description: "You must be signed in.", variant: "destructive" });
         return;
     }
-    if (!fileToUpload || !title) {
-        setStatusMessage({ type: 'error', text: 'Please select a PDF file and provide a title.' });
-        return;
-    }
-
-    setIsUploading(true);
-    setUploadProgress(0);
-    setStatusMessage({ type: 'info', text: 'Starting upload...' });
-
+    
     try {
-        let coverImageInfo: { downloadURL: string, storagePath: string } | null = null;
-        if (coverImageFile) {
-            setStatusMessage({ type: 'info', text: 'Uploading cover image...' });
-            const coverImageStoragePath = `bookCovers/${Date.now()}-${coverImageFile.name}`;
-            coverImageInfo = await uploadFile(coverImageFile, coverImageStoragePath);
+        let coverImageInfo: { downloadURL: string; storagePath: string } | null = null;
+        if (data.coverImageFile) {
+            const coverPath = `bookCovers/${Date.now()}-${data.coverImageFile.name}`;
+            coverImageInfo = await uploadFile(data.coverImageFile, coverPath);
         }
 
-        setStatusMessage({ type: 'info', text: 'Uploading PDF file...' });
-        const pdfStoragePath = `pdfs/${Date.now()}-${fileToUpload.name}`;
-        const pdfInfo = await uploadFile(fileToUpload, pdfStoragePath);
+        if (editingDocument) { // Editing existing document
+            const docRef = doc(db, "readingRoomPdfs", editingDocument.id);
+            const updateData: Partial<ReadingRoomPdf> = {
+                title: data.title,
+                author: data.author,
+            };
+            if (coverImageInfo) {
+                updateData.coverImageUrl = coverImageInfo.downloadURL;
+                updateData.coverImageStoragePath = coverImageInfo.storagePath;
+                // Delete old cover image if it exists
+                if (editingDocument.coverImageStoragePath) {
+                    await deleteObject(ref(storage, editingDocument.coverImageStoragePath));
+                }
+            }
+            await updateDoc(docRef, updateData);
+            toast({ title: "Success", description: `"${data.title}" has been updated.` });
 
-        await addDoc(collection(db, "readingRoomPdfs"), {
-            title,
-            author,
-            url: pdfInfo.downloadURL,
-            storagePath: pdfInfo.storagePath,
-            coverImageUrl: coverImageInfo?.downloadURL || null,
-            coverImageStoragePath: coverImageInfo?.storagePath || null,
-            uploadedAt: serverTimestamp(),
-            uploaderUid: user.uid
-        });
+        } else { // Adding new document
+            if (!data.pdfFile) {
+                toast({ title: "Error", description: "A PDF file is required for new documents.", variant: "destructive" });
+                return;
+            }
+            const pdfPath = `pdfs/${Date.now()}-${data.pdfFile.name}`;
+            const pdfInfo = await uploadFile(data.pdfFile, pdfPath);
 
-        toast({ title: "Upload successful!", description: `"${title}" is now available in the reading room.` });
-        setStatusMessage({ type: '', text: '' });
-        // Reset form
-        setTitle('');
-        setAuthor('');
-        setFileToUpload(null);
-        setCoverImageFile(null);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-        if (coverImageInputRef.current) coverImageInputRef.current.value = '';
+            await addDoc(collection(db, "readingRoomPdfs"), {
+                title: data.title,
+                author: data.author,
+                url: pdfInfo.downloadURL,
+                storagePath: pdfInfo.storagePath,
+                coverImageUrl: coverImageInfo?.downloadURL || null,
+                coverImageStoragePath: coverImageInfo?.storagePath || null,
+                uploadedAt: serverTimestamp(),
+                uploaderUid: user.uid
+            });
+            toast({ title: "Upload successful!", description: `"${data.title}" is now available.` });
+        }
     } catch (error: any) {
-        console.error("Upload error:", error);
-        let errorMessage = `Upload failed: ${error.message}`;
-        if (error.code === 'storage/unauthorized') {
-            errorMessage = "Upload failed. Please check your Storage security rules in the Firebase console.";
-        }
-        setStatusMessage({ type: 'error', text: errorMessage });
-    } finally {
-        setIsUploading(false);
+        console.error("Error saving document:", error);
+        toast({ title: "Save Failed", description: "Could not save the document details.", variant: "destructive" });
     }
   };
+
 
   const handleDelete = async (pdf: ReadingRoomPdf) => {
     if (!window.confirm(`Are you sure you want to delete "${pdf.title}"? This action cannot be undone.`)) {
@@ -215,103 +171,38 @@ export default function ManageReadingRoomPage() {
 
   return (
     <div className="space-y-8">
-      <header>
-        <h1 className="font-headline text-3xl font-bold">Manage Reading Room</h1>
-        <p className="text-muted-foreground">Upload and manage PDFs available in the public reading room.</p>
+      <header className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        <div>
+          <h1 className="font-headline text-3xl font-bold">Manage Reading Room</h1>
+          <p className="text-muted-foreground">Add, edit, or remove documents from the public reading room.</p>
+        </div>
+         <Button onClick={() => handleOpenDialog()}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Add Document
+        </Button>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div className="md:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <UploadCloud />
-                Upload New Document
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="pdf-title">Book Title</Label>
-                <Input id="pdf-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title of the book or document" disabled={isUploading} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="pdf-author">Author (optional)</Label>
-                <Input id="pdf-author" value={author} onChange={(e) => setAuthor(e.target.value)} placeholder="Name of the author" disabled={isUploading} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cover-image-file">Book Cover Image (optional)</Label>
-                <Input id="cover-image-file" type="file" accept="image/*" onChange={handleCoverImageChange} ref={coverImageInputRef} disabled={isUploading} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="pdf-file">PDF File</Label>
-                <Input id="pdf-file" type="file" accept=".pdf" onChange={handleFileChange} ref={fileInputRef} disabled={isUploading} />
-              </div>
-              {isUploading && (
-                <Progress value={uploadProgress} className="w-full" />
-              )}
-              {statusMessage.text && (
-                <p className={`text-sm ${statusMessage.type === 'error' ? 'text-destructive' : 'text-muted-foreground'}`}>
-                  {statusMessage.text}
-                </p>
-              )}
-            </CardContent>
-            <CardFooter>
-              <Button className="w-full" onClick={handleUpload} disabled={isUploading || !fileToUpload || !title}>
-                {isUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Upload Document
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
-        <div className="md:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText />
-                Available PDFs
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoadingPdfs ? (
-                <div className="flex justify-center items-center py-16">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-              ) : availablePdfs.length > 0 ? (
-                <div className="space-y-4">
-                  {availablePdfs.map(pdf => (
-                    <div key={pdf.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <div className="flex-grow">
-                        <h3 className="font-semibold">{pdf.title}</h3>
-                        {pdf.author && <p className="text-sm text-muted-foreground">{pdf.author}</p>}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button asChild size="sm">
-                          <Link href={`/reading-room/${pdf.id}`} target="_blank" rel="noopener noreferrer">
-                            <BookOpen className="mr-2 h-4 w-4" />
-                            View
-                          </Link>
-                        </Button>
-                        <Button size="icon" variant="destructive" onClick={() => handleDelete(pdf)}>
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-16">
-                  <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground" />
-                  <h3 className="mt-4 text-lg font-medium">No PDFs Available</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Upload a document to get started.
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      <section>
+        {isLoadingPdfs ? (
+             <div className="flex justify-center items-center py-16">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+             </div>
+        ) : (
+            <ReadingRoomTable
+                documents={availablePdfs}
+                onEdit={handleOpenDialog}
+                onDelete={handleDelete}
+            />
+        )}
+      </section>
+
+      {isDialogOpen && (
+        <ManageDocumentDialog
+          document={editingDocument}
+          onOpenChange={setIsDialogOpen}
+          onSave={handleSave}
+        />
+      )}
     </div>
   );
 }
