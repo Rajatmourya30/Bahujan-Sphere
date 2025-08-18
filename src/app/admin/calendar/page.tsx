@@ -38,11 +38,9 @@ export default function ManageCalendarPage() {
           const userDoc = querySnapshot.docs[0].data();
           const role = userDoc.role as UserRole;
           setUserRole(role);
-          localStorage.setItem('adminUserRole', role || '');
         } else {
           // If not a team member, treat as unauthorized for this page
-          router.replace('/admin/login');
-          return;
+           setUserRole(null);
         }
 
       } else {
@@ -53,6 +51,7 @@ export default function ManageCalendarPage() {
 
     return () => unsubscribe();
   }, [router]);
+
 
   const handleOpenDialog = (event: CalendarEvent | null = null) => {
     setEditingEvent(event);
