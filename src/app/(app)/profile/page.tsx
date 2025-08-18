@@ -115,11 +115,6 @@ export default function ProfilePage() {
                 </CardContent>
             </Card>
 
-            <Button onClick={() => setIsDonationDialogOpen(true)} size="lg" className="w-full">
-                <Heart className="mr-2" />
-                {t('profile_page.support_button')}
-            </Button>
-            
             <Card>
                 <CardHeader>
                     <CardTitle className="text-xl font-headline">{t('profile_page.settings_title')}</CardTitle>
@@ -141,6 +136,11 @@ export default function ProfilePage() {
                     </div>
                 </CardContent>
             </Card>
+
+            <Button onClick={() => setIsDonationDialogOpen(true)} size="lg" className="w-full">
+                <Heart className="mr-2" />
+                {t('profile_page.support_button')}
+            </Button>
 
             <Button onClick={handleLogout} variant="outline" className="w-full">
                 <LogOut className="mr-2 h-4 w-4" />
