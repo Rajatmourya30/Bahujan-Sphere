@@ -76,10 +76,10 @@ function EventDetail({ event, onReadMoreClick }: { event: CalendarEvent, onReadM
 }
 
 interface EventCalendarProps {
-    events: CalendarEvent[];
+    events?: CalendarEvent[];
 }
 
-export function EventCalendar({ events }: EventCalendarProps) {
+export function EventCalendar({ events = [] }: EventCalendarProps) {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const { t } = useLanguage();
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);

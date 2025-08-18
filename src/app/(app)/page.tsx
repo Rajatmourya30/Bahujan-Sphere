@@ -6,10 +6,11 @@ import { useLanguage } from "@/hooks/use-language";
 import { allEvents } from "@/lib/events";
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { CalendarEvent } from "@/lib/events";
 
 export default function Home() {
   const { t } = useLanguage();
-  const [events, setEvents] = useState<typeof allEvents>([]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
