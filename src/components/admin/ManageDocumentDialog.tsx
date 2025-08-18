@@ -115,7 +115,7 @@ export function ManageDocumentDialog({ document, onOpenChange, onSave }: ManageD
                 <FormItem>
                   <FormLabel>Author (optional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="Name of the author" {...field} disabled={isSaving} />
+                    <Input placeholder="Name of the author" {...field} value={field.value ?? ''} disabled={isSaving} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
