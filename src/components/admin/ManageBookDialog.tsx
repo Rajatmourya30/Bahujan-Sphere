@@ -32,7 +32,6 @@ const formSchema = z.object({
   imageUrl: z.string().url('Must be a valid URL'),
   affiliateUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   pdfUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
-  imageAiHint: z.string().min(1, 'AI Hint is required'),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -61,22 +60,29 @@ export function ManageBookDialog({
       imageUrl: book?.imageUrl || '',
       affiliateUrl: book?.affiliateUrl || '',
       pdfUrl: book?.pdfUrl || '',
-      imageAiHint: book?.imageAiHint || '',
     },
   });
 
   const onSubmit = (values: FormValues) => {
-    const bookData: Omit<Book, 'id'> = {
+    // Construct bookData without imageAiHint
+    const bookData: Omit<Book, 'id' | 'imageAiHint'> & { imageAiHint?: string } = {
         titleKey: values.titleKey,
         authorKey: values.authorKey,
         descriptionKey: values.descriptionKey,
         imageUrl: values.imageUrl,
         affiliateUrl: values.affiliateUrl || '',
         pdfUrl: values.pdfUrl || undefined,
-        imageAiHint: values.imageAiHint
+    };
+    
+    // To maintain compatibility with the Book type, we can add a default hint.
+    // The user just wanted it removed from the UI.
+    const completeBookData: Omit<Book, 'id'> = {
+        ...bookData,
+        imageAiHint: 'book cover' // Provide a default or existing value
     };
 
-    onSave(bookData);
+
+    onSave(completeBookData);
     onOpenChange(false);
   };
 
@@ -175,20 +181,6 @@ export function ManageBookDialog({
                 )}
               />
             )}
-            
-             <FormField
-              control={form.control}
-              name="imageAiHint"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Image AI Hint</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. book cover" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
