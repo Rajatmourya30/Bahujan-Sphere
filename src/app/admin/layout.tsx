@@ -32,7 +32,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { isLoading } = useAdminAuth();
+  const { user, isLoading } = useAdminAuth();
 
   // For this simplified example, we'll grant all permissions to any logged-in user.
   // A real app would use custom claims to manage roles.
@@ -58,6 +58,7 @@ function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
     { href: '/admin/google-ads', label: 'Google Ads', icon: Megaphone, visible: permissions.canManageAds },
   ].filter(item => item.visible);
 
+  // Render loading skeleton while auth state is being determined
   if (isLoading) {
     return (
         <div className="flex h-screen w-full items-center justify-center">
@@ -72,6 +73,12 @@ function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
   // Do not render layout on login page to avoid sidebar appearing
   if (pathname === '/admin/login') {
     return <>{children}</>;
+  }
+
+  // If loading is finished and there's no user, children will be the login page
+  // The provider will have already initiated the redirect.
+  if (!user) {
+      return <>{children}</>;
   }
 
 

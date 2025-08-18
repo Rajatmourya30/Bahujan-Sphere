@@ -24,25 +24,19 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setIsLoading(false);
-
-      if (!currentUser && pathname !== '/admin/login') {
-        router.replace('/admin/login');
-      }
     });
 
+    // Clean up the subscription on unmount
     return () => unsubscribe();
-  }, [router, pathname]);
+  }, []); // Empty dependency array ensures this runs only once on mount
 
-  if (isLoading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <div className="space-y-4 p-4">
-          <Skeleton className="h-10 w-48" />
-          <Skeleton className="h-64 w-full" />
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    // This effect handles redirection based on the auth state, AFTER loading is complete.
+    if (!isLoading && !user && pathname !== '/admin/login') {
+      router.replace('/admin/login');
+    }
+  }, [isLoading, user, pathname, router]);
+
 
   return (
     <AdminAuthContext.Provider value={{ user, isLoading }}>
