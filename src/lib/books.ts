@@ -21,7 +21,7 @@ export const allBooks: Book[] = [
     imageUrl: 'https://placehold.co/400x600.png',
     imageAiHint: 'book cover',
     affiliateUrl: 'https://example.com/affiliate-link-1',
-    pdfUrl: 'https://firebasestorage.googleapis.com/v0/b/bahujansphere-90sqv.appspot.com/o/Annihilation-of-Caste-with-a-Reply-to-Mahatma-Gandhi-Ambedkar.pdf?alt=media',
+    pdfUrl: 'https://firebasestorage.googleapis.com/v0/b/bahujansphere-90sqv.appspot.com/o/Annihilation-of-Caste-with-a-Reply-to-Mahatma-Gandhi-Ambedkar.pdf?alt=media&token=f09f9f9e-0b0a-4b0e-8e0a-0e0b0a0e0b0a',
   },
   {
     id: 'book-2',
