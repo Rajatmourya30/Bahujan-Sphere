@@ -3,61 +3,63 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-const BOOKMARKS_STORAGE_KEY = 'bahujanSphereBookmarks';
-
-const getStoredBookmarks = (): string[] => {
+const getStoredBookmarks = (key: string): string[] => {
     if (typeof window === 'undefined') {
         return [];
     }
     try {
-        const stored = localStorage.getItem(BOOKMARKS_STORAGE_KEY);
+        const stored = localStorage.getItem(key);
         return stored ? JSON.parse(stored) : [];
     } catch (error) {
-        console.error('Error reading bookmarks from localStorage', error);
+        console.error(`Error reading bookmarks from localStorage for key "${key}"`, error);
         return [];
     }
 };
 
-export const useBookmarks = () => {
+const setStoredBookmarks = (key: string, ids: string[]) => {
+    if (typeof window === 'undefined') {
+        return;
+    }
+    try {
+        localStorage.setItem(key, JSON.stringify(ids));
+    } catch (error) {
+        console.error(`Error saving bookmarks to localStorage for key "${key}"`, error);
+    }
+};
+
+export const useBookmarkStore = (storageKey: string) => {
   const [bookmarkedIds, setBookmarkedIds] = useState<string[]>([]);
   
   useEffect(() => {
-    setBookmarkedIds(getStoredBookmarks());
-  }, []);
+    setBookmarkedIds(getStoredBookmarks(storageKey));
+  }, [storageKey]);
 
-  const setStoredBookmarks = (ids: string[]) => {
-    try {
-      localStorage.setItem(BOOKMARKS_STORAGE_KEY, JSON.stringify(ids));
-    } catch (error) {
-      console.error('Error saving bookmarks to localStorage', error);
-    }
-  };
-
-  const addBookmark = useCallback((eventId: string) => {
+  const addBookmark = useCallback((itemId: string) => {
     setBookmarkedIds(prev => {
-        const newIds = [...prev, eventId];
-        setStoredBookmarks(newIds);
+        if (prev.includes(itemId)) return prev;
+        const newIds = [...prev, itemId];
+        setStoredBookmarks(storageKey, newIds);
         return newIds;
     });
-  }, []);
+  }, [storageKey]);
 
-  const removeBookmark = useCallback((eventId: string) => {
+  const removeBookmark = useCallback((itemId: string) => {
     setBookmarkedIds(prev => {
-        const newIds = prev.filter(id => id !== eventId);
-        setStoredBookmarks(newIds);
+        const newIds = prev.filter(id => id !== itemId);
+        setStoredBookmarks(storageKey, newIds);
         return newIds;
     });
-  }, []);
+  }, [storageKey]);
   
-  const isBookmarked = useCallback((eventId: string) => {
-    return bookmarkedIds.includes(eventId);
+  const isBookmarked = useCallback((itemId: string) => {
+    return bookmarkedIds.includes(itemId);
   }, [bookmarkedIds]);
   
-  const toggleBookmark = useCallback((eventId: string) => {
-      if (isBookmarked(eventId)) {
-          removeBookmark(eventId);
+  const toggleBookmark = useCallback((itemId: string) => {
+      if (isBookmarked(itemId)) {
+          removeBookmark(itemId);
       } else {
-          addBookmark(eventId);
+          addBookmark(itemId);
       }
   }, [addBookmark, removeBookmark, isBookmarked]);
 

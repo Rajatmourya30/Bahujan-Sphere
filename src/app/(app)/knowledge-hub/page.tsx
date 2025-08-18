@@ -8,12 +8,36 @@ import { allKnowledgeOrganizations, type KnowledgeOrganization } from '@/lib/kno
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Globe, Search } from 'lucide-react';
+import { Bookmark, Globe, Search } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useBookmarkStore } from '@/hooks/use-bookmarks';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { useRouter } from 'next/navigation';
+import { cn } from '@/lib/utils';
 
 function OrganizationCard({ organization }: { organization: KnowledgeOrganization }) {
     const { t } = useLanguage();
+    const router = useRouter();
+    const { isBookmarked, toggleBookmark } = useBookmarkStore('knowledgeHubBookmarks');
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            setIsAuthenticated(!!user);
+        });
+        return () => unsubscribe();
+    }, []);
+
+    const handleBookmarkClick = () => {
+        if (isAuthenticated) {
+            toggleBookmark(organization.id);
+        } else {
+            router.push('/login');
+        }
+    }
+
 
     return (
         <Card>
@@ -32,12 +56,21 @@ function OrganizationCard({ organization }: { organization: KnowledgeOrganizatio
                     <CardDescription className="mt-1 text-sm">{t(organization.descriptionKey)}</CardDescription>
                 </div>
             </CardHeader>
-            <CardFooter>
-                 <Button asChild variant="outline" className="w-full">
+            <CardFooter className="flex items-center gap-2">
+                 <Button asChild variant="outline" className="flex-grow">
                     <Link href={organization.websiteUrl} target="_blank">
                         <Globe className="mr-2" />
                         {t('knowledge_hub.visit_website_button')}
                     </Link>
+                </Button>
+                <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleBookmarkClick}
+                    aria-label={t('event_calendar.bookmark_button')}
+                    className="shrink-0"
+                >
+                    <Bookmark className={cn("h-5 w-5", isBookmarked(organization.id) ? "fill-primary text-primary" : "text-muted-foreground")} />
                 </Button>
             </CardFooter>
         </Card>

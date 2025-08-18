@@ -9,11 +9,35 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
+import { Bookmark, Search } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useBookmarkStore } from '@/hooks/use-bookmarks';
+import { cn } from '@/lib/utils';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { useRouter } from 'next/navigation';
 
 function StoreCard({ store }: { store: BahujanStore }) {
     const { t } = useLanguage();
+    const router = useRouter();
+    const { isBookmarked, toggleBookmark } = useBookmarkStore('storeBookmarks');
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            setIsAuthenticated(!!user);
+        });
+        return () => unsubscribe();
+    }, []);
+
+    const handleBookmarkClick = () => {
+        if (isAuthenticated) {
+            toggleBookmark(store.id);
+        } else {
+            router.push('/login');
+        }
+    }
+
 
     return (
         <Card className="flex flex-col text-center">
@@ -32,12 +56,23 @@ function StoreCard({ store }: { store: BahujanStore }) {
                 <CardTitle className="font-headline text-lg">{t(store.nameKey)}</CardTitle>
                 <CardDescription className="mt-2 text-sm">{t(store.descriptionKey)}</CardDescription>
             </CardContent>
-            <CardFooter>
-                <Button asChild className="w-full">
-                    <Link href={store.storeUrl} target="_blank">
-                        {t('store.visit_store_button')}
-                    </Link>
-                </Button>
+            <CardFooter className="flex-col gap-2">
+                <div className="flex w-full items-center gap-2">
+                    <Button asChild className="flex-grow">
+                        <Link href={store.storeUrl} target="_blank">
+                            {t('store.visit_store_button')}
+                        </Link>
+                    </Button>
+                     <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={handleBookmarkClick}
+                        aria-label={t('event_calendar.bookmark_button')}
+                        className="shrink-0"
+                    >
+                        <Bookmark className={cn("h-5 w-5", isBookmarked(store.id) ? "fill-primary text-primary" : "text-muted-foreground")} />
+                    </Button>
+                </div>
             </CardFooter>
         </Card>
     )

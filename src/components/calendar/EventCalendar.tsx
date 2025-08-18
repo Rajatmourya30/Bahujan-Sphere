@@ -9,7 +9,7 @@ import { useLanguage } from '@/hooks/use-language';
 import type { CalendarEvent } from '@/lib/events';
 import { Badge } from '../ui/badge';
 import { Bookmark } from 'lucide-react';
-import { useBookmarks } from '@/hooks/use-bookmarks';
+import { useBookmarkStore } from '@/hooks/use-bookmarks';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { EventDetailModal } from './EventDetailModal';
@@ -20,7 +20,7 @@ import { auth } from '@/lib/firebase';
 
 function EventDetail({ event, onReadMoreClick }: { event: CalendarEvent, onReadMoreClick: () => void }) {
   const { t } = useLanguage();
-  const { isBookmarked, toggleBookmark } = useBookmarks();
+  const { isBookmarked, toggleBookmark } = useBookmarkStore('eventBookmarks');
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
