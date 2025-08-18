@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -9,6 +10,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/use-language';
+import { auth } from '@/lib/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { Loader2 } from 'lucide-react';
 
 export default function UserLoginPage() {
   const router = useRouter();
@@ -16,25 +20,22 @@ export default function UserLoginPage() {
   const { t } = useLanguage();
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = () => {
-    // In a real app, you'd have proper authentication.
-    // Here, we'll check for the user in localStorage.
-    const storedUser = localStorage.getItem('bahujanUser');
-    if (storedUser) {
-        const user = JSON.parse(storedUser);
-        if (user.email === email && user.password === password) {
-            localStorage.setItem('isUserAuthenticated', 'true');
-            router.push('/profile');
-            return;
-        }
+  const handleLogin = async () => {
+    setIsLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      router.push('/profile');
+    } catch (error: any) {
+      toast({
+          title: t('login_page.toast_failed_title'),
+          description: t('login_page.toast_failed_description'),
+          variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
     }
-    
-    toast({
-        title: t('login_page.toast_failed_title'),
-        description: t('login_page.toast_failed_description'),
-        variant: 'destructive',
-    });
   };
 
   return (
@@ -67,7 +68,8 @@ export default function UserLoginPage() {
                 required
               />
             </div>
-            <Button onClick={handleLogin} className="w-full">
+            <Button onClick={handleLogin} className="w-full" disabled={isLoading}>
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {t('login_page.login_button')}
             </Button>
           </div>

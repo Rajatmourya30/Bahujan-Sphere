@@ -13,6 +13,9 @@ import { LanguageSwitcher } from '@/components/shared/LanguageSwitcher';
 import { Label } from '@/components/ui/label';
 import { ThemeSwitcher } from '@/components/shared/ThemeSwitcher';
 import { DonationDialog } from '@/components/profile/DonationDialog';
+import { auth, db } from '@/lib/firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 
 interface UserProfile {
     name: string;
@@ -26,30 +29,40 @@ interface UserProfile {
 export default function ProfilePage() {
   const router = useRouter();
   const { t } = useLanguage();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isDonationDialogOpen, setIsDonationDialogOpen] = useState(false);
 
   useEffect(() => {
-    const authStatus = localStorage.getItem('isUserAuthenticated');
-    if (authStatus !== 'true') {
-      router.replace('/login');
-    } else {
-      const storedUser = localStorage.getItem('bahujanUser');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const docRef = doc(db, "users", firebaseUser.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setUser(docSnap.data() as UserProfile);
+        } else {
+          // Handle case where user exists in Auth but not Firestore
+          router.replace('/login');
+        }
+      } else {
+        router.replace('/login');
       }
-      setIsAuthenticated(true);
-    }
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
   }, [router]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('isUserAuthenticated');
-    localStorage.removeItem('bahujanUser');
-    router.push('/login');
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      router.push('/login');
+    } catch (error) {
+      console.error("Error signing out: ", error);
+    }
   };
 
-  if (!isAuthenticated || !user) {
+  if (isLoading || !user) {
     return (
         <div className="space-y-4">
             <div className="flex items-center space-x-4">

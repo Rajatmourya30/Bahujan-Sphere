@@ -7,6 +7,8 @@ import { Home, User, Bookmark, Library, Store } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/hooks/use-language';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -22,10 +24,11 @@ export function BottomNav() {
   ];
 
   useEffect(() => {
-    // Check auth status from localStorage on the client side
-    const authStatus = localStorage.getItem('isUserAuthenticated') === 'true';
-    setIsAuthenticated(authStatus);
-  }, [pathname]); // Re-check on path change
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setIsAuthenticated(!!user);
+    });
+    return () => unsubscribe();
+  }, []);
 
 
   // Hide nav on admin pages

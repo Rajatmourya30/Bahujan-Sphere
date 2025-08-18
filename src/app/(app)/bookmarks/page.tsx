@@ -11,26 +11,49 @@ import Link from 'next/link';
 import { BookmarkX } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function BookmarksPage() {
   const { t } = useLanguage();
   const { bookmarkedIds, removeBookmark } = useBookmarks();
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const authStatus = localStorage.getItem('isUserAuthenticated');
-    if (authStatus !== 'true') {
-      router.replace('/login');
-    } else {
-      setIsAuthenticated(true);
-    }
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        router.replace('/login');
+      } else {
+        setIsLoading(false);
+      }
+    });
+    return () => unsubscribe();
   }, [router]);
 
   const bookmarkedEvents = allEvents.filter(event => bookmarkedIds.includes(event.id));
 
-  if (!isAuthenticated) {
-    return null; // Or a loading skeleton
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-1/2" />
+        <Skeleton className="h-4 w-3/4" />
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-3/4" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
+            <div className="flex gap-2">
+              <Skeleton className="h-6 w-16" />
+              <Skeleton className="h-6 w-20" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (

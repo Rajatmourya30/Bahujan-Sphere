@@ -20,6 +20,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/use-language';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { auth, db } from '@/lib/firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
@@ -35,6 +40,7 @@ export default function SignupPage() {
     const router = useRouter();
     const { toast } = useToast();
     const { t } = useLanguage();
+    const [isLoading, setIsLoading] = useState(false);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -49,18 +55,36 @@ export default function SignupPage() {
         },
     });
 
-    function onSubmit(values: z.infer<typeof formSchema>) {
-        // In a real app, you'd send this to a server.
-        // Here, we'll store it in localStorage.
-        localStorage.setItem('bahujanUser', JSON.stringify(values));
-        localStorage.setItem('isUserAuthenticated', 'true');
+    async function onSubmit(values: z.infer<typeof formSchema>) {
+        setIsLoading(true);
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+            const user = userCredential.user;
 
-        toast({
-            title: t('signup_page.toast_success_title'),
-            description: t('signup_page.toast_success_description'),
-        });
-        
-        router.push('/profile');
+            // Don't store the password in the database
+            const { password, ...profileData } = values;
+
+            await setDoc(doc(db, "users", user.uid), profileData);
+
+            toast({
+                title: t('signup_page.toast_success_title'),
+                description: t('signup_page.toast_success_description'),
+            });
+            
+            router.push('/profile');
+        } catch (error: any) {
+            let description = 'An unexpected error occurred. Please try again.';
+            if (error.code === 'auth/email-already-in-use') {
+                description = 'This email is already in use. Please login instead.';
+            }
+            toast({
+                title: 'Sign Up Failed',
+                description: description,
+                variant: 'destructive',
+            });
+        } finally {
+            setIsLoading(false);
+        }
     }
 
     const currentYear = new Date().getFullYear();
@@ -183,7 +207,10 @@ export default function SignupPage() {
                             />
                         </div>
 
-                        <Button type="submit" className="w-full">{t('signup_page.submit_button')}</Button>
+                        <Button type="submit" className="w-full" disabled={isLoading}>
+                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {t('signup_page.submit_button')}
+                        </Button>
                     </form>
                 </Form>
             </CardContent>
