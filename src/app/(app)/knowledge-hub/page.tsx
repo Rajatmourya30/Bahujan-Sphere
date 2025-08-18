@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useLanguage } from '@/hooks/use-language';
 import { allKnowledgeOrganizations, type KnowledgeOrganization } from '@/lib/knowledge-hub';
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Globe, Search } from 'lucide-react';
 import Link from 'next/link';
+import { Skeleton } from '@/components/ui/skeleton';
 
 function OrganizationCard({ organization }: { organization: KnowledgeOrganization }) {
     const { t } = useLanguage();
@@ -47,16 +48,27 @@ function OrganizationCard({ organization }: { organization: KnowledgeOrganizatio
 export default function KnowledgeHubPage() {
     const { t } = useLanguage();
     const [searchTerm, setSearchTerm] = useState('');
+    const [organizations, setOrganizations] = useState<KnowledgeOrganization[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchOrgs = async () => {
+            // Simulate API fetch
+            setOrganizations(allKnowledgeOrganizations);
+            setIsLoading(false);
+        };
+        fetchOrgs();
+    }, []);
 
     const filteredOrganizations = useMemo(() => {
         if (!searchTerm) {
-            return allKnowledgeOrganizations;
+            return organizations;
         }
-        return allKnowledgeOrganizations.filter(org => 
+        return organizations.filter(org => 
             t(org.nameKey).toLowerCase().includes(searchTerm.toLowerCase()) ||
             t(org.descriptionKey).toLowerCase().includes(searchTerm.toLowerCase())
         );
-    }, [searchTerm, t]);
+    }, [searchTerm, t, organizations]);
 
     return (
         <div className="space-y-8">
@@ -78,15 +90,23 @@ export default function KnowledgeHubPage() {
                 />
             </div>
             
-            <div className="grid grid-cols-1 gap-6">
-                {filteredOrganizations.length > 0 ? (
-                    filteredOrganizations.map(org => (
-                        <OrganizationCard key={org.id} organization={org} />
-                    ))
-                ) : (
-                    <p className="text-center text-muted-foreground py-8">{t('knowledge_hub.no_results')}</p>
-                )}
-            </div>
+            {isLoading ? (
+                 <div className="grid grid-cols-1 gap-6">
+                    <Skeleton className="h-40 w-full" />
+                    <Skeleton className="h-40 w-full" />
+                    <Skeleton className="h-40 w-full" />
+                 </div>
+            ) : (
+                <div className="grid grid-cols-1 gap-6">
+                    {filteredOrganizations.length > 0 ? (
+                        filteredOrganizations.map(org => (
+                            <OrganizationCard key={org.id} organization={org} />
+                        ))
+                    ) : (
+                        <p className="text-center text-muted-foreground py-8">{t('knowledge_hub.no_results')}</p>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

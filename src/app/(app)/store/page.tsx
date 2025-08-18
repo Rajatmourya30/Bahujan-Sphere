@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLanguage } from '@/hooks/use-language';
 import { allBahujanStores, type BahujanStore } from '@/lib/store';
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 function StoreCard({ store }: { store: BahujanStore }) {
     const { t } = useLanguage();
@@ -45,16 +46,27 @@ function StoreCard({ store }: { store: BahujanStore }) {
 export default function StorePage() {
     const { t } = useLanguage();
     const [searchTerm, setSearchTerm] = useState('');
+    const [stores, setStores] = useState<BahujanStore[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchStores = async () => {
+            // Simulate API fetch
+            setStores(allBahujanStores);
+            setIsLoading(false);
+        };
+        fetchStores();
+    }, []);
 
     const filteredStores = useMemo(() => {
         if (!searchTerm) {
-            return allBahujanStores;
+            return stores;
         }
-        return allBahujanStores.filter(store => 
+        return stores.filter(store => 
             t(store.nameKey).toLowerCase().includes(searchTerm.toLowerCase()) ||
             t(store.descriptionKey).toLowerCase().includes(searchTerm.toLowerCase())
         );
-    }, [searchTerm, t]);
+    }, [searchTerm, t, stores]);
 
     return (
         <div className="space-y-8">
@@ -76,19 +88,28 @@ export default function StorePage() {
                 />
             </div>
 
-            {filteredStores.length > 0 ? (
+            {isLoading ? (
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                    {filteredStores.map(item => (
-                        <StoreCard key={item.id} store={item} />
-                    ))}
+                    <Skeleton className="h-64 w-full" />
+                    <Skeleton className="h-64 w-full" />
                 </div>
             ) : (
-                 <p className="text-center text-muted-foreground py-8">{t('store.no_results')}</p>
-            )}
+                <>
+                    {filteredStores.length > 0 ? (
+                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                            {filteredStores.map(item => (
+                                <StoreCard key={item.id} store={item} />
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-center text-muted-foreground py-8">{t('store.no_results')}</p>
+                    )}
 
-            <footer className="text-center text-sm text-muted-foreground">
-                <p>{t('store.footer_text')}</p>
-            </footer>
+                    <footer className="text-center text-sm text-muted-foreground">
+                        <p>{t('store.footer_text')}</p>
+                    </footer>
+                </>
+            )}
         </div>
     );
 }

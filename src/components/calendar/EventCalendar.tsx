@@ -6,7 +6,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '../ui/button';
 import { useLanguage } from '@/hooks/use-language';
-import { allEvents, type CalendarEvent } from '@/lib/events';
+import type { CalendarEvent } from '@/lib/events';
 import { Badge } from '../ui/badge';
 import { Bookmark } from 'lucide-react';
 import { useBookmarks } from '@/hooks/use-bookmarks';
@@ -75,19 +75,23 @@ function EventDetail({ event, onReadMoreClick }: { event: CalendarEvent, onReadM
   );
 }
 
-export function EventCalendar() {
+interface EventCalendarProps {
+    events: CalendarEvent[];
+}
+
+export function EventCalendar({ events }: EventCalendarProps) {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const { t } = useLanguage();
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 
   const eventDates = useMemo(() => {
-    return allEvents.map(event => event.date);
-  }, []);
+    return events.map(event => event.date);
+  }, [events]);
 
   const dayEvents = useMemo(() => {
     if (!date) return [];
-    return allEvents.filter(event => isSameDay(event.date, date));
-  }, [date]);
+    return events.filter(event => isSameDay(event.date, date));
+  }, [date, events]);
 
   return (
     <>

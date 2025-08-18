@@ -3,9 +3,31 @@
 import { EventCalendar } from "@/components/calendar/EventCalendar";
 import { Logo } from "@/components/shared/Logo";
 import { useLanguage } from "@/hooks/use-language";
+import { allEvents } from "@/lib/events";
+import { useEffect, useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Home() {
   const { t } = useLanguage();
+  const [events, setEvents] = useState<typeof allEvents>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        // In a real app, you'd fetch from an API
+        // For now, we simulate a fetch
+        setEvents(allEvents);
+      } catch (error) {
+        console.error("Failed to fetch events:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchEvents();
+  }, []);
+
+
   return (
     <div className="space-y-4">
       <header className="text-center pb-4 border-b">
@@ -17,7 +39,14 @@ export default function Home() {
           {t('home.tagline')}
         </p>
       </header>
-      <EventCalendar />
+      {isLoading ? (
+        <div className="space-y-4">
+            <Skeleton className="h-80 w-full" />
+            <Skeleton className="h-40 w-full" />
+        </div>
+      ) : (
+        <EventCalendar events={events} />
+      )}
     </div>
   );
 }

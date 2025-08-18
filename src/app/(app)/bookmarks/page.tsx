@@ -14,25 +14,29 @@ import { useRouter } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
+import type { CalendarEvent } from '@/lib/events';
 
 export default function BookmarksPage() {
   const { t } = useLanguage();
   const { bookmarkedIds, removeBookmark } = useBookmarks();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (!user) {
         router.replace('/login');
       } else {
+        // In a real app, you'd fetch all events from an API here
+        setEvents(allEvents); 
         setIsLoading(false);
       }
     });
     return () => unsubscribe();
   }, [router]);
 
-  const bookmarkedEvents = allEvents.filter(event => bookmarkedIds.includes(event.id));
+  const bookmarkedEvents = events.filter(event => bookmarkedIds.includes(event.id));
 
   if (isLoading) {
     return (
