@@ -162,7 +162,7 @@ export default function SignupPage() {
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>{t('signup_page.birth_year_label')}</FormLabel>
-                                        <Select onValueChange={(value) => field.onChange(Number(value))} defaultValue={field.value?.toString()}>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value?.toString()}>
                                             <FormControl>
                                                 <SelectTrigger>
                                                     <SelectValue placeholder={t('signup_page.birth_year_placeholder')} />
