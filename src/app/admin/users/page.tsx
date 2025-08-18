@@ -14,6 +14,8 @@ import { LanguageDemographicsChart } from '@/components/admin/LanguageDemographi
 import { RetentionRateChart } from '@/components/admin/RetentionRateChart';
 import { FeatureUsageChart } from '@/components/admin/FeatureUsageChart';
 import { DeviceBreakdownChart } from '@/components/admin/DeviceBreakdownChart';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 const UserGrowthChart = dynamic(
   () => import('@/components/admin/UserGrowthChart').then((mod) => mod.UserGrowthChart),
@@ -39,15 +41,18 @@ const sampleUsers = [
 
 export default function UserDashboardPage() {
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const authStatus = localStorage.getItem('isAdminAuthenticated');
-    if (authStatus !== 'true') {
-      router.replace('/admin/login');
-    } else {
-      setIsAuthenticated(true);
-    }
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setIsLoading(false);
+      } else {
+        router.replace('/admin/login');
+      }
+    });
+
+    return () => unsubscribe();
   }, [router]);
 
   const handleDownload = () => {
@@ -57,7 +62,7 @@ export default function UserDashboardPage() {
     XLSX.writeFile(workbook, "user_data.xlsx");
   };
 
-  if (!isAuthenticated) {
+  if (isLoading) {
     return (
         <div className="space-y-4 p-4">
             <Skeleton className="h-10 w-1/3" />
