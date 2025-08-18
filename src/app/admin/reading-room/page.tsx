@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { BookOpen, UploadCloud, FileText, Loader2, AlertCircle, Trash2 } from 'lucide-react';
+import { BookOpen, UploadCloud, FileText, Loader2, AlertCircle, Trash2, ImageUp } from 'lucide-react';
 import { auth, db, storage } from '@/lib/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -23,6 +23,8 @@ interface ReadingRoomPdf {
   url: string;
   storagePath: string;
   uploadedAt: Timestamp;
+  coverImageUrl?: string;
+  coverImageStoragePath?: string;
 }
 
 export default function ManageReadingRoomPage() {
@@ -31,6 +33,7 @@ export default function ManageReadingRoomPage() {
   const [user, setUser] = useState<User | null>(null);
 
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
   
@@ -42,6 +45,7 @@ export default function ManageReadingRoomPage() {
   const [isLoadingPdfs, setIsLoadingPdfs] = useState(true);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const coverImageInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
@@ -88,6 +92,42 @@ export default function ManageReadingRoomPage() {
     }
   };
 
+  const handleCoverImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+        if (!file.type.startsWith('image/')) {
+            setStatusMessage({ type: 'error', text: 'Please select a valid image file.'});
+            setCoverImageFile(null);
+            if (coverImageInputRef.current) coverImageInputRef.current.value = '';
+            return;
+        }
+        setStatusMessage({ type: '', text: ''});
+        setCoverImageFile(file);
+    }
+  };
+
+  const uploadFile = (file: File, path: string) => {
+    return new Promise<{ downloadURL: string, storagePath: string }>((resolve, reject) => {
+      const storageRef = ref(storage, path);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      uploadTask.on('state_changed',
+        (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            setUploadProgress(progress);
+            setStatusMessage({ type: 'info', text: `Uploading... ${Math.round(progress)}%` });
+        },
+        (error) => {
+            reject(error);
+        },
+        async () => {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            resolve({ downloadURL, storagePath: path });
+        }
+      );
+    });
+  };
+
   const handleUpload = async () => {
     if (!user) {
         setStatusMessage({ type: 'error', text: 'You must be signed in to upload files.' });
@@ -102,56 +142,48 @@ export default function ManageReadingRoomPage() {
     setUploadProgress(0);
     setStatusMessage({ type: 'info', text: 'Starting upload...' });
 
-    const uniqueFileName = `${Date.now()}-${fileToUpload.name}`;
-    const storagePath = `pdfs/${uniqueFileName}`;
-    const storageRef = ref(storage, storagePath);
-    const uploadTask = uploadBytesResumable(storageRef, fileToUpload);
-
-    uploadTask.on('state_changed',
-        (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            setUploadProgress(progress);
-            setStatusMessage({ type: 'info', text: `Uploading... ${Math.round(progress)}%` });
-        },
-        (error) => {
-            console.error("Upload error:", error);
-            let errorMessage = `Upload failed: ${error.message}`;
-            if (error.code === 'storage/unauthorized') {
-                errorMessage = "Upload failed. Please check your Storage security rules and CORS settings in the Firebase console.";
-            }
-            setStatusMessage({ type: 'error', text: errorMessage });
-            setIsUploading(false);
-        },
-        async () => {
-            try {
-                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                
-                await addDoc(collection(db, "readingRoomPdfs"), {
-                    title,
-                    author,
-                    url: downloadURL,
-                    storagePath: storagePath,
-                    uploadedAt: serverTimestamp(),
-                    uploaderUid: user.uid
-                });
-
-                toast({ title: "Upload successful!", description: `"${title}" is now available in the reading room.` });
-                setStatusMessage({ type: '', text: '' });
-                // Reset form
-                setTitle('');
-                setAuthor('');
-                setFileToUpload(null);
-                if (fileInputRef.current) {
-                    fileInputRef.current.value = '';
-                }
-            } catch (error) {
-                console.error("Error saving to Firestore:", error);
-                setStatusMessage({ type: 'error', text: 'File uploaded, but failed to save details.' });
-            } finally {
-                setIsUploading(false);
-            }
+    try {
+        let coverImageInfo: { downloadURL: string, storagePath: string } | null = null;
+        if (coverImageFile) {
+            setStatusMessage({ type: 'info', text: 'Uploading cover image...' });
+            const coverImageStoragePath = `bookCovers/${Date.now()}-${coverImageFile.name}`;
+            coverImageInfo = await uploadFile(coverImageFile, coverImageStoragePath);
         }
-    );
+
+        setStatusMessage({ type: 'info', text: 'Uploading PDF file...' });
+        const pdfStoragePath = `pdfs/${Date.now()}-${fileToUpload.name}`;
+        const pdfInfo = await uploadFile(fileToUpload, pdfStoragePath);
+
+        await addDoc(collection(db, "readingRoomPdfs"), {
+            title,
+            author,
+            url: pdfInfo.downloadURL,
+            storagePath: pdfInfo.storagePath,
+            coverImageUrl: coverImageInfo?.downloadURL || null,
+            coverImageStoragePath: coverImageInfo?.storagePath || null,
+            uploadedAt: serverTimestamp(),
+            uploaderUid: user.uid
+        });
+
+        toast({ title: "Upload successful!", description: `"${title}" is now available in the reading room.` });
+        setStatusMessage({ type: '', text: '' });
+        // Reset form
+        setTitle('');
+        setAuthor('');
+        setFileToUpload(null);
+        setCoverImageFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        if (coverImageInputRef.current) coverImageInputRef.current.value = '';
+    } catch (error: any) {
+        console.error("Upload error:", error);
+        let errorMessage = `Upload failed: ${error.message}`;
+        if (error.code === 'storage/unauthorized') {
+            errorMessage = "Upload failed. Please check your Storage security rules in the Firebase console.";
+        }
+        setStatusMessage({ type: 'error', text: errorMessage });
+    } finally {
+        setIsUploading(false);
+    }
   };
 
   const handleDelete = async (pdf: ReadingRoomPdf) => {
@@ -163,6 +195,12 @@ export default function ManageReadingRoomPage() {
         // Delete the file from Firebase Storage
         const fileRef = ref(storage, pdf.storagePath);
         await deleteObject(fileRef);
+        
+        // Delete cover image if it exists
+        if (pdf.coverImageStoragePath) {
+          const coverImageRef = ref(storage, pdf.coverImageStoragePath);
+          await deleteObject(coverImageRef);
+        }
 
         // Delete the document from Firestore
         await deleteDoc(doc(db, "readingRoomPdfs", pdf.id));
@@ -188,7 +226,7 @@ export default function ManageReadingRoomPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <UploadCloud />
-                Upload New PDF
+                Upload New Document
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -199,6 +237,10 @@ export default function ManageReadingRoomPage() {
               <div className="space-y-2">
                 <Label htmlFor="pdf-author">Author (optional)</Label>
                 <Input id="pdf-author" value={author} onChange={(e) => setAuthor(e.target.value)} placeholder="Name of the author" disabled={isUploading} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cover-image-file">Book Cover Image (optional)</Label>
+                <Input id="cover-image-file" type="file" accept="image/*" onChange={handleCoverImageChange} ref={coverImageInputRef} disabled={isUploading} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="pdf-file">PDF File</Label>
@@ -216,7 +258,7 @@ export default function ManageReadingRoomPage() {
             <CardFooter>
               <Button className="w-full" onClick={handleUpload} disabled={isUploading || !fileToUpload || !title}>
                 {isUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Upload PDF
+                Upload Document
               </Button>
             </CardFooter>
           </Card>

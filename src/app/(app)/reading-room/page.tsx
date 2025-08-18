@@ -10,12 +10,14 @@ import { db } from '@/lib/firebase';
 import { collection, query, orderBy, onSnapshot, type Timestamp } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BookOpen } from 'lucide-react';
+import Image from 'next/image';
 
 interface ReadingRoomPdf {
   id: string;
   title: string;
   author?: string;
   uploadedAt: Timestamp;
+  coverImageUrl?: string;
 }
 
 function ReadingRoomBookCard({ pdf }: { pdf: ReadingRoomPdf }) {
@@ -23,9 +25,20 @@ function ReadingRoomBookCard({ pdf }: { pdf: ReadingRoomPdf }) {
 
     return (
         <Card className="flex flex-col">
-            <CardHeader>
-                <CardTitle className="font-headline text-lg">{pdf.title}</CardTitle>
-                {pdf.author && <CardDescription className="text-sm font-medium">{pdf.author}</CardDescription>}
+            <CardHeader className="flex-row items-start gap-4">
+                <div className="relative h-32 w-24 flex-shrink-0">
+                    <Image
+                        src={pdf.coverImageUrl || 'https://placehold.co/400x600.png'}
+                        alt={pdf.title}
+                        fill
+                        className="object-cover rounded-md"
+                        data-ai-hint="book cover"
+                    />
+                </div>
+                <div className="flex-grow">
+                    <CardTitle className="font-headline text-lg">{pdf.title}</CardTitle>
+                    {pdf.author && <CardDescription className="text-sm font-medium">{pdf.author}</CardDescription>}
+                </div>
             </CardHeader>
             <CardContent className="flex-grow">
                 <p className="text-sm text-muted-foreground line-clamp-3">
