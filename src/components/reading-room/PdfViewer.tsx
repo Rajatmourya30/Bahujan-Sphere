@@ -9,9 +9,6 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Loader2, ZoomIn, ZoomOut } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 
-// Set the workerSrc to the public path where we will copy the file.
-pdfjs.GlobalWorkerOptions.workerSrc = `/static/js/pdf.worker.min.mjs`;
-
 interface PdfViewerProps {
   file: string;
 }
@@ -22,8 +19,9 @@ export function PdfViewer({ file }: PdfViewerProps) {
   const [scale, setScale] = useState(1.0);
   const [isClient, setIsClient] = useState(false);
 
-  // This ensures the component only renders on the client, avoiding SSR issues with the library.
+  // This ensures the component only renders on the client, and sets up the worker.
   useEffect(() => {
+    pdfjs.GlobalWorkerOptions.workerSrc = `/static/js/pdf.worker.min.mjs`;
     setIsClient(true);
   }, []);
 
