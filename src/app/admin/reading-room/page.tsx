@@ -84,6 +84,7 @@ export default function ManageReadingRoomPage() {
           onOpenChange={setIsDialogOpen}
           onSave={handleSave}
           managePdfUrl={true}
+          manageAffiliateUrl={false}
         />
       )}
     </div>

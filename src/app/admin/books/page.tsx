@@ -80,6 +80,7 @@ export default function ManageBooksPage() {
           onOpenChange={setIsDialogOpen}
           onSave={handleSave}
           managePdfUrl={false}
+          manageAffiliateUrl={true}
         />
       )}
     </div>

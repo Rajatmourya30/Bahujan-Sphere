@@ -31,8 +31,9 @@ const formSchema = z.object({
   descriptionKey: z.string().min(1, 'Key is required'),
   imageUrl: z.string().url('Must be a valid URL'),
   imageAiHint: z.string().min(1, 'AI Hint is required'),
-  affiliateUrl: z.string().url('Must be a valid URL'),
+  affiliateUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   pdfUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  pdfFile: z.any().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -42,9 +43,16 @@ interface ManageBookDialogProps {
   onOpenChange: (open: boolean) => void;
   onSave: (data: Omit<Book, 'id'>) => void;
   managePdfUrl?: boolean;
+  manageAffiliateUrl?: boolean;
 }
 
-export function ManageBookDialog({ book, onOpenChange, onSave, managePdfUrl = false }: ManageBookDialogProps) {
+export function ManageBookDialog({
+    book,
+    onOpenChange,
+    onSave,
+    managePdfUrl = false,
+    manageAffiliateUrl = true
+}: ManageBookDialogProps) {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -59,6 +67,14 @@ export function ManageBookDialog({ book, onOpenChange, onSave, managePdfUrl = fa
   });
 
   const onSubmit = (values: FormValues) => {
+    // In a real app, you would handle the file upload here
+    // and set the pdfUrl based on the uploaded file's location.
+    // For this demo, we'll just log the file name if it exists.
+    if (values.pdfFile && values.pdfFile.length > 0) {
+        console.log("Uploaded file:", values.pdfFile[0].name);
+        // This is where you would set the actual URL after upload
+        values.pdfUrl = `/pdfs/${values.pdfFile[0].name}`;
+    }
     onSave(values);
     onOpenChange(false);
   };
@@ -139,33 +155,57 @@ export function ManageBookDialog({ book, onOpenChange, onSave, managePdfUrl = fa
                 </FormItem>
               )}
             />
-             <FormField
-              control={form.control}
-              name="affiliateUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Affiliate URL</FormLabel>
-                  <FormControl>
-                    <Input type="url" placeholder="https://example.com/affiliate-link" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {managePdfUrl && (
+             {manageAffiliateUrl && (
               <FormField
                 control={form.control}
-                name="pdfUrl"
+                name="affiliateUrl"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>PDF URL</FormLabel>
+                    <FormLabel>Affiliate URL</FormLabel>
                     <FormControl>
-                      <Input type="url" placeholder="https://example.com/book.pdf" {...field} />
+                      <Input type="url" placeholder="https://example.com/affiliate-link" {...field} />
                     </FormControl>
-                     <FormMessage />
+                    <FormMessage />
                   </FormItem>
                 )}
               />
+            )}
+            {managePdfUrl && (
+              <>
+                <FormField
+                    control={form.control}
+                    name="pdfFile"
+                    render={({ field: { onChange, value, ...rest } }) => (
+                    <FormItem>
+                        <FormLabel>Upload PDF</FormLabel>
+                        <FormControl>
+                        <Input 
+                            type="file" 
+                            accept=".pdf"
+                            onChange={(e) => {
+                                onChange(e.target.files);
+                            }}
+                            {...rest} 
+                        />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="pdfUrl"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Or enter PDF URL</FormLabel>
+                        <FormControl>
+                        <Input type="url" placeholder="https://example.com/book.pdf" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+              </>
             )}
             <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
