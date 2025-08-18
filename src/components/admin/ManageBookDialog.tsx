@@ -163,8 +163,8 @@ export function ManageBookDialog({
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-             <ScrollArea className="max-h-[60vh] -mr-3 pr-4">
-                <div className="space-y-4 py-4 px-1">
+             <ScrollArea className="max-h-[60vh] px-4">
+                <div className="space-y-4 py-4">
                     <FormField
                     control={form.control}
                     name="titleKey"
@@ -293,7 +293,7 @@ export function ManageBookDialog({
                     )}
                 </div>
             </ScrollArea>
-            <DialogFooter className="pt-4">
+            <DialogFooter className="pt-4 px-6 pb-6">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isUploading}>
                 Cancel
               </Button>
