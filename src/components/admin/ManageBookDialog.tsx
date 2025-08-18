@@ -26,7 +26,7 @@ import { Textarea } from '@/components/ui/textarea';
 import type { Book } from '@/lib/books';
 import { ScrollArea } from '../ui/scroll-area';
 import { useState } from 'react';
-import { getDownloadURL, ref, uploadBytesResumable, UploadTask } from 'firebase/storage';
+import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
@@ -37,7 +37,6 @@ const formSchema = z.object({
   authorKey: z.string().min(1, 'Key is required'),
   descriptionKey: z.string().min(1, 'Key is required'),
   imageFile: z.any().optional(),
-  imageAiHint: z.string().min(1, 'AI Hint is required'),
   affiliateUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   pdfFile: z.any().optional(),
 }).refine(data => (data.book && data.book.imageUrl) || (data.imageFile && data.imageFile.length > 0), {
@@ -96,7 +95,6 @@ export function ManageBookDialog({
       titleKey: book?.titleKey || '',
       authorKey: book?.authorKey || '',
       descriptionKey: book?.descriptionKey || '',
-      imageAiHint: book?.imageAiHint || '',
       affiliateUrl: book?.affiliateUrl || '',
       book: book,
     },
@@ -106,32 +104,34 @@ export function ManageBookDialog({
     setIsUploading(true);
     setUploadProgress(0);
 
-    const newBookData: Omit<Book, 'id'> = {
-        titleKey: values.titleKey,
-        authorKey: values.authorKey,
-        descriptionKey: values.descriptionKey,
-        imageAiHint: values.imageAiHint,
-        affiliateUrl: values.affiliateUrl || '',
-        imageUrl: book?.imageUrl || '',
-        pdfUrl: book?.pdfUrl || '',
-    };
-
     try {
+        let imageUrl = book?.imageUrl || '';
         if (values.imageFile && values.imageFile.length > 0) {
             const file = values.imageFile[0];
             const imagePath = `book-covers/${Date.now()}_${file.name}`;
             setUploadMessage('Uploading cover image...');
-            newBookData.imageUrl = await uploadFile(file, imagePath, setUploadProgress);
+            imageUrl = await uploadFile(file, imagePath, setUploadProgress);
         }
 
         setUploadProgress(0);
 
+        let pdfUrl = book?.pdfUrl || '';
         if (managePdfUrl && values.pdfFile && values.pdfFile.length > 0) {
             const file = values.pdfFile[0];
             const pdfPath = `pdfs/${Date.now()}_${file.name}`;
             setUploadMessage('Uploading PDF...');
-            newBookData.pdfUrl = await uploadFile(file, pdfPath, setUploadProgress);
+            pdfUrl = await uploadFile(file, pdfPath, setUploadProgress);
         }
+
+        const newBookData: Omit<Book, 'id'> = {
+            titleKey: values.titleKey,
+            authorKey: values.authorKey,
+            descriptionKey: values.descriptionKey,
+            imageAiHint: 'book cover',
+            affiliateUrl: values.affiliateUrl || '',
+            imageUrl: imageUrl,
+            pdfUrl: pdfUrl,
+        };
 
         onSave(newBookData);
         onOpenChange(false);
@@ -226,19 +226,7 @@ export function ManageBookDialog({
                      {book?.imageUrl && !form.watch('imageFile')?.[0] && (
                         <div className="text-sm text-muted-foreground">Current image: <a href={book.imageUrl} target="_blank" rel="noopener noreferrer" className="underline">View Image</a></div>
                      )}
-                    <FormField
-                    control={form.control}
-                    name="imageAiHint"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Image AI Hint</FormLabel>
-                        <FormControl>
-                            <Input placeholder="e.g. book cover" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
+                    
                     {manageAffiliateUrl && (
                     <FormField
                         control={form.control}
