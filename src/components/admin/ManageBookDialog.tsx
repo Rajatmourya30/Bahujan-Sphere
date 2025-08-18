@@ -92,7 +92,7 @@ export function ManageBookDialog({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
              <ScrollArea className="max-h-[70vh] -mr-6 pr-6">
-                <div className="space-y-4 py-4 pr-1">
+                <div className="space-y-4 py-4 px-1">
                     <FormField
                     control={form.control}
                     name="titleKey"
