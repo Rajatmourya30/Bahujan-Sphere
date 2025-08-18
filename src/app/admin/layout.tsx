@@ -25,41 +25,14 @@ import {
   Users,
 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { Logo } from '@/components/shared/Logo';
-import { useEffect, useState } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { AdminAuthProvider, useAdminAuth } from '@/context/AdminAuthProvider';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    // Do not run auth check on the login page itself
-    if (pathname === '/admin/login') {
-      setIsLoading(false);
-      return;
-    }
-
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-      } else {
-        router.replace('/admin/login');
-      }
-      setIsLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [router, pathname]);
+  const { isLoading } = useAdminAuth();
 
   // For this simplified example, we'll grant all permissions to any logged-in user.
   // A real app would use custom claims to manage roles.
@@ -85,11 +58,6 @@ export default function AdminLayout({
     { href: '/admin/google-ads', label: 'Google Ads', icon: Megaphone, visible: permissions.canManageAds },
   ].filter(item => item.visible);
 
-  // Do not render layout on login page to avoid sidebar appearing
-  if (pathname === '/admin/login') {
-    return <>{children}</>;
-  }
-
   if (isLoading) {
     return (
         <div className="flex h-screen w-full items-center justify-center">
@@ -98,8 +66,14 @@ export default function AdminLayout({
                 <Skeleton className="h-64 w-full" />
             </div>
         </div>
-    )
+    );
   }
+
+  // Do not render layout on login page to avoid sidebar appearing
+  if (pathname === '/admin/login') {
+    return <>{children}</>;
+  }
+
 
   return (
     <SidebarProvider defaultOpen={false}>
@@ -137,4 +111,17 @@ export default function AdminLayout({
       </SidebarInset>
     </SidebarProvider>
   );
+}
+
+
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+    return (
+        <AdminAuthProvider>
+            <AdminDashboardLayout>{children}</AdminDashboardLayout>
+        </AdminAuthProvider>
+    )
 }
