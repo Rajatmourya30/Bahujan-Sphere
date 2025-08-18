@@ -7,15 +7,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Globe, LogOut, Palette, Heart } from 'lucide-react';
+import { Globe, LogOut, Palette, Heart, Trash2 } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { LanguageSwitcher } from '@/components/shared/LanguageSwitcher';
 import { Label } from '@/components/ui/label';
 import { ThemeSwitcher } from '@/components/shared/ThemeSwitcher';
 import { DonationDialog } from '@/components/profile/DonationDialog';
 import { auth, db } from '@/lib/firebase';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { onAuthStateChanged, signOut, deleteUser } from 'firebase/auth';
+import { doc, getDoc, deleteDoc } from 'firebase/firestore';
+import { DeleteAccountDialog } from '@/components/profile/DeleteAccountDialog';
+import { useToast } from '@/hooks/use-toast';
 
 interface UserProfile {
     name: string;
@@ -29,9 +31,11 @@ interface UserProfile {
 export default function ProfilePage() {
   const router = useRouter();
   const { t } = useLanguage();
+  const { toast } = useToast();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDonationDialogOpen, setIsDonationDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -61,6 +65,37 @@ export default function ProfilePage() {
       console.error("Error signing out: ", error);
     }
   };
+  
+  const handleDeleteAccount = async () => {
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) {
+        toast({ title: 'Error', description: 'No user is currently signed in.', variant: 'destructive' });
+        return;
+    }
+
+    try {
+        // First, delete the Firestore document
+        const userDocRef = doc(db, 'users', firebaseUser.uid);
+        await deleteDoc(userDocRef);
+
+        // Then, delete the user from Firebase Auth
+        await deleteUser(firebaseUser);
+
+        toast({ title: 'Account Deleted', description: 'Your account has been permanently deleted.' });
+        router.push('/signup'); // Redirect to signup or home page
+    } catch (error: any) {
+        console.error('Error deleting account:', error);
+        let description = 'An error occurred while deleting your account.';
+        // This error often means the user needs to re-authenticate
+        if (error.code === 'auth/requires-recent-login') {
+            description = 'This is a sensitive operation. Please log out and log back in before deleting your account.';
+        }
+        toast({ title: 'Deletion Failed', description, variant: 'destructive' });
+    } finally {
+        setIsDeleteDialogOpen(false);
+    }
+  };
+
 
   if (isLoading || !user) {
     return (
@@ -143,10 +178,16 @@ export default function ProfilePage() {
                     {t('profile_page.support_button')}
                 </Button>
 
-                <Button onClick={handleLogout} variant="outline" className="w-full">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    {t('profile_page.logout_button')}
-                </Button>
+                <div className="space-y-2">
+                    <Button onClick={handleLogout} variant="outline" className="w-full">
+                        <LogOut className="mr-2 h-4 w-4" />
+                        {t('profile_page.logout_button')}
+                    </Button>
+                     <Button onClick={() => setIsDeleteDialogOpen(true)} variant="destructive" className="w-full">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Account
+                    </Button>
+                </div>
             </div>
         </div>
         
@@ -155,6 +196,13 @@ export default function ProfilePage() {
                 isOpen={isDonationDialogOpen}
                 onOpenChange={setIsDonationDialogOpen}
                 userName={user.name}
+            />
+        )}
+        {isDeleteDialogOpen && (
+            <DeleteAccountDialog
+                isOpen={isDeleteDialogOpen}
+                onOpenChange={setIsDeleteDialogOpen}
+                onConfirm={handleDeleteAccount}
             />
         )}
     </>
