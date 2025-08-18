@@ -10,10 +10,12 @@ import { allBooks, type Book } from '@/lib/books';
 import { BookManagementTable } from '@/components/admin/BookManagementTable';
 import { ManageBookDialog } from '@/components/admin/ManageBookDialog';
 
-export default function ManageBooksPage() {
+export default function ManageReadingRoomPage() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [books, setBooks] = useState(allBooks);
+  
+  // Filter for books that are available in the reading room
+  const [books, setBooks] = useState(() => allBooks.filter(b => b.pdfUrl));
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingBook, setEditingBook] = useState<Book | null>(null);
 
@@ -32,6 +34,8 @@ export default function ManageBooksPage() {
   };
   
   const handleSave = (bookData: Omit<Book, 'id'>) => {
+    // This is a simplified state management for the demo.
+    // In a real app, you would update a central data store.
     if (editingBook) {
       setBooks(currentBooks => currentBooks.map(b => b.id === editingBook.id ? { ...b, ...bookData } : b));
     } else {
@@ -57,12 +61,12 @@ export default function ManageBooksPage() {
     <div className="space-y-8">
       <header className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
-          <h1 className="font-headline text-3xl font-bold">Manage Books</h1>
-          <p className="text-muted-foreground">Add, edit, or remove books for the affiliate section.</p>
+          <h1 className="font-headline text-3xl font-bold">Manage Reading Room</h1>
+          <p className="text-muted-foreground">Add, edit, or remove books with PDFs for the reading room.</p>
         </div>
         <Button onClick={() => handleOpenDialog()}>
           <PlusCircle className="mr-2 h-4 w-4" />
-          Add Book
+          Add Book to Reading Room
         </Button>
       </header>
 
@@ -79,7 +83,7 @@ export default function ManageBooksPage() {
           book={editingBook}
           onOpenChange={setIsDialogOpen}
           onSave={handleSave}
-          managePdfUrl={false}
+          managePdfUrl={true}
         />
       )}
     </div>

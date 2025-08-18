@@ -1,100 +1,91 @@
+
 'use client';
 
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarHeader,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarProvider,
-  SidebarTrigger,
-} from '@/components/ui/sidebar';
-import {
-  Calendar,
-  HeartHandshake,
-  Home,
-  Library,
-  Megaphone,
-  Store,
-  UserCog,
-  Users,
-} from 'lucide-react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Logo } from '@/components/shared/Logo';
-import { useEffect, useState } from 'react';
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table"
+import { Card, CardContent } from "@/components/ui/card";
+import { MoreHorizontal } from "lucide-react";
+import { Button } from "../ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import Image from "next/image";
+import { useLanguage } from "@/hooks/use-language";
+import type { Book } from "@/lib/books";
 
-type UserRole = 'Admin' | 'Editor' | 'Reviewer' | 'Contributor' | null;
+interface BookManagementTableProps {
+    books: Book[];
+    onEdit: (book: Book) => void;
+    onRemove: (bookId: string) => void;
+}
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const pathname = usePathname();
-  const [userRole, setUserRole] = useState<UserRole>(null);
+export function BookManagementTable({ books, onEdit, onRemove }: BookManagementTableProps) {
+    const { t } = useLanguage();
 
-  useEffect(() => {
-    const role = localStorage.getItem('adminUserRole') as UserRole;
-    setUserRole(role);
-  }, [pathname]);
-
-  const permissions = {
-    canManageDonations: userRole === 'Admin',
-    canManageUsers: userRole === 'Admin',
-    canManageTeam: userRole === 'Admin' || userRole === 'Editor',
-    canManageContent: userRole === 'Admin' || userRole === 'Editor',
-    canAccessCalendar: userRole === 'Admin' || userRole === 'Editor' || userRole === 'Contributor' || userRole === 'Reviewer',
-    canManageAds: userRole === 'Admin',
-  };
-  
-  const navItems = [
-      { href: '/admin', label: 'Dashboard', icon: Home, visible: true },
-      { href: '/admin/calendar', label: 'Calendar', icon: Calendar, visible: permissions.canAccessCalendar },
-      { href: '/admin/knowledge-hub', label: 'Knowledge Hub', icon: Library, visible: permissions.canManageContent },
-      { href: '/admin/store', label: 'Store Directory', icon: Store, visible: permissions.canManageContent },
-      { href: '/admin/donations', label: 'Donations', icon: HeartHandshake, visible: permissions.canManageDonations },
-      { href: '/admin/users', label: 'Users', icon: Users, visible: permissions.canManageUsers },
-      { href: '/admin/team', label: 'Team', icon: UserCog, visible: permissions.canManageTeam },
-      { href: '/admin/google-ads', label: 'Google Ads', icon: Megaphone, visible: permissions.canManageAds },
-  ].filter(item => item.visible);
-
-  return (
-    <SidebarProvider defaultOpen={false}>
-      <Sidebar collapsible="icon" variant="inset">
-        <SidebarHeader className="pt-4">
-          <div className="flex items-center gap-2">
-            <Logo />
-            <span className="text-lg font-semibold">Admin Panel</span>
-          </div>
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarMenu>
-            {navItems.map((item) => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === item.href}
-                  tooltip={item.label}
-                >
-                  <Link href={item.href}>
-                    <item.icon />
-                    <span>{item.label}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarContent>
-      </Sidebar>
-      <SidebarInset>
-        <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-            <SidebarTrigger />
-        </header>
-        <main className="p-4 sm:px-6 sm:py-0 space-y-8">{children}</main>
-      </SidebarInset>
-    </SidebarProvider>
-  );
+    return (
+        <Card>
+            <CardContent className="p-0">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Book</TableHead>
+                            <TableHead>Author</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {books.map((book) => (
+                            <TableRow key={book.id}>
+                                <TableCell className="font-medium">
+                                    <div className="flex items-center gap-3">
+                                        <div className="relative h-16 w-12 flex-shrink-0">
+                                            <Image
+                                                src={book.imageUrl}
+                                                alt={t(book.titleKey)}
+                                                fill
+                                                className="object-cover rounded-md"
+                                                data-ai-hint={book.imageAiHint}
+                                            />
+                                        </div>
+                                        <span className="font-bold">{t(book.titleKey)}</span>
+                                    </div>
+                                </TableCell>
+                                <TableCell>
+                                     <p className="text-sm text-muted-foreground">
+                                        {t(book.authorKey)}
+                                    </p>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                                <span className="sr-only">Open menu</span>
+                                                <MoreHorizontal className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                            <DropdownMenuItem onClick={() => onEdit(book)}>
+                                                Edit
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                                className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                                                onClick={() => onRemove(book.id)}
+                                            >
+                                                Remove
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
+    );
 }
