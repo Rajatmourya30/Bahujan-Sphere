@@ -26,6 +26,9 @@ import { KnowledgeHubEngagementChart } from '@/components/admin/KnowledgeHubEnga
 import { AdRevenueChart } from '@/components/admin/AdRevenueChart';
 import { RevenueByCategoryChart } from '@/components/admin/RevenueByCategoryChart';
 import { TopAdPlacementsChart } from '@/components/admin/TopAdPlacementsChart';
+import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 
 const UserGrowthChart = dynamic(
@@ -44,31 +47,52 @@ type UserRole = 'Admin' | 'Editor' | 'Reviewer' | 'Contributor' | null;
 export default function AdminDashboardPage() {
   const router = useRouter();
   const { t } = useLanguage();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<UserRole>(null);
-  const [user, setUser] = useState<{name: string} | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const authStatus = localStorage.getItem('isAdminAuthenticated');
-    const role = localStorage.getItem('adminUserRole') as UserRole;
-    if (authStatus !== 'true' || !role) {
-      router.replace('/admin/login');
-    } else {
-      setIsAuthenticated(true);
-      setUserRole(role);
-      const adminEmail = localStorage.getItem('adminUserEmail'); // Assuming email is stored on login
-      setUser({ name: role });
-    }
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setFirebaseUser(user);
+        
+        // Fetch user role from Firestore
+        const teamQuery = query(collection(db, "teamMembers"), where("email", "==", user.email));
+        const querySnapshot = await getDocs(teamQuery);
+        
+        if (!querySnapshot.empty) {
+          const userDoc = querySnapshot.docs[0].data();
+          const role = userDoc.role as UserRole;
+          setUserRole(role);
+          localStorage.setItem('adminUserRole', role || '');
+        } else {
+          // If user is not in the teamMembers collection, they have no role.
+          setUserRole(null);
+          localStorage.removeItem('adminUserRole');
+          // Optional: redirect if they shouldn't be here
+          // router.replace('/admin/login'); 
+        }
+
+      } else {
+        router.replace('/admin/login');
+      }
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
   }, [router]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('isAdminAuthenticated');
-    localStorage.removeItem('adminUserRole');
-    localStorage.removeItem('adminUserEmail');
-    router.push('/admin/login');
+  const handleLogout = async () => {
+    try {
+        await signOut(auth);
+        localStorage.removeItem('adminUserRole');
+        router.push('/admin/login');
+    } catch (error) {
+        console.error("Error signing out: ", error);
+    }
   };
   
-  if (!isAuthenticated || !userRole || !user) {
+  if (isLoading || !firebaseUser) {
     return (
         <div className="space-y-4 pt-4">
             <Skeleton className="h-10 w-1/3" />
@@ -89,7 +113,7 @@ export default function AdminDashboardPage() {
       <header className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
             <h1 className="font-headline text-3xl font-bold">{t('admin_dashboard.title')}</h1>
-            <p className="text-muted-foreground">Welcome, {user.name}. Here's an overview of your app.</p>
+            <p className="text-muted-foreground">Welcome, {userRole || 'User'}. Here's an overview of your app.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
            <Button asChild variant="outline">

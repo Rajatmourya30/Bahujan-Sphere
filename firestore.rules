@@ -1,27 +1,19 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // USERS: Allow users to create and manage their own profile data.
     match /users/{userId} {
-      allow read, create: if request.auth != null;
-      allow update, delete: if request.auth.uid == userId;
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // READING ROOM PDFS: Allow any authenticated user to add PDFs.
-    // In a real app, you might restrict this to admin roles using custom claims.
     match /readingRoomPdfs/{docId} {
       allow read: if true;
-      allow create, write, delete: if request.auth != null;
+      allow write: if request.auth != null;
     }
 
-    // TEAM MEMBERS: Allow authenticated users to read team data.
-    // Writing/deleting would typically be restricted to 'Admin' roles via custom claims.
     match /teamMembers/{docId} {
-        allow read: if request.auth != null;
-        allow create, update, delete: if request.auth != null; // Simplified for this context
+      allow read: if request.auth != null;
+      allow write: if request.auth != null; // In a real app, you'd restrict this to Admins
     }
   }
 }
