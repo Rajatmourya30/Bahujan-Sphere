@@ -1,0 +1,81 @@
+# BahujanSphere DataConnect Schema
+
+type User @table {
+  id: String! @primaryKey
+  createdAt: Timestamp!
+  name: String!
+  email: String!
+  country: String
+  state: String
+  city: String
+  birthYear: Int
+}
+
+type Event @table {
+  id: String! @primaryKey
+  createdAt: Timestamp!
+  updatedAt: Timestamp!
+  date: Date!
+  titleKey: String!
+  descriptionKey: String!
+  readMoreUrl: String
+  tagKeys: [String!]
+}
+
+type Book @table {
+  id: String! @primaryKey
+  createdAt: Timestamp!
+  updatedAt: Timestamp!
+  titleKey: String!
+  authorKey: String!
+  descriptionKey: String!
+  imageUrl: String
+  affiliateUrl: String
+  pdfUrl: String
+}
+
+type Organization @table {
+  id: String! @primaryKey
+  createdAt: Timestamp!
+  updatedAt: Timestamp!
+  nameKey: String!
+  descriptionKey: String!
+  logoUrl: String
+  websiteUrl: String
+}
+
+type Store @table {
+  id: String! @primaryKey
+  createdAt: Timestamp!
+  updatedAt: Timestamp!
+  nameKey: String!
+  descriptionKey: String!
+  imageUrl: String
+  storeUrl: String
+}
+
+# --- Bookmarking Connections ---
+
+type EventBookmark @table(key: ["user", "event"]) {
+  user: User!
+  event: Event!
+  createdAt: Timestamp!
+}
+
+type BookBookmark @table(key: ["user", "book"]) {
+  user: User!
+  book: Book!
+  createdAt: Timestamp!
+}
+
+type OrganizationBookmark @table(key: ["user", "organization"]) {
+  user: User!
+  organization: Organization!
+  createdAt: Timestamp!
+}
+
+type StoreBookmark @table(key: ["user", "store"]) {
+  user: User!
+  store: Store!
+  createdAt: Timestamp!
+}
