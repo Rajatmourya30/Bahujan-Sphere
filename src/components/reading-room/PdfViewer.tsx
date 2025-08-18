@@ -46,7 +46,7 @@ export function PdfViewer({ file }: PdfViewerProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-center p-2 bg-card border-b">
+      <div className="flex flex-wrap items-center justify-center gap-2 p-2 bg-card border-b">
          <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" onClick={goToPrevPage} disabled={pageNumber <= 1}>
                 <ChevronLeft />
@@ -58,7 +58,7 @@ export function PdfViewer({ file }: PdfViewerProps) {
                 <ChevronRight />
             </Button>
         </div>
-        <div className="flex items-center gap-2 ml-4">
+        <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" onClick={zoomOut}>
                 <ZoomOut />
             </Button>

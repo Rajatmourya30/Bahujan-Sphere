@@ -26,6 +26,9 @@ interface FileUploadProps {
 // Helper to get storage reference from a Firebase Storage download URL
 const getRefFromUrl = (url: string): StorageReference | null => {
     try {
+        if (!url.startsWith('https://firebasestorage.googleapis.com')) {
+            return null; // Not a Firebase Storage URL
+        }
         // Decode the URL to handle special characters in the path
         const decodedUrl = decodeURIComponent(url);
         // Extract the path after '/o/' which represents the file path in the bucket
@@ -126,7 +129,7 @@ export function FileUpload({
     const fileRef = getRefFromUrl(currentFileUrl);
 
     if (!fileRef) {
-        toast({ title: 'Removal Failed', description: 'Invalid file URL.', variant: 'destructive' });
+        toast({ title: 'Removal Failed', description: 'This file is not managed by Firebase Storage and cannot be removed.', variant: 'destructive' });
         setIsRemoving(false);
         return;
     }
