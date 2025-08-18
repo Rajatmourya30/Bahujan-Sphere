@@ -34,12 +34,8 @@ const nextConfig: NextConfig = {
   experimental: {
     allowedDevOrigins: ['*'],
   },
-   webpack: (config) => {
-    config.resolve.alias['pdfjs-dist'] = path.join(
-      __dirname,
-      './node_modules/pdfjs-dist/build/pdf.worker.min.mjs'
-    );
-    config.externals.push('pdfjs-dist');
+  webpack: (config) => {
+    config.resolve.alias.canvas = false;
     return config;
   },
 };
