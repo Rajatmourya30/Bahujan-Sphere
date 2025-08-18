@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Loader2, ZoomIn, ZoomOut } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 
-// Set the workerSrc to the public path
+// Set the workerSrc to the public path where we will copy the file.
 pdfjs.GlobalWorkerOptions.workerSrc = `/static/js/pdf.worker.min.mjs`;
 
 interface PdfViewerProps {
@@ -20,6 +20,12 @@ export function PdfViewer({ file }: PdfViewerProps) {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [scale, setScale] = useState(1.0);
+  const [isClient, setIsClient] = useState(false);
+
+  // This ensures the component only renders on the client, avoiding SSR issues with the library.
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }): void {
     setNumPages(numPages);
@@ -43,13 +49,10 @@ export function PdfViewer({ file }: PdfViewerProps) {
   const zoomOut = () => {
       setScale(s => Math.max(s - 0.2, 0.5));
   }
-  
-  // This is a workaround for a known issue in react-pdf with Next.js 13+ App Router
-  const [isClient, setIsClient] = useState(false)
-  useEffect(() => {
-    setIsClient(true)
-  }, [])
 
+  if (!isClient) {
+      return <LoaderWithSkeleton />;
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -75,7 +78,7 @@ export function PdfViewer({ file }: PdfViewerProps) {
         </div>
       </div>
       <div className="flex-grow overflow-auto p-4 flex justify-center">
-         {isClient && <Document
+         <Document
           file={file}
           onLoadSuccess={onDocumentLoadSuccess}
           loading={<LoaderWithSkeleton />}
@@ -88,14 +91,14 @@ export function PdfViewer({ file }: PdfViewerProps) {
             renderAnnotationLayer={true}
             loading={<LoaderWithSkeleton />}
           />
-        </Document>}
+        </Document>
       </div>
     </div>
   );
 }
 
 const LoaderWithSkeleton = () => (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex flex-col items-center gap-2 p-4">
         <Loader2 className="h-8 w-8 animate-spin" />
         <Skeleton className="h-[842px] w-[595px]" />
     </div>
