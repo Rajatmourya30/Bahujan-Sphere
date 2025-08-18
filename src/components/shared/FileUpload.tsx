@@ -23,16 +23,8 @@ interface FileUploadProps {
   className?: string;
 }
 
-// Helper to check if a URL is a Firebase Storage URL
-const isFirebaseStorageUrl = (url: string): boolean => {
-    return url.startsWith('https://firebasestorage.googleapis.com');
-}
-
 // Helper to get storage reference from a Firebase Storage download URL
 const getRefFromUrl = (url: string): StorageReference | null => {
-    if (!isFirebaseStorageUrl(url)) {
-        return null;
-    }
     try {
         // Decode the URL to handle special characters in the path
         const decodedUrl = decodeURIComponent(url);
@@ -69,7 +61,7 @@ export function FileUpload({
   };
   
   const deleteOldFile = async () => {
-    if (currentFileUrl && isFirebaseStorageUrl(currentFileUrl)) {
+    if (currentFileUrl) {
         const oldFileRef = getRefFromUrl(currentFileUrl);
         if (oldFileRef) {
             try {
@@ -95,7 +87,7 @@ export function FileUpload({
     setIsUploading(true);
     setUploadProgress(0);
 
-    // First, try to delete the old file if it exists and is a Firebase URL
+    // First, try to delete the old file if it exists
     await deleteOldFile();
 
     // Now, upload the new file
@@ -129,12 +121,6 @@ export function FileUpload({
   
   const handleRemove = async () => {
     if (!currentFileUrl) return;
-
-    // Only attempt to delete if it's a Firebase Storage URL
-    if (!isFirebaseStorageUrl(currentFileUrl)) {
-        toast({ title: 'Cannot Remove', description: 'This is a placeholder image and cannot be removed directly.', variant: 'destructive' });
-        return;
-    }
     
     setIsRemoving(true);
     const fileRef = getRefFromUrl(currentFileUrl);
