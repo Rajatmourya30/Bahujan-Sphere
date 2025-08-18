@@ -1,86 +1,100 @@
-
 'use client';
 
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@/components/ui/sidebar';
+import {
+  Calendar,
+  HeartHandshake,
+  Home,
+  Library,
+  Megaphone,
+  Store,
+  UserCog,
+  Users,
+} from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Logo } from '@/components/shared/Logo';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
-import { allBooks, Book } from '@/lib/books';
-import { BookManagementTable } from '@/components/admin/BookManagementTable';
-import { ManageBookDialog } from '@/components/admin/ManageBookDialog';
 
-export default function ManageBooksPage() {
-  const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [books, setBooks] = useState(allBooks);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingBook, setEditingBook] = useState<Book | null>(null);
+type UserRole = 'Admin' | 'Editor' | 'Reviewer' | 'Contributor' | null;
+
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const pathname = usePathname();
+  const [userRole, setUserRole] = useState<UserRole>(null);
 
   useEffect(() => {
-    const authStatus = localStorage.getItem('isAdminAuthenticated');
-    if (authStatus !== 'true') {
-      router.replace('/admin/login');
-    } else {
-      setIsAuthenticated(true);
-    }
-  }, [router]);
+    const role = localStorage.getItem('adminUserRole') as UserRole;
+    setUserRole(role);
+  }, [pathname]);
 
-  const handleOpenDialog = (book: Book | null = null) => {
-    setEditingBook(book);
-    setIsDialogOpen(true);
+  const permissions = {
+    canManageDonations: userRole === 'Admin',
+    canManageUsers: userRole === 'Admin',
+    canManageTeam: userRole === 'Admin' || userRole === 'Editor',
+    canManageContent: userRole === 'Admin' || userRole === 'Editor',
+    canAccessCalendar: userRole === 'Admin' || userRole === 'Editor' || userRole === 'Contributor' || userRole === 'Reviewer',
+    canManageAds: userRole === 'Admin',
   };
   
-  const handleSave = (bookData: Omit<Book, 'id'>) => {
-    if (editingBook) {
-      setBooks(currentBooks => currentBooks.map(b => b.id === editingBook.id ? { ...b, ...bookData } : b));
-    } else {
-      setBooks(currentBooks => [...currentBooks, { ...bookData, id: `book-${Date.now()}` }]);
-    }
-  };
-
-  const handleRemove = (bookId: string) => {
-    setBooks(currentBooks => currentBooks.filter(b => b.id !== bookId));
-  };
-
-  if (!isAuthenticated) {
-    return (
-      <div className="space-y-4 p-4">
-        <Skeleton className="h-10 w-1/3" />
-        <Skeleton className="h-10 w-1/4" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
-  }
+  const navItems = [
+      { href: '/admin', label: 'Dashboard', icon: Home, visible: true },
+      { href: '/admin/calendar', label: 'Calendar', icon: Calendar, visible: permissions.canAccessCalendar },
+      { href: '/admin/knowledge-hub', label: 'Knowledge Hub', icon: Library, visible: permissions.canManageContent },
+      { href: '/admin/store', label: 'Store Directory', icon: Store, visible: permissions.canManageContent },
+      { href: '/admin/donations', label: 'Donations', icon: HeartHandshake, visible: permissions.canManageDonations },
+      { href: '/admin/users', label: 'Users', icon: Users, visible: permissions.canManageUsers },
+      { href: '/admin/team', label: 'Team', icon: UserCog, visible: permissions.canManageTeam },
+      { href: '/admin/google-ads', label: 'Google Ads', icon: Megaphone, visible: permissions.canManageAds },
+  ].filter(item => item.visible);
 
   return (
-    <div className="space-y-8">
-      <header className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-        <div>
-          <h1 className="font-headline text-3xl font-bold">Manage Books</h1>
-          <p className="text-muted-foreground">Add, edit, or remove books from the Reading Room and Books section.</p>
-        </div>
-        <Button onClick={() => handleOpenDialog()}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add Book
-        </Button>
-      </header>
-
-      <section>
-        <BookManagementTable
-          books={books}
-          onEdit={handleOpenDialog}
-          onRemove={handleRemove}
-        />
-      </section>
-
-      {isDialogOpen && (
-        <ManageBookDialog
-          book={editingBook}
-          onOpenChange={setIsDialogOpen}
-          onSave={handleSave}
-        />
-      )}
-    </div>
+    <SidebarProvider defaultOpen={false}>
+      <Sidebar collapsible="icon" variant="inset">
+        <SidebarHeader className="pt-4">
+          <div className="flex items-center gap-2">
+            <Logo />
+            <span className="text-lg font-semibold">Admin Panel</span>
+          </div>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarMenu>
+            {navItems.map((item) => (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === item.href}
+                  tooltip={item.label}
+                >
+                  <Link href={item.href}>
+                    <item.icon />
+                    <span>{item.label}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarContent>
+      </Sidebar>
+      <SidebarInset>
+        <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+            <SidebarTrigger />
+        </header>
+        <main className="p-4 sm:px-6 sm:py-0 space-y-8">{children}</main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

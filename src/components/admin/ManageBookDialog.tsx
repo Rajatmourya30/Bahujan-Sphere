@@ -1,178 +1,100 @@
-
 'use client';
 
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+  Sidebar,
+  SidebarContent,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@/components/ui/sidebar';
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import type { Book } from '@/lib/books';
+  Calendar,
+  HeartHandshake,
+  Home,
+  Library,
+  Megaphone,
+  Store,
+  UserCog,
+  Users,
+} from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Logo } from '@/components/shared/Logo';
+import { useEffect, useState } from 'react';
 
-const formSchema = z.object({
-  titleKey: z.string().min(1, 'Key is required'),
-  authorKey: z.string().min(1, 'Key is required'),
-  descriptionKey: z.string().min(1, 'Key is required'),
-  imageUrl: z.string().url('Must be a valid URL'),
-  affiliateUrl: z.string().url('Must be a valid URL'),
-  pdfUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
-  imageAiHint: z.string().min(1, 'AI Hint is required'),
-});
+type UserRole = 'Admin' | 'Editor' | 'Reviewer' | 'Contributor' | null;
 
-type FormValues = z.infer<typeof formSchema>;
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const pathname = usePathname();
+  const [userRole, setUserRole] = useState<UserRole>(null);
 
-interface ManageBookDialogProps {
-  book: Book | null;
-  onOpenChange: (open: boolean) => void;
-  onSave: (data: Omit<Book, 'id'>) => void;
-}
+  useEffect(() => {
+    const role = localStorage.getItem('adminUserRole') as UserRole;
+    setUserRole(role);
+  }, [pathname]);
 
-export function ManageBookDialog({ book, onOpenChange, onSave }: ManageBookDialogProps) {
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      titleKey: book?.titleKey || '',
-      authorKey: book?.authorKey || '',
-      descriptionKey: book?.descriptionKey || '',
-      imageUrl: book?.imageUrl || '',
-      affiliateUrl: book?.affiliateUrl || '',
-      pdfUrl: book?.pdfUrl || '',
-      imageAiHint: book?.imageAiHint || '',
-    },
-  });
-
-  const onSubmit = (values: FormValues) => {
-    onSave(values);
-    onOpenChange(false);
+  const permissions = {
+    canManageDonations: userRole === 'Admin',
+    canManageUsers: userRole === 'Admin',
+    canManageTeam: userRole === 'Admin' || userRole === 'Editor',
+    canManageContent: userRole === 'Admin' || userRole === 'Editor',
+    canAccessCalendar: userRole === 'Admin' || userRole === 'Editor' || userRole === 'Contributor' || userRole === 'Reviewer',
+    canManageAds: userRole === 'Admin',
   };
+  
+  const navItems = [
+      { href: '/admin', label: 'Dashboard', icon: Home, visible: true },
+      { href: '/admin/calendar', label: 'Calendar', icon: Calendar, visible: permissions.canAccessCalendar },
+      { href: '/admin/knowledge-hub', label: 'Knowledge Hub', icon: Library, visible: permissions.canManageContent },
+      { href: '/admin/store', label: 'Store Directory', icon: Store, visible: permissions.canManageContent },
+      { href: '/admin/donations', label: 'Donations', icon: HeartHandshake, visible: permissions.canManageDonations },
+      { href: '/admin/users', label: 'Users', icon: Users, visible: permissions.canManageUsers },
+      { href: '/admin/team', label: 'Team', icon: UserCog, visible: permissions.canManageTeam },
+      { href: '/admin/google-ads', label: 'Google Ads', icon: Megaphone, visible: permissions.canManageAds },
+  ].filter(item => item.visible);
 
   return (
-    <Dialog open={true} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{book ? 'Edit Book' : 'Add New Book'}</DialogTitle>
-          <DialogDescription>
-            Fill in the details for the book.
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
-            <FormField
-              control={form.control}
-              name="titleKey"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Title Key</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. book_1_title" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="authorKey"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Author Key</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. book_1_author" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="descriptionKey"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description Key</FormLabel>
-                  <FormControl>
-                     <Textarea placeholder="e.g. book_1_desc" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="imageUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Image URL</FormLabel>
-                  <FormControl>
-                    <Input type="url" placeholder="https://placehold.co/400x600.png" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="affiliateUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Affiliate URL</FormLabel>
-                  <FormControl>
-                    <Input type="url" placeholder="https://example.com/affiliate" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="pdfUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>PDF URL (for Reading Room)</FormLabel>
-                  <FormControl>
-                    <Input type="url" placeholder="https://example.com/book.pdf" {...field} />
-                  </FormControl>
-                   <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="imageAiHint"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Image AI Hint</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. book cover" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <DialogFooter className="pt-4 sticky bottom-0 bg-background">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">Save Changes</Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+    <SidebarProvider defaultOpen={false}>
+      <Sidebar collapsible="icon" variant="inset">
+        <SidebarHeader className="pt-4">
+          <div className="flex items-center gap-2">
+            <Logo />
+            <span className="text-lg font-semibold">Admin Panel</span>
+          </div>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarMenu>
+            {navItems.map((item) => (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === item.href}
+                  tooltip={item.label}
+                >
+                  <Link href={item.href}>
+                    <item.icon />
+                    <span>{item.label}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarContent>
+      </Sidebar>
+      <SidebarInset>
+        <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+            <SidebarTrigger />
+        </header>
+        <main className="p-4 sm:px-6 sm:py-0 space-y-8">{children}</main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
