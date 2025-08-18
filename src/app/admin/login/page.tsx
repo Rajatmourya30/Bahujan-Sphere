@@ -10,8 +10,9 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/use-language';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -24,8 +25,26 @@ export default function AdminLoginPage() {
   const handleLogin = async () => {
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      // Set a flag in localStorage to indicate the user is authenticated
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Security Check: Verify if the user is in the teamMembers collection
+      const teamQuery = query(collection(db, "teamMembers"), where("email", "==", user.email));
+      const querySnapshot = await getDocs(teamQuery);
+      
+      if (querySnapshot.empty) {
+        // If the user is not in the team collection, they are not an admin.
+        await auth.signOut(); // Log them out immediately
+        toast({
+          title: 'Access Denied',
+          description: 'You do not have permission to access the admin panel.',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // If they are a team member, proceed.
       localStorage.setItem('isAdminAuthenticated', 'true');
       router.push('/admin');
     } catch (error: any) {
