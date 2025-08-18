@@ -51,7 +51,6 @@ export default function SignupPage() {
             country: '',
             state: '',
             city: '',
-            birthYear: undefined,
         },
     });
 
@@ -61,13 +60,9 @@ export default function SignupPage() {
             const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
             const user = userCredential.user;
 
-            // Don't store the password in the database
             const { password, ...profileData } = values;
 
-            await setDoc(doc(db, "users", user.uid), {
-                ...profileData,
-                birthYear: Number(profileData.birthYear) 
-            });
+            await setDoc(doc(db, "users", user.uid), profileData);
 
             toast({
                 title: t('signup_page.toast_success_title'),
@@ -162,7 +157,10 @@ export default function SignupPage() {
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>{t('signup_page.birth_year_label')}</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value?.toString()}>
+                                        <Select
+                                            onValueChange={(value) => field.onChange(Number(value))}
+                                            defaultValue={field.value?.toString()}
+                                        >
                                             <FormControl>
                                                 <SelectTrigger>
                                                     <SelectValue placeholder={t('signup_page.birth_year_placeholder')} />
