@@ -35,14 +35,12 @@ const formSchema = z.object({
   titleKey: z.string().min(1, 'Key is required'),
   authorKey: z.string().min(1, 'Key is required'),
   descriptionKey: z.string().min(1, 'Key is required'),
-  imageUrl: z.string().url().optional(),
   imageFile: z.any().optional(),
   imageAiHint: z.string().min(1, 'AI Hint is required'),
   affiliateUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
-  pdfUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   pdfFile: z.any().optional(),
-}).refine(data => data.imageUrl || (data.imageFile && data.imageFile.length > 0) || (data.book && data.book.imageUrl), {
-    message: "An image URL or an uploaded image is required.",
+}).refine(data => (data.book && data.book.imageUrl) || (data.imageFile && data.imageFile.length > 0), {
+    message: "An image file is required when adding a new book.",
     path: ["imageFile"],
 });
 
@@ -79,10 +77,8 @@ export function ManageBookDialog({
       titleKey: book?.titleKey || '',
       authorKey: book?.authorKey || '',
       descriptionKey: book?.descriptionKey || '',
-      imageUrl: book?.imageUrl || '',
       imageAiHint: book?.imageAiHint || '',
       affiliateUrl: book?.affiliateUrl || '',
-      pdfUrl: book?.pdfUrl || '',
       book: book,
     },
   });
@@ -90,30 +86,33 @@ export function ManageBookDialog({
   const onSubmit = async (values: FormValues) => {
     setIsUploading(true);
     try {
-        const bookData: Omit<Book, 'id'> = {
-            titleKey: values.titleKey,
-            authorKey: values.authorKey,
-            descriptionKey: values.descriptionKey,
-            imageAiHint: values.imageAiHint,
-            affiliateUrl: values.affiliateUrl || '',
-            pdfUrl: book?.pdfUrl || '', // Start with existing PDF URL
-            imageUrl: book?.imageUrl || '', // Start with existing image URL
-        };
+      let imageUrl = book?.imageUrl || '';
+      let pdfUrl = book?.pdfUrl || '';
 
-        if (values.imageFile && values.imageFile.length > 0) {
-            const file = values.imageFile[0];
-            const imagePath = `book-covers/${Date.now()}_${file.name}`;
-            bookData.imageUrl = await uploadFile(file, imagePath);
-        }
+      if (values.imageFile && values.imageFile.length > 0) {
+        const file = values.imageFile[0];
+        const imagePath = `book-covers/${Date.now()}_${file.name}`;
+        imageUrl = await uploadFile(file, imagePath);
+      }
 
-        if (managePdfUrl && values.pdfFile && values.pdfFile.length > 0) {
-            const file = values.pdfFile[0];
-            const pdfPath = `pdfs/${Date.now()}_${file.name}`;
-            bookData.pdfUrl = await uploadFile(file, pdfPath);
-        }
+      if (managePdfUrl && values.pdfFile && values.pdfFile.length > 0) {
+        const file = values.pdfFile[0];
+        const pdfPath = `pdfs/${Date.now()}_${file.name}`;
+        pdfUrl = await uploadFile(file, pdfPath);
+      }
+      
+      const bookData: Omit<Book, 'id'> = {
+        titleKey: values.titleKey,
+        authorKey: values.authorKey,
+        descriptionKey: values.descriptionKey,
+        imageAiHint: values.imageAiHint,
+        affiliateUrl: values.affiliateUrl || '',
+        imageUrl: imageUrl,
+        pdfUrl: pdfUrl,
+      };
 
-        onSave(bookData);
-        onOpenChange(false);
+      onSave(bookData);
+      onOpenChange(false);
     } catch (error) {
         console.error("Upload failed:", error);
         toast({
@@ -198,7 +197,7 @@ export function ManageBookDialog({
                         </FormItem>
                         )}
                     />
-                     {book?.imageUrl && !form.watch('imageFile') && (
+                     {book?.imageUrl && !form.watch('imageFile')?.[0] && (
                         <div className="text-sm text-muted-foreground">Current image: <a href={book.imageUrl} target="_blank" rel="noopener noreferrer" className="underline">View Image</a></div>
                      )}
                     <FormField
@@ -251,7 +250,7 @@ export function ManageBookDialog({
                             </FormItem>
                             )}
                         />
-                         {book?.pdfUrl && !form.watch('pdfFile') && (
+                         {book?.pdfUrl && !form.watch('pdfFile')?.[0] && (
                             <div className="text-sm text-muted-foreground">Current PDF: <a href={book.pdfUrl} target="_blank" rel="noopener noreferrer" className="underline">View PDF</a></div>
                         )}
                     </>
