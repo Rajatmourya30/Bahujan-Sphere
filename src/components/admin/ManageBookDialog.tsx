@@ -41,13 +41,13 @@ const formSchema = z.object({
   affiliateUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   pdfUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   pdfFile: z.any().optional(),
-}).refine(data => data.imageUrl || (data.imageFile && data.imageFile.length > 0), {
+}).refine(data => data.imageUrl || (data.imageFile && data.imageFile.length > 0) || (data.book && data.book.imageUrl), {
     message: "An image URL or an uploaded image is required.",
     path: ["imageFile"],
 });
 
 
-type FormValues = z.infer<typeof formSchema>;
+type FormValues = z.infer<typeof formSchema> & { book?: Book | null };
 
 interface ManageBookDialogProps {
   book: Book | null;
@@ -83,6 +83,7 @@ export function ManageBookDialog({
       imageAiHint: book?.imageAiHint || '',
       affiliateUrl: book?.affiliateUrl || '',
       pdfUrl: book?.pdfUrl || '',
+      book: book,
     },
   });
 
@@ -95,8 +96,8 @@ export function ManageBookDialog({
             descriptionKey: values.descriptionKey,
             imageAiHint: values.imageAiHint,
             affiliateUrl: values.affiliateUrl || '',
-            pdfUrl: values.pdfUrl || book?.pdfUrl || '',
-            imageUrl: values.imageUrl || book?.imageUrl || '',
+            pdfUrl: book?.pdfUrl || '', // Start with existing PDF URL
+            imageUrl: book?.imageUrl || '', // Start with existing image URL
         };
 
         if (values.imageFile && values.imageFile.length > 0) {
