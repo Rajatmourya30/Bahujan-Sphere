@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -171,23 +171,22 @@ export default function ProfilePage() {
                             <ThemeSwitcher />
                         </div>
                     </CardContent>
+                    <CardFooter className="flex justify-between items-center">
+                        <Button onClick={() => setIsDeleteDialogOpen(true)} variant="link" size="sm" className="text-destructive hover:text-destructive/80">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete Account
+                        </Button>
+                        <Button onClick={handleLogout} variant="outline">
+                            <LogOut className="mr-2 h-4 w-4" />
+                            {t('profile_page.logout_button')}
+                        </Button>
+                    </CardFooter>
                 </Card>
 
                 <Button onClick={() => setIsDonationDialogOpen(true)} size="lg" className="w-full">
                     <Heart className="mr-2" />
                     {t('profile_page.support_button')}
                 </Button>
-
-                <div className="space-y-2">
-                    <Button onClick={handleLogout} variant="outline" className="w-full">
-                        <LogOut className="mr-2 h-4 w-4" />
-                        {t('profile_page.logout_button')}
-                    </Button>
-                     <Button onClick={() => setIsDeleteDialogOpen(true)} variant="destructive" className="w-full">
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete Account
-                    </Button>
-                </div>
             </div>
         </div>
         
