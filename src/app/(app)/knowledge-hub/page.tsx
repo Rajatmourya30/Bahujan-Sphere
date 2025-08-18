@@ -91,19 +91,18 @@ export default function KnowledgeHubPage() {
             </div>
             
             {isLoading ? (
-                 <div className="grid grid-cols-1 gap-6">
-                    <Skeleton className="h-40 w-full" />
+                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <Skeleton className="h-40 w-full" />
                     <Skeleton className="h-40 w-full" />
                  </div>
             ) : (
-                <div className="grid grid-cols-1 gap-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     {filteredOrganizations.length > 0 ? (
                         filteredOrganizations.map(org => (
                             <OrganizationCard key={org.id} organization={org} />
                         ))
                     ) : (
-                        <p className="text-center text-muted-foreground py-8">{t('knowledge_hub.no_results')}</p>
+                        <p className="text-center text-muted-foreground py-8 md:col-span-2">{t('knowledge_hub.no_results')}</p>
                     )}
                 </div>
             )}

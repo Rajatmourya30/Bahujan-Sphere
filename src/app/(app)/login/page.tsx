@@ -39,7 +39,7 @@ export default function UserLoginPage() {
   };
 
   return (
-    <div className="flex justify-center items-center h-full">
+    <div className="flex justify-center items-center py-12">
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle className="text-2xl font-headline">{t('login_page.title')}</CardTitle>

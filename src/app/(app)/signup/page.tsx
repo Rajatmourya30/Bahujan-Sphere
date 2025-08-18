@@ -98,7 +98,7 @@ export default function SignupPage() {
     const years = Array.from({ length: 100 }, (_, i) => currentYear - i);
 
   return (
-    <div className="flex justify-center items-center h-full py-8">
+    <div className="flex justify-center items-center py-12">
         <Card className="w-full max-w-md">
             <CardHeader>
                 <CardTitle className="text-2xl font-headline">{t('signup_page.title')}</CardTitle>

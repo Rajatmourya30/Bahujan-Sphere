@@ -30,13 +30,13 @@ export default function Home() {
 
 
   return (
-    <div className="space-y-4">
-      <header className="text-center pb-4 border-b">
+    <div className="space-y-8">
+      <header className="text-center pb-8 border-b">
         <div className="flex justify-center items-center gap-2">
-            <Logo className="dark:text-primary-foreground" />
-            <h1 className="font-headline text-3xl font-bold text-primary dark:text-primary-foreground">BahujanSphere</h1>
+            <Logo className="dark:text-primary-foreground h-8 w-8" />
+            <h1 className="font-headline text-5xl font-bold text-primary dark:text-primary-foreground">BahujanSphere</h1>
         </div>
-        <p className="mt-2 text-md text-muted-foreground max-w-3xl mx-auto">
+        <p className="mt-4 text-xl text-muted-foreground max-w-3xl mx-auto">
           {t('home.tagline')}
         </p>
       </header>
