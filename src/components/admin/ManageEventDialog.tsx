@@ -70,7 +70,7 @@ export function ManageEventDialog({ event, onOpenChange, onSave }: ManageEventDi
 
   return (
     <Dialog open={true} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-xl flex flex-col h-full max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>{event ? 'Edit Event' : 'Add New Event'}</DialogTitle>
           <DialogDescription>
@@ -78,8 +78,8 @@ export function ManageEventDialog({ event, onOpenChange, onSave }: ManageEventDi
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <ScrollArea className="max-h-[60vh] p-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-grow min-h-0">
+            <ScrollArea className="flex-grow pr-6">
               <div className="space-y-4">
                 <FormField
                   control={form.control}
@@ -176,7 +176,7 @@ export function ManageEventDialog({ event, onOpenChange, onSave }: ManageEventDi
                 />
               </div>
             </ScrollArea>
-            <DialogFooter className="pt-4 px-6 pb-6">
+            <DialogFooter className="pt-6 flex-shrink-0">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
