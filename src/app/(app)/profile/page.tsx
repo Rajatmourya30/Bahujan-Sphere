@@ -13,13 +13,12 @@ import { LanguageSwitcher } from '@/components/shared/LanguageSwitcher';
 import { Label } from '@/components/ui/label';
 import { ThemeSwitcher } from '@/components/shared/ThemeSwitcher';
 import { DonationDialog } from '@/components/profile/DonationDialog';
-import { auth, db, storage } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, signOut, deleteUser, type User } from 'firebase/auth';
-import { doc, getDoc, deleteDoc, updateDoc } from 'firebase/firestore';
-import { ref, deleteObject } from 'firebase/storage';
+import { doc, getDoc, deleteDoc } from 'firebase/firestore';
 import { DeleteAccountDialog } from '@/components/profile/DeleteAccountDialog';
 import { useToast } from '@/hooks/use-toast';
-import { FileUpload } from '@/components/shared/FileUpload';
+
 
 interface UserProfile {
     name: string;
@@ -60,30 +59,6 @@ export default function ProfilePage() {
 
     return () => unsubscribe();
   }, [router]);
-  
-  const updateUserPhotoUrl = async (newUrl: string) => {
-    if (!firebaseUser) return;
-    try {
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
-        await updateDoc(userDocRef, { photoUrl: newUrl });
-        setUserProfile(prev => prev ? { ...prev, photoUrl: newUrl } : null);
-    } catch (error) {
-        console.error("Failed to update photo URL in Firestore:", error);
-        toast({ title: "Error", description: "Could not save your new profile picture.", variant: "destructive" });
-    }
-  };
-  
-  const handlePhotoRemoved = async () => {
-    if (!firebaseUser) return;
-    try {
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
-        await updateDoc(userDocRef, { photoUrl: '' });
-        setUserProfile(prev => prev ? { ...prev, photoUrl: '' } : null);
-    } catch (error) {
-        console.error("Failed to clear photo URL in Firestore:", error);
-    }
-  };
-
 
   const handleLogout = async () => {
     try {
@@ -101,16 +76,6 @@ export default function ProfilePage() {
     }
 
     try {
-        // Delete profile picture from storage if it exists
-        if (userProfile?.photoUrl) {
-            try {
-                const photoRef = ref(storage, userProfile.photoUrl);
-                await deleteObject(photoRef).catch(err => console.log("Photo not found, skipping delete.", err));
-            } catch (error) {
-                console.error("Error deleting profile picture:", error);
-            }
-        }
-        
         const userDocRef = doc(db, 'users', firebaseUser.uid);
         await deleteDoc(userDocRef);
         await deleteUser(firebaseUser);
@@ -129,7 +94,7 @@ export default function ProfilePage() {
     }
   };
 
-  if (isLoading || !userProfile || !firebaseUser) {
+  if (isLoading || !userProfile) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="md:col-span-1">
@@ -147,7 +112,7 @@ export default function ProfilePage() {
   return (
     <>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="md:col-span-1 space-y-6">
+            <div className="md:col-span-1">
                  <Card>
                     <CardHeader className="items-center text-center">
                         <Avatar className="h-24 w-24 mb-4">
@@ -183,21 +148,6 @@ export default function ProfilePage() {
                         </div>
                     </CardContent>
                 </Card>
-
-                 <Card>
-                    <CardHeader>
-                        <CardTitle className="text-xl font-headline">Profile Picture</CardTitle>
-                    </CardHeader>
-                     <CardContent>
-                        <FileUpload 
-                            label="Upload a new photo"
-                            filePath={`profile-pictures/${firebaseUser.uid}`}
-                            currentFileUrl={userProfile.photoUrl}
-                            onUploadComplete={updateUserPhotoUrl}
-                            onRemoveComplete={handlePhotoRemoved}
-                        />
-                    </CardContent>
-                 </Card>
             </div>
             <div className="md:col-span-2 space-y-6">
                 <Card>

@@ -9,7 +9,10 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Loader2, ZoomIn, ZoomOut } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 
-pdfjs.GlobalWorkerOptions.workerSrc = '/_next/static/chunks/pdf.worker.min.mjs';
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url,
+).toString();
 
 interface PdfViewerProps {
   file: string;

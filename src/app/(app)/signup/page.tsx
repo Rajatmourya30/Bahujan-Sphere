@@ -61,17 +61,14 @@ export default function SignupPage() {
             const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
             const user = userCredential.user;
 
-            const profileData = {
-              name: values.name,
-              email: values.email,
-              country: values.country,
-              state: values.state,
-              city: values.city,
-              birthYear: Number(values.birthYear),
-              photoUrl: '' // Initialize with an empty photoUrl
-            };
-
-            await setDoc(doc(db, "users", user.uid), profileData);
+            await setDoc(doc(db, "users", user.uid), {
+                name: values.name,
+                email: values.email,
+                country: values.country,
+                state: values.state,
+                city: values.city,
+                birthYear: Number(values.birthYear),
+            });
 
             toast({
                 title: t('signup_page.toast_success_title'),

@@ -31,7 +31,6 @@ import type { TranslationKey } from '@/lib/i18n/translations';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
 import { cn } from '@/lib/utils';
-import { ScrollArea } from '../ui/scroll-area';
 
 const formSchema = z.object({
   titleKey: z.string().min(1, 'Key is required') as z.ZodType<TranslationKey>,
@@ -70,7 +69,7 @@ export function ManageEventDialog({ event, onOpenChange, onSave }: ManageEventDi
 
   return (
     <Dialog open={true} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl flex flex-col h-full max-h-[90vh]">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{event ? 'Edit Event' : 'Add New Event'}</DialogTitle>
           <DialogDescription>
@@ -78,105 +77,101 @@ export function ManageEventDialog({ event, onOpenChange, onSave }: ManageEventDi
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-grow min-h-0">
-            <ScrollArea className="flex-grow pr-6">
-              <div className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="titleKey"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Title Key</FormLabel>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+            <FormField
+              control={form.control}
+              name="titleKey"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title Key</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. event_ambedkar_birth_title" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Date</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
                       <FormControl>
-                        <Input placeholder="e.g. event_ambedkar_birth_title" {...field} />
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? (
+                            format(field.value, "PPP")
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="date"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                format(field.value, "PPP")
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) =>
-                              date > new Date() || date < new Date("1900-01-01")
-                            }
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="descriptionKey"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description Key</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="e.g. event_ambedkar_birth_desc" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="tagKeys"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tag Keys</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. tag_ambedkarite,tag_buddhist" {...field} value={Array.isArray(field.value) ? field.value.join(', ') : ''} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="readMoreUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Read More URL</FormLabel>
-                      <FormControl>
-                        <Input type="url" placeholder="https://example.com" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </ScrollArea>
-            <DialogFooter className="pt-6 flex-shrink-0">
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) =>
+                          date > new Date() || date < new Date("1900-01-01")
+                        }
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="descriptionKey"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description Key</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="e.g. event_ambedkar_birth_desc" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="tagKeys"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tag Keys</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. tag_ambedkarite,tag_buddhist" {...field} value={Array.isArray(field.value) ? field.value.join(', ') : ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="readMoreUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Read More URL</FormLabel>
+                  <FormControl>
+                    <Input type="url" placeholder="https://example.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>

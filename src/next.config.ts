@@ -1,6 +1,4 @@
 import type {NextConfig} from 'next';
-import path from 'path';
-import CopyPlugin from 'copy-webpack-plugin';
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -18,32 +16,7 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
-      {
-        protocol: 'https',
-        hostname: 'firebasestorage.googleapis.com',
-        port: '',
-        pathname: '/**',
-      },
     ],
-  },
-  experimental: {
-    allowedDevOrigins: ['*'],
-  },
-  webpack: (config) => {
-    config.resolve.alias.canvas = false;
-
-    config.plugins.push(
-      new CopyPlugin({
-        patterns: [
-          {
-            from: 'node_modules/pdfjs-dist/build/pdf.worker.min.mjs',
-            to: 'static/chunks/pdf.worker.min.mjs',
-          },
-        ],
-      }),
-    );
-    
-    return config;
   },
 };
 

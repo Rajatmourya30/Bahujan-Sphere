@@ -1,7 +1,6 @@
 
 'use client';
 
-import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -25,14 +24,15 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import type { Book } from '@/lib/books';
-import { ScrollArea } from '../ui/scroll-area';
-import { FileUpload } from '../shared/FileUpload';
 
 const formSchema = z.object({
   titleKey: z.string().min(1, 'Key is required'),
   authorKey: z.string().min(1, 'Key is required'),
   descriptionKey: z.string().min(1, 'Key is required'),
+  imageUrl: z.string().url('Must be a valid URL'),
   affiliateUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  pdfUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  imageAiHint: z.string().min(1, 'AI Hint is required'),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -58,36 +58,31 @@ export function ManageBookDialog({
       titleKey: book?.titleKey || '',
       authorKey: book?.authorKey || '',
       descriptionKey: book?.descriptionKey || '',
+      imageUrl: book?.imageUrl || '',
       affiliateUrl: book?.affiliateUrl || '',
+      pdfUrl: book?.pdfUrl || '',
+      imageAiHint: book?.imageAiHint || '',
     },
   });
-  
-  const [imageUrl, setImageUrl] = React.useState(book?.imageUrl || '');
-  const [pdfUrl, setPdfUrl] = React.useState(book?.pdfUrl || '');
 
-  const onSubmit = async (values: FormValues) => {
-    if (!imageUrl) {
-        form.setError('root', { type: 'manual', message: 'A cover image is required.' });
-        return;
-    }
-    
+  const onSubmit = (values: FormValues) => {
     const bookData: Omit<Book, 'id'> = {
         titleKey: values.titleKey,
         authorKey: values.authorKey,
         descriptionKey: values.descriptionKey,
+        imageUrl: values.imageUrl,
         affiliateUrl: values.affiliateUrl || '',
-        imageUrl,
-        pdfUrl: pdfUrl || undefined,
-        imageAiHint: 'book cover'
+        pdfUrl: values.pdfUrl || undefined,
+        imageAiHint: values.imageAiHint
     };
 
     onSave(bookData);
     onOpenChange(false);
-};
+  };
 
   return (
     <Dialog open={true} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl flex flex-col h-full max-h-[90vh]">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{book ? 'Edit Book' : 'Add New Book'}</DialogTitle>
           <DialogDescription>
@@ -95,90 +90,107 @@ export function ManageBookDialog({
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-grow min-h-0">
-             <ScrollArea className="flex-grow pr-6">
-                <div className="space-y-4">
-                    <FormField
-                    control={form.control}
-                    name="titleKey"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Title Key</FormLabel>
-                        <FormControl>
-                            <Input placeholder="e.g. book_annihilation_of_caste_title" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
-                    control={form.control}
-                    name="authorKey"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Author Key</FormLabel>
-                        <FormControl>
-                            <Input placeholder="e.g. book_annihilation_of_caste_author" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
-                    control={form.control}
-                    name="descriptionKey"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Description Key</FormLabel>
-                        <FormControl>
-                            <Textarea placeholder="e.g. book_annihilation_of_caste_desc" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    
-                    <FileUpload
-                        label="Book Cover Image"
-                        filePath="book-covers"
-                        currentFileUrl={imageUrl}
-                        onUploadComplete={setImageUrl}
-                        onRemoveComplete={() => setImageUrl('')}
-                    />
-                    
-                    {manageAffiliateUrl && (
-                    <FormField
-                        control={form.control}
-                        name="affiliateUrl"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Affiliate URL</FormLabel>
-                            <FormControl>
-                            <Input type="url" placeholder="https://example.com/affiliate-link" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    )}
-                    
-                    {managePdfUrl && (
-                     <FileUpload
-                        label="Book PDF"
-                        filePath="pdfs"
-                        currentFileUrl={pdfUrl}
-                        acceptedFileTypes=".pdf"
-                        onUploadComplete={setPdfUrl}
-                        onRemoveComplete={() => setPdfUrl('')}
-                    />
-                    )}
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+            <FormField
+              control={form.control}
+              name="titleKey"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title Key</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. book_annihilation_of_caste_title" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="authorKey"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Author Key</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. book_annihilation_of_caste_author" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="descriptionKey"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description Key</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="e.g. book_annihilation_of_caste_desc" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="imageUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Image URL</FormLabel>
+                  <FormControl>
+                    <Input type="url" placeholder="https://placehold.co/400x600.png" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {manageAffiliateUrl && (
+              <FormField
+                control={form.control}
+                name="affiliateUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Affiliate URL</FormLabel>
+                    <FormControl>
+                      <Input type="url" placeholder="https://example.com/affiliate-link" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+            
+            {managePdfUrl && (
+               <FormField
+                control={form.control}
+                name="pdfUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>PDF URL</FormLabel>
+                    <FormControl>
+                      <Input type="url" placeholder="https://example.com/book.pdf" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+            
+             <FormField
+              control={form.control}
+              name="imageAiHint"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Image AI Hint</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. book cover" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-                    {form.formState.errors.root && (
-                        <p className="text-sm font-medium text-destructive">{form.formState.errors.root.message}</p>
-                    )}
-                </div>
-            </ScrollArea>
-            <DialogFooter className="pt-6 flex-shrink-0">
+            <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
