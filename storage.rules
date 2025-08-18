@@ -1,24 +1,25 @@
-
 rules_version = '2';
-
 service firebase.storage {
   match /b/{bucket}/o {
-    
-    // Public Reading Room PDFs
-    // Allow anyone to read, but only authenticated users to write.
+    // Allow anyone to read files. This is needed for images and PDFs to be publicly viewable.
     match /pdfs/{allPaths=**} {
       allow read;
-      allow write: if request.auth != null;
     }
 
-    // User Profile Pictures
-    // Allow users to read/write their own profile picture.
-    // They can only access files within a folder that matches their UID.
-    match /profilePictures/{userId}/{allPaths=**} {
+    match /profilePictures/{allPaths=**} {
       allow read;
+    }
+    
+    // Securely allow authenticated users to upload/delete THEIR OWN profile picture.
+    // The `userId` in the path must match the logged-in user's ID.
+    match /profilePictures/{userId}/{allPaths=**} {
       allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Allow any authenticated user to upload book covers and PDFs.
+    // In a production app, you would restrict this to admin roles.
+    match /pdfs/{fileName} {
+      allow write: if request.auth != null;
     }
   }
 }
-
-    
