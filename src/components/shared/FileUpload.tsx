@@ -23,16 +23,24 @@ interface FileUploadProps {
   className?: string;
 }
 
-// Helper to get storage reference from a download URL
+// Helper to check if a URL is a Firebase Storage URL
+const isFirebaseStorageUrl = (url: string): boolean => {
+    return url.startsWith('https://firebasestorage.googleapis.com');
+}
+
+// Helper to get storage reference from a Firebase Storage download URL
 const getRefFromUrl = (url: string): StorageReference | null => {
+    if (!isFirebaseStorageUrl(url)) {
+        return null;
+    }
     try {
-        const urlObj = new URL(url);
-        // The pathname looks like /v0/b/bucket-name.appspot.com/o/path%2Fto%2Ffile.jpg
-        // We need to decode it and extract the path after the '/o/' part.
-        const path = decodeURIComponent(urlObj.pathname.split('/o/')[1].split('?')[0]);
+        // Decode the URL to handle special characters in the path
+        const decodedUrl = decodeURIComponent(url);
+        // Extract the path after '/o/' which represents the file path in the bucket
+        const path = decodedUrl.split('/o/')[1].split('?')[0];
         return ref(storage, path);
     } catch (error) {
-        console.error("Invalid Firebase Storage URL:", error);
+        console.error("Error parsing Firebase Storage URL:", error);
         return null;
     }
 }
@@ -59,6 +67,24 @@ export function FileUpload({
       setSelectedFile(file);
     }
   };
+  
+  const deleteOldFile = async () => {
+    if (currentFileUrl && isFirebaseStorageUrl(currentFileUrl)) {
+        const oldFileRef = getRefFromUrl(currentFileUrl);
+        if (oldFileRef) {
+            try {
+                await deleteObject(oldFileRef);
+            } catch (error: any) {
+                if (error.code === 'storage/object-not-found') {
+                    console.log("Old file not found, proceeding.");
+                } else {
+                    console.warn("Could not delete old file:", error);
+                    // We can choose to not throw an error here to allow the new upload to proceed
+                }
+            }
+        }
+    }
+  }
 
   const handleUpload = async () => {
     if (!selectedFile) {
@@ -69,21 +95,8 @@ export function FileUpload({
     setIsUploading(true);
     setUploadProgress(0);
 
-    // First, delete the old file if it exists
-    if (currentFileUrl) {
-      try {
-        const oldFileRef = getRefFromUrl(currentFileUrl);
-        if (oldFileRef) {
-            await deleteObject(oldFileRef);
-        }
-      } catch (error: any) {
-        if (error.code === 'storage/object-not-found') {
-          console.log("Old file not found in storage, proceeding with upload.");
-        } else {
-          console.warn("Could not delete old file, but proceeding with upload anyway:", error);
-        }
-      }
-    }
+    // First, try to delete the old file if it exists and is a Firebase URL
+    await deleteOldFile();
 
     // Now, upload the new file
     const storageRef = ref(storage, `${filePath}/${selectedFile.name}`);
@@ -116,6 +129,13 @@ export function FileUpload({
   
   const handleRemove = async () => {
     if (!currentFileUrl) return;
+
+    // Only attempt to delete if it's a Firebase Storage URL
+    if (!isFirebaseStorageUrl(currentFileUrl)) {
+        toast({ title: 'Cannot Remove', description: 'This is a placeholder image and cannot be removed directly.', variant: 'destructive' });
+        return;
+    }
+    
     setIsRemoving(true);
     const fileRef = getRefFromUrl(currentFileUrl);
 
