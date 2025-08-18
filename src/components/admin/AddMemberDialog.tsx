@@ -31,6 +31,8 @@ import {
 import { Input } from '@/components/ui/input';
 import type { TeamMemberRole } from './TeamMemberTable';
 import type { NewTeamMember } from '@/lib/team';
+import { Alert, AlertTitle, AlertDescription } from '../ui/alert';
+import { Info } from 'lucide-react';
 
 const roles: TeamMemberRole[] = ['Admin', 'Editor', 'Reviewer', 'Contributor'];
 
@@ -67,11 +69,21 @@ export function AddMemberDialog({ onOpenChange, onSave }: AddMemberDialogProps) 
         <DialogHeader>
           <DialogTitle>Add New Team Member</DialogTitle>
           <DialogDescription>
-            Enter the details of the new team member and assign them a role. They will be added to Firestore.
+            Add the new member's details here to grant them access rights.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertTitle>Important: Two-Step Process</AlertTitle>
+              <AlertDescription>
+                <ol className="list-decimal pl-4 space-y-1">
+                  <li>Add the user's details here and click "Add Member".</li>
+                  <li>Then, go to the <strong>Firebase Authentication console</strong> to create their login account with the same email and a password.</li>
+                </ol>
+              </AlertDescription>
+            </Alert>
             <FormField
               control={form.control}
               name="name"
