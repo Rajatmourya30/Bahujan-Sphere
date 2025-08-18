@@ -171,7 +171,7 @@ export default function ProfilePage() {
                         </div>
                     </CardContent>
                     <CardFooter className="flex justify-between items-center">
-                        <Button onClick={() => setIsDeleteDialogOpen(true)} variant="link" size="sm" className="text-destructive hover:text-destructive/80">
+                        <Button onClick={() => setIsDeleteDialogOpen(true)} variant="link" size="sm" className="text-destructive dark:text-red-500 hover:text-destructive/80 dark:hover:text-red-400">
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete Account
                         </Button>
@@ -182,8 +182,8 @@ export default function ProfilePage() {
                     </CardFooter>
                 </Card>
 
-                <Button onClick={() => setIsDonationDialogOpen(true)} size="lg" className="w-full">
-                    <Heart className="mr-2" />
+                <Button onClick={() => setIsDonationDialogOpen(true)} size="lg" className="w-full group">
+                    <Heart className="mr-2 transition-colors group-hover:fill-red-500 group-hover:text-red-500 animate-in group-hover:scale-110" />
                     {t('profile_page.support_button')}
                 </Button>
             </div>
