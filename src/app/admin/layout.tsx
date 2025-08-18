@@ -13,6 +13,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import {
+  Book,
   Calendar,
   HeartHandshake,
   Home,
@@ -56,6 +57,7 @@ export default function AdminLayout({
       { href: '/admin/calendar', label: 'Calendar', icon: Calendar, visible: permissions.canAccessCalendar },
       { href: '/admin/knowledge-hub', label: 'Knowledge Hub', icon: Library, visible: permissions.canManageContent },
       { href: '/admin/store', label: 'Store Directory', icon: Store, visible: permissions.canManageContent },
+      { href: '/admin/books', label: 'Books', icon: Book, visible: permissions.canManageContent },
       { href: '/admin/donations', label: 'Donations', icon: HeartHandshake, visible: permissions.canManageDonations },
       { href: '/admin/users', label: 'Users', icon: Users, visible: permissions.canManageUsers },
       { href: '/admin/team', label: 'Team', icon: UserCog, visible: permissions.canManageTeam },
