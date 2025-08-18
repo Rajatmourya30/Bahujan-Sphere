@@ -75,8 +75,8 @@ function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  // If loading is finished and there's no user, children will be the login page
-  // The provider will have already initiated the redirect.
+  // If loading is finished and there's no user, the provider will have already
+  // initiated the redirect, and we can render the children (the login page).
   if (!user) {
       return <>{children}</>;
   }

@@ -5,7 +5,6 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useRouter, usePathname } from 'next/navigation';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { Skeleton } from '@/components/ui/skeleton';
 
 interface AdminAuthContextType {
   user: User | null;
@@ -28,7 +27,7 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Clean up the subscription on unmount
     return () => unsubscribe();
-  }, []); // Empty dependency array ensures this runs only once on mount
+  }, []);
 
   useEffect(() => {
     // This effect handles redirection based on the auth state, AFTER loading is complete.
