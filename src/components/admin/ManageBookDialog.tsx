@@ -25,30 +25,16 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import type { Book } from '@/lib/books';
 import { ScrollArea } from '../ui/scroll-area';
-import { useState } from 'react';
-import { getDownloadURL, ref, uploadBytesResumable, type UploadTask } from 'firebase/storage';
-import { storage } from '@/lib/firebase';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
-import { Progress } from '../ui/progress';
-import { Label } from '../ui/label';
+import { FileUpload } from '../shared/FileUpload';
 
 const formSchema = z.object({
   titleKey: z.string().min(1, 'Key is required'),
   authorKey: z.string().min(1, 'Key is required'),
   descriptionKey: z.string().min(1, 'Key is required'),
-  imageFile: z.any().optional(),
   affiliateUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
-  pdfFile: z.any().optional(),
-}).refine(data => {
-    return (data.book && data.book.imageUrl) || (data.imageFile && data.imageFile.length > 0);
-}, {
-    message: "An image file is required when adding a new book.",
-    path: ["imageFile"],
 });
 
-
-type FormValues = z.infer<typeof formSchema> & { book?: Book | null };
+type FormValues = z.infer<typeof formSchema>;
 
 interface ManageBookDialogProps {
   book: Book | null;
@@ -58,28 +44,6 @@ interface ManageBookDialogProps {
   manageAffiliateUrl?: boolean;
 }
 
-const uploadFile = (file: File, path: string, onProgress: (progress: number) => void): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const storageRef = ref(storage, path);
-        const uploadTask: UploadTask = uploadBytesResumable(storageRef, file);
-
-        uploadTask.on('state_changed',
-            (snapshot) => {
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                onProgress(progress);
-            },
-            (error) => {
-                console.error("Upload error:", error);
-                reject(error);
-            },
-            async () => {
-                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                resolve(downloadURL);
-            }
-        );
-    });
-};
-
 export function ManageBookDialog({
     book,
     onOpenChange,
@@ -87,11 +51,6 @@ export function ManageBookDialog({
     managePdfUrl = false,
     manageAffiliateUrl = true
 }: ManageBookDialogProps) {
-  const { toast } = useToast();
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadMessage, setUploadMessage] = useState('');
-
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -99,60 +58,32 @@ export function ManageBookDialog({
       authorKey: book?.authorKey || '',
       descriptionKey: book?.descriptionKey || '',
       affiliateUrl: book?.affiliateUrl || '',
-      book: book,
     },
   });
+  
+  // We need to manage image and PDF URLs outside the form state
+  // as they are handled by a separate component.
+  const [imageUrl, setImageUrl] = React.useState(book?.imageUrl || '');
+  const [pdfUrl, setPdfUrl] = React.useState(book?.pdfUrl || '');
 
   const onSubmit = async (values: FormValues) => {
-    setIsUploading(true);
-    
-    try {
-        let imageUrl = book?.imageUrl || '';
-        let pdfUrl = book?.pdfUrl;
-
-        // Handle Image Upload
-        if (values.imageFile?.[0]) {
-            setUploadMessage('Uploading cover image...');
-            setUploadProgress(0);
-            const file = values.imageFile[0];
-            const imagePath = `book-covers/${Date.now()}_${file.name}`;
-            imageUrl = await uploadFile(file, imagePath, setUploadProgress);
-        }
-
-        // Handle PDF Upload
-        if (managePdfUrl && values.pdfFile?.[0]) {
-            setUploadMessage('Uploading PDF...');
-            setUploadProgress(0);
-            const file = values.pdfFile[0];
-            const pdfPath = `pdfs/${Date.now()}_${file.name}`;
-            pdfUrl = await uploadFile(file, pdfPath, setUploadProgress);
-        }
-        
-        const bookData: Omit<Book, 'id'> = {
-            titleKey: values.titleKey,
-            authorKey: values.authorKey,
-            descriptionKey: values.descriptionKey,
-            affiliateUrl: values.affiliateUrl || '',
-            imageUrl,
-            pdfUrl,
-            imageAiHint: 'book cover'
-        };
-
-        onSave(bookData);
-        onOpenChange(false);
-
-    } catch (error) {
-        console.error("Upload failed:", error);
-        toast({
-            title: "Upload Failed",
-            description: "There was an error uploading a file. Please try again.",
-            variant: "destructive",
-        });
-    } finally {
-        setIsUploading(false);
-        setUploadMessage('');
-        setUploadProgress(0);
+    if (!imageUrl) {
+        form.setError('root', { type: 'manual', message: 'A cover image is required.' });
+        return;
     }
+    
+    const bookData: Omit<Book, 'id'> = {
+        titleKey: values.titleKey,
+        authorKey: values.authorKey,
+        descriptionKey: values.descriptionKey,
+        affiliateUrl: values.affiliateUrl || '',
+        imageUrl,
+        pdfUrl: pdfUrl || undefined,
+        imageAiHint: 'book cover'
+    };
+
+    onSave(bookData);
+    onOpenChange(false);
 };
 
   return (
@@ -207,30 +138,14 @@ export function ManageBookDialog({
                         </FormItem>
                     )}
                     />
-                    <FormField
-                        control={form.control}
-                        name="imageFile"
-                        render={({ field: { onChange, value, ...rest } }) => (
-                        <FormItem>
-                            <FormLabel>Book Cover Image</FormLabel>
-                            <FormControl>
-                            <Input 
-                                type="file" 
-                                accept="image/png, image/jpeg, image/webp"
-                                onChange={(e) => {
-                                    onChange(e.target.files);
-                                }}
-                                {...rest} 
-                                disabled={isUploading}
-                            />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
+                    
+                    <FileUpload
+                        label="Book Cover Image"
+                        filePath="book-covers"
+                        currentFileUrl={imageUrl}
+                        onUploadComplete={setImageUrl}
+                        onRemoveComplete={() => setImageUrl('')}
                     />
-                     {book?.imageUrl && !form.watch('imageFile')?.[0] && (
-                        <div className="text-sm text-muted-foreground">Current image: <a href={book.imageUrl} target="_blank" rel="noopener noreferrer" className="underline">View Image</a></div>
-                     )}
                     
                     {manageAffiliateUrl && (
                     <FormField
@@ -249,49 +164,27 @@ export function ManageBookDialog({
                     )}
                     
                     {managePdfUrl && (
-                    <>
-                        <FormField
-                            control={form.control}
-                            name="pdfFile"
-                            render={({ field: { onChange, value, ...rest } }) => (
-                            <FormItem>
-                                <FormLabel>Upload PDF</FormLabel>
-                                <FormControl>
-                                <Input 
-                                    type="file" 
-                                    accept=".pdf"
-                                    onChange={(e) => {
-                                        onChange(e.target.files);
-                                    }}
-                                    {...rest} 
-                                    disabled={isUploading}
-                                />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                         {book?.pdfUrl && !form.watch('pdfFile')?.[0] && (
-                            <div className="text-sm text-muted-foreground">Current PDF: <a href={book.pdfUrl} target="_blank" rel="noopener noreferrer" className="underline">View PDF</a></div>
-                        )}
-                    </>
+                     <FileUpload
+                        label="Book PDF"
+                        filePath="pdfs"
+                        currentFileUrl={pdfUrl}
+                        acceptedFileTypes=".pdf"
+                        onUploadComplete={setPdfUrl}
+                        onRemoveComplete={() => setPdfUrl('')}
+                    />
                     )}
 
-                    {isUploading && (
-                        <div className="space-y-2 pt-2">
-                           <Label>{uploadMessage} {uploadProgress.toFixed(0)}%</Label>
-                           <Progress value={uploadProgress} />
-                        </div>
+                    {form.formState.errors.root && (
+                        <p className="text-sm font-medium text-destructive">{form.formState.errors.root.message}</p>
                     )}
                 </div>
             </ScrollArea>
             <DialogFooter className="pt-4 px-6 pb-6">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isUploading}>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isUploading}>
-                {isUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isUploading ? 'Saving...' : 'Save Changes'}
+              <Button type="submit">
+                Save Changes
               </Button>
             </DialogFooter>
           </form>

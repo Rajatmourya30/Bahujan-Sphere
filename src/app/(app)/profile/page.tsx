@@ -1,25 +1,25 @@
 
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Globe, LogOut, Palette, Heart, Trash2, Camera, X } from 'lucide-react';
+import { Globe, LogOut, Palette, Heart, Trash2 } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { LanguageSwitcher } from '@/components/shared/LanguageSwitcher';
 import { Label } from '@/components/ui/label';
 import { ThemeSwitcher } from '@/components/shared/ThemeSwitcher';
 import { DonationDialog } from '@/components/profile/DonationDialog';
-import { auth, db, storage } from '@/lib/firebase';
-import { onAuthStateChanged, signOut, deleteUser } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase';
+import { onAuthStateChanged, signOut, deleteUser, type User } from 'firebase/auth';
 import { doc, getDoc, deleteDoc, updateDoc } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ref, deleteObject } from 'firebase/storage';
 import { DeleteAccountDialog } from '@/components/profile/DeleteAccountDialog';
 import { useToast } from '@/hooks/use-toast';
-import { Progress } from '@/components/ui/progress';
+import { FileUpload } from '@/components/shared/FileUpload';
 
 interface UserProfile {
     name: string;
@@ -35,20 +35,20 @@ export default function ProfilePage() {
   const router = useRouter();
   const { t } = useLanguage();
   const { toast } = useToast();
-  const [user, setUser] = useState<UserProfile | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDonationDialogOpen, setIsDonationDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const docRef = doc(db, "users", firebaseUser.uid);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setFirebaseUser(user);
+        const docRef = doc(db, "users", user.uid);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-          setUser(docSnap.data() as UserProfile);
+          setUserProfile(docSnap.data() as UserProfile);
         } else {
           router.replace('/login');
         }
@@ -60,6 +60,30 @@ export default function ProfilePage() {
 
     return () => unsubscribe();
   }, [router]);
+  
+  const updateUserPhotoUrl = async (newUrl: string) => {
+    if (!firebaseUser) return;
+    try {
+        const userDocRef = doc(db, 'users', firebaseUser.uid);
+        await updateDoc(userDocRef, { photoUrl: newUrl });
+        setUserProfile(prev => prev ? { ...prev, photoUrl: newUrl } : null);
+    } catch (error) {
+        console.error("Failed to update photo URL in Firestore:", error);
+        toast({ title: "Error", description: "Could not save your new profile picture.", variant: "destructive" });
+    }
+  };
+  
+  const handlePhotoRemoved = async () => {
+    if (!firebaseUser) return;
+    try {
+        const userDocRef = doc(db, 'users', firebaseUser.uid);
+        await updateDoc(userDocRef, { photoUrl: '' });
+        setUserProfile(prev => prev ? { ...prev, photoUrl: '' } : null);
+    } catch (error) {
+        console.error("Failed to clear photo URL in Firestore:", error);
+    }
+  };
+
 
   const handleLogout = async () => {
     try {
@@ -70,116 +94,20 @@ export default function ProfilePage() {
     }
   };
 
-  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    const firebaseUser = auth.currentUser;
-    if (!file || !firebaseUser) return;
-
-    // Delete old photo first, but don't block upload if it fails
-    if (user?.photoUrl) {
-        try {
-            const oldPhotoRef = ref(storage, user.photoUrl);
-            await deleteObject(oldPhotoRef);
-        } catch (error: any) {
-            if (error.code === 'storage/object-not-found') {
-                console.log("Old photo not found, proceeding with upload.");
-            } else {
-                console.warn("Could not delete old photo, proceeding with upload:", error);
-            }
-        }
-    }
-
-    const storageRef = ref(storage, `profile-pictures/${firebaseUser.uid}/${file.name}`);
-    const uploadTask = uploadBytesResumable(storageRef, file);
-
-    uploadTask.on('state_changed',
-        (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            setUploadProgress(progress);
-        },
-        (error) => {
-            console.error("Error uploading profile picture:", error);
-            let description = "An unknown error occurred during upload.";
-            switch (error.code) {
-                case 'storage/unauthorized':
-                    description = "Permission denied. Please ensure you are logged in and have the necessary rights.";
-                    break;
-                case 'storage/canceled':
-                    description = "The upload was canceled.";
-                    break;
-                case 'storage/quota-exceeded':
-                    description = "Storage quota exceeded. Please contact support.";
-                    break;
-            }
-            toast({ title: "Upload Failed", description, variant: "destructive" });
-            setUploadProgress(null);
-        },
-        async () => {
-            try {
-                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                const userDocRef = doc(db, 'users', firebaseUser.uid);
-                await updateDoc(userDocRef, { photoUrl: downloadURL });
-
-                setUser(prevUser => prevUser ? { ...prevUser, photoUrl: downloadURL } : null);
-                toast({ title: "Profile Picture Updated", description: "Your new photo has been saved." });
-            } catch (error) {
-                 console.error("Error updating profile:", error);
-                 toast({ title: "Update Failed", description: "Failed to save the new photo to your profile.", variant: "destructive" });
-            } finally {
-                setTimeout(() => setUploadProgress(null), 1000);
-            }
-        }
-    );
-  };
-  
-  const handleRemovePhoto = async () => {
-      const firebaseUser = auth.currentUser;
-      if (!firebaseUser || !user?.photoUrl) return;
-
-      if (user.photoUrl.includes('firebasestorage.googleapis.com')) {
-        try {
-            const photoRef = ref(storage, user.photoUrl);
-            // Attempt to delete the file from storage
-            await deleteObject(photoRef);
-        } catch (error: any) {
-            // If the file doesn't exist in storage, that's okay. We still want to clear the URL from the profile.
-            if (error.code === 'storage/object-not-found') {
-                console.log("Photo not found in storage, but clearing from profile.");
-            } else {
-                // For other errors, log them but still proceed to update Firestore
-                console.error("Error removing profile picture from storage:", error);
-            }
-        }
-      }
-
-      // Always update the Firestore document to remove the photo URL
-      try {
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
-        await updateDoc(userDocRef, { photoUrl: '' });
-        
-        setUser(prevUser => prevUser ? { ...prevUser, photoUrl: '' } : null);
-        toast({ title: "Profile Picture Removed" });
-      } catch (firestoreError) {
-          console.error("Error updating Firestore:", firestoreError);
-          toast({ title: "Removal Failed", description: "Could not update your profile.", variant: "destructive" });
-      }
-  };
-
   const handleDeleteAccount = async () => {
-    const firebaseUser = auth.currentUser;
     if (!firebaseUser) {
         toast({ title: 'Error', description: 'No user is currently signed in.', variant: 'destructive' });
         return;
     }
 
     try {
-        // Also delete profile picture from storage if it exists
-        if (user?.photoUrl && user.photoUrl.includes('firebasestorage.googleapis.com')) {
+        // Delete profile picture from storage if it exists
+        if (userProfile?.photoUrl) {
             try {
-                const photoRef = ref(storage, user.photoUrl);
+                const photoRef = ref(storage, userProfile.photoUrl);
                 await deleteObject(photoRef).catch(err => console.log("Photo not found, skipping delete.", err));
             } catch (error) {
-                console.error("Error creating ref from photo URL for deletion:", error);
+                console.error("Error deleting profile picture:", error);
             }
         }
         
@@ -201,7 +129,7 @@ export default function ProfilePage() {
     }
   };
 
-  if (isLoading || !user) {
+  if (isLoading || !userProfile || !firebaseUser) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="md:col-span-1">
@@ -219,72 +147,57 @@ export default function ProfilePage() {
   return (
     <>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="md:col-span-1">
+            <div className="md:col-span-1 space-y-6">
                  <Card>
                     <CardHeader className="items-center text-center">
-                        <div className="relative group">
-                            <Avatar className="h-24 w-24 mb-4">
-                                <AvatarImage src={user.photoUrl || undefined} alt={user.name} />
-                                <AvatarFallback className="bg-primary text-primary-foreground text-4xl">
-                                    {user.name.charAt(0).toUpperCase()}
-                                </AvatarFallback>
-                            </Avatar>
-                            <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <input
-                                    type="file"
-                                    ref={fileInputRef}
-                                    onChange={handlePhotoUpload}
-                                    accept="image/png, image/jpeg, image/webp"
-                                    className="hidden"
-                                />
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="text-white hover:bg-white/20"
-                                    onClick={() => fileInputRef.current?.click()}
-                                >
-                                    <Camera />
-                                </Button>
-                                {user.photoUrl && (
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="text-white hover:bg-white/20"
-                                        onClick={handleRemovePhoto}
-                                    >
-                                        <X />
-                                    </Button>
-                                )}
-                            </div>
-                        </div>
-                        {uploadProgress !== null && <Progress value={uploadProgress} className="w-full h-2 mt-2" />}
-
+                        <Avatar className="h-24 w-24 mb-4">
+                            <AvatarImage src={userProfile.photoUrl || undefined} alt={userProfile.name} />
+                            <AvatarFallback className="bg-primary text-primary-foreground text-4xl">
+                                {userProfile.name.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                        </Avatar>
+                        
                         <div>
-                            <CardTitle className="text-2xl font-headline">{user.name}</CardTitle>
-                            <CardDescription>{user.email}</CardDescription>
+                            <CardTitle className="text-2xl font-headline">{userProfile.name}</CardTitle>
+                            <CardDescription>{userProfile.email}</CardDescription>
                         </div>
                     </CardHeader>
                     <CardContent className="text-sm">
                         <div className="space-y-4">
                              <div>
                                 <p className="font-medium text-muted-foreground">{t('profile_page.city')}</p>
-                                <p>{user.city}</p>
+                                <p>{userProfile.city}</p>
                             </div>
                              <div>
                                 <p className="font-medium text-muted-foreground">{t('profile_page.state')}</p>
-                                <p>{user.state}</p>
+                                <p>{userProfile.state}</p>
                             </div>
                             <div>
                                 <p className="font-medium text-muted-foreground">{t('profile_page.country')}</p>
-                                <p>{user.country}</p>
+                                <p>{userProfile.country}</p>
                             </div>
                              <div>
                                 <p className="font-medium text-muted-foreground">{t('profile_page.birth_year')}</p>
-                                <p>{user.birthYear}</p>
+                                <p>{userProfile.birthYear}</p>
                             </div>
                         </div>
                     </CardContent>
                 </Card>
+
+                 <Card>
+                    <CardHeader>
+                        <CardTitle className="text-xl font-headline">Profile Picture</CardTitle>
+                    </CardHeader>
+                     <CardContent>
+                        <FileUpload 
+                            label="Upload a new photo"
+                            filePath={`profile-pictures/${firebaseUser.uid}`}
+                            currentFileUrl={userProfile.photoUrl}
+                            onUploadComplete={updateUserPhotoUrl}
+                            onRemoveComplete={handlePhotoRemoved}
+                        />
+                    </CardContent>
+                 </Card>
             </div>
             <div className="md:col-span-2 space-y-6">
                 <Card>
@@ -330,7 +243,7 @@ export default function ProfilePage() {
             <DonationDialog
                 isOpen={isDonationDialogOpen}
                 onOpenChange={setIsDonationDialogOpen}
-                userName={user.name}
+                userName={userProfile.name}
             />
         )}
         {isDeleteDialogOpen && (
