@@ -70,17 +70,23 @@ export default function ProfilePage() {
     }
   };
 
-  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     const firebaseUser = auth.currentUser;
     if (!file || !firebaseUser) return;
 
     // Delete old photo first, but don't block upload if it fails
     if (user?.photoUrl) {
-      const oldPhotoRef = ref(storage, user.photoUrl);
-      deleteObject(oldPhotoRef).catch((error) => {
-        console.warn("Could not delete old photo, proceeding with upload:", error);
-      });
+        try {
+            const oldPhotoRef = ref(storage, user.photoUrl);
+            await deleteObject(oldPhotoRef);
+        } catch (error: any) {
+            if (error.code === 'storage/object-not-found') {
+                console.log("Old photo not found, proceeding with upload.");
+            } else {
+                console.warn("Could not delete old photo, proceeding with upload:", error);
+            }
+        }
     }
 
     const storageRef = ref(storage, `profile-pictures/${firebaseUser.uid}/${file.name}`);
@@ -93,7 +99,19 @@ export default function ProfilePage() {
         },
         (error) => {
             console.error("Error uploading profile picture:", error);
-            toast({ title: "Upload Failed", description: "Could not upload your profile picture. Check storage rules.", variant: "destructive" });
+            let description = "An unknown error occurred during upload.";
+            switch (error.code) {
+                case 'storage/unauthorized':
+                    description = "Permission denied. Please ensure you are logged in and have the necessary rights.";
+                    break;
+                case 'storage/canceled':
+                    description = "The upload was canceled.";
+                    break;
+                case 'storage/quota-exceeded':
+                    description = "Storage quota exceeded. Please contact support.";
+                    break;
+            }
+            toast({ title: "Upload Failed", description, variant: "destructive" });
             setUploadProgress(null);
         },
         async () => {
@@ -117,19 +135,21 @@ export default function ProfilePage() {
   const handleRemovePhoto = async () => {
       const firebaseUser = auth.currentUser;
       if (!firebaseUser || !user?.photoUrl) return;
-      
-      try {
-          const photoRef = ref(storage, user.photoUrl);
-          // Attempt to delete the file from storage
-          await deleteObject(photoRef);
-      } catch (error: any) {
-          // If the file doesn't exist in storage, that's okay. We still want to clear the URL from the profile.
-          if (error.code === 'storage/object-not-found') {
-              console.log("Photo not found in storage, but clearing from profile.");
-          } else {
-              // For other errors, log them but still proceed to update Firestore
-              console.error("Error removing profile picture from storage:", error);
-          }
+
+      if (user.photoUrl.includes('firebasestorage.googleapis.com')) {
+        try {
+            const photoRef = ref(storage, user.photoUrl);
+            // Attempt to delete the file from storage
+            await deleteObject(photoRef);
+        } catch (error: any) {
+            // If the file doesn't exist in storage, that's okay. We still want to clear the URL from the profile.
+            if (error.code === 'storage/object-not-found') {
+                console.log("Photo not found in storage, but clearing from profile.");
+            } else {
+                // For other errors, log them but still proceed to update Firestore
+                console.error("Error removing profile picture from storage:", error);
+            }
+        }
       }
 
       // Always update the Firestore document to remove the photo URL
@@ -154,9 +174,13 @@ export default function ProfilePage() {
 
     try {
         // Also delete profile picture from storage if it exists
-        if (user?.photoUrl) {
-            const photoRef = ref(storage, user.photoUrl);
-            await deleteObject(photoRef).catch(err => console.log("Photo not found, skipping delete.", err));
+        if (user?.photoUrl && user.photoUrl.includes('firebasestorage.googleapis.com')) {
+            try {
+                const photoRef = ref(storage, user.photoUrl);
+                await deleteObject(photoRef).catch(err => console.log("Photo not found, skipping delete.", err));
+            } catch (error) {
+                console.error("Error creating ref from photo URL for deletion:", error);
+            }
         }
         
         const userDocRef = doc(db, 'users', firebaseUser.uid);
