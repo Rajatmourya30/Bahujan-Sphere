@@ -21,7 +21,7 @@ export const allBooks: Book[] = [
     imageUrl: 'https://placehold.co/400x600.png',
     imageAiHint: 'book cover',
     affiliateUrl: 'https://example.com/affiliate-link-1',
-    pdfUrl: 'https://archive.org/download/ambedkar-writings-and-speeches-vol-1/BABASAHEB%20AMBEDKAR%20WRITINGS%20AND%20SPEECHES%20VOL%201.pdf',
+    pdfUrl: 'https://firebasestorage.googleapis.com/v0/b/bahujansphere-90sqv.appspot.com/o/Annihilation-of-Caste-with-a-Reply-to-Mahatma-Gandhi-Ambedkar.pdf?alt=media',
   },
   {
     id: 'book-2',
