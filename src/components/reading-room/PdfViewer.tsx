@@ -46,16 +46,18 @@ export function PdfViewer({ file }: PdfViewerProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-center gap-4 p-2 bg-card border-b">
-         <Button variant="outline" size="icon" onClick={goToPrevPage} disabled={pageNumber <= 1}>
-            <ChevronLeft />
-        </Button>
-        <span>
-          Page {pageNumber} of {numPages || '--'}
-        </span>
-        <Button variant="outline" size="icon" onClick={goToNextPage} disabled={!numPages || pageNumber >= numPages}>
-            <ChevronRight />
-        </Button>
+      <div className="flex items-center justify-center flex-wrap gap-2 p-2 bg-card border-b">
+         <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={goToPrevPage} disabled={pageNumber <= 1}>
+                <ChevronLeft />
+            </Button>
+            <span>
+            Page {pageNumber} of {numPages || '--'}
+            </span>
+            <Button variant="outline" size="icon" onClick={goToNextPage} disabled={!numPages || pageNumber >= numPages}>
+                <ChevronRight />
+            </Button>
+        </div>
         <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" onClick={zoomOut}>
                 <ZoomOut />
