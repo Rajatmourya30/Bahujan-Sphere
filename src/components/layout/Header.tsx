@@ -59,7 +59,7 @@ export function Header() {
         <div className="mr-4 flex items-center">
           <Link href="/" className="flex items-center gap-2">
             <Logo />
-            <span className="font-bold">BahujanSphere</span>
+            <span className="font-bold text-primary">BahujanSphere</span>
           </Link>
         </div>
         <nav className="flex flex-1 items-center space-x-2">

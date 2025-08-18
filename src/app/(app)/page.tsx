@@ -33,8 +33,8 @@ export default function Home() {
     <div className="space-y-8">
       <header className="text-center pb-8 border-b">
         <div className="flex justify-center items-center gap-2">
-            <Logo className="dark:text-primary-foreground h-8 w-8" />
-            <h1 className="font-headline text-5xl font-bold text-primary dark:text-primary-foreground">BahujanSphere</h1>
+            <Logo className="h-8 w-8" />
+            <h1 className="font-headline text-5xl font-bold text-primary">BahujanSphere</h1>
         </div>
         <p className="mt-4 text-xl text-muted-foreground max-w-3xl mx-auto">
           {t('home.tagline')}
