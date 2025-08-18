@@ -25,11 +25,12 @@ import {
   Users,
 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Logo } from '@/components/shared/Logo';
 import { useEffect, useState } from 'react';
-
-type UserRole = 'Admin' | 'Editor' | 'Reviewer' | 'Contributor' | null;
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AdminLayout({
   children,
@@ -37,34 +38,63 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const [userRole, setUserRole] = useState<UserRole>(null);
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const role = localStorage.getItem('adminUserRole') as UserRole;
-    setUserRole(role);
-  }, [pathname]);
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+      } else {
+        router.replace('/admin/login');
+      }
+      setIsLoading(false);
+    });
 
+    return () => unsubscribe();
+  }, [router]);
+
+  // For this simplified example, we'll grant all permissions to any logged-in user.
+  // A real app would use custom claims to manage roles.
   const permissions = {
-    canManageDonations: userRole === 'Admin',
-    canManageUsers: userRole === 'Admin',
-    canManageTeam: userRole === 'Admin' || userRole === 'Editor',
-    canManageContent: userRole === 'Admin' || userRole === 'Editor',
-    canAccessCalendar: userRole === 'Admin' || userRole === 'Editor' || userRole === 'Contributor' || userRole === 'Reviewer',
-    canManageAds: userRole === 'Admin',
+    canManageDonations: true,
+    canManageUsers: true,
+    canManageTeam: true,
+    canManageContent: true,
+    canAccessCalendar: true,
+    canManageAds: true,
   };
-  
+
   const navItems = [
-      { href: '/admin', label: 'Dashboard', icon: Home, visible: true },
-      { href: '/admin/calendar', label: 'Calendar', icon: Calendar, visible: permissions.canAccessCalendar },
-      { href: '/admin/knowledge-hub', label: 'Knowledge Hub', icon: Library, visible: permissions.canManageContent },
-      { href: '/admin/store', label: 'Store Directory', icon: Store, visible: permissions.canManageContent },
-      { href: '/admin/books', label: 'Books', icon: Book, visible: permissions.canManageContent },
-      { href: '/admin/reading-room', label: 'Reading Room', icon: BookOpenCheck, visible: permissions.canManageContent },
-      { href: '/admin/donations', label: 'Donations', icon: HeartHandshake, visible: permissions.canManageDonations },
-      { href: '/admin/users', label: 'Users', icon: Users, visible: permissions.canManageUsers },
-      { href: '/admin/team', label: 'Team', icon: UserCog, visible: permissions.canManageTeam },
-      { href: '/admin/google-ads', label: 'Google Ads', icon: Megaphone, visible: permissions.canManageAds },
+    { href: '/admin', label: 'Dashboard', icon: Home, visible: true },
+    { href: '/admin/calendar', label: 'Calendar', icon: Calendar, visible: permissions.canAccessCalendar },
+    { href: '/admin/knowledge-hub', label: 'Knowledge Hub', icon: Library, visible: permissions.canManageContent },
+    { href: '/admin/store', label: 'Store Directory', icon: Store, visible: permissions.canManageContent },
+    { href: '/admin/books', label: 'Books', icon: Book, visible: permissions.canManageContent },
+    { href: '/admin/reading-room', label: 'Reading Room', icon: BookOpenCheck, visible: permissions.canManageContent },
+    { href: '/admin/donations', label: 'Donations', icon: HeartHandshake, visible: permissions.canManageDonations },
+    { href: '/admin/users', label: 'Users', icon: Users, visible: permissions.canManageUsers },
+    { href: '/admin/team', label: 'Team', icon: UserCog, visible: permissions.canManageTeam },
+    { href: '/admin/google-ads', label: 'Google Ads', icon: Megaphone, visible: permissions.canManageAds },
   ].filter(item => item.visible);
+
+  if (isLoading) {
+    return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <div className="space-y-4 p-4">
+                <Skeleton className="h-10 w-48" />
+                <Skeleton className="h-64 w-full" />
+            </div>
+        </div>
+    )
+  }
+
+  // Do not render layout on login page to avoid sidebar appearing
+  if (pathname === '/admin/login') {
+    return <>{children}</>;
+  }
+
 
   return (
     <SidebarProvider defaultOpen={false}>

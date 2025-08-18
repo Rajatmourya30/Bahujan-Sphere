@@ -1,21 +1,17 @@
+
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow read access to all files for public viewing
-    match /{allPaths=**} {
+    // Allow anyone to read files from these directories
+    match /{folder}/{allPaths=**} 
+      where folder in ['pdfs', 'profile-pictures', 'book-covers'] {
       allow read;
     }
-
-    // Allow authenticated users to write to specific folders
-    match /pdfs/{fileName} {
-      allow write: if request.auth != null;
-    }
-    match /profile-pictures/{fileName} {
-      allow write: if request.auth != null;
-    }
-    match /book-covers/{fileName} {
-      allow write: if request.auth != null;
+    
+    // Allow any authenticated user to write to the pdfs directory
+    match /pdfs/{allPaths=**} {
+        allow write: if request.auth != null;
     }
   }
 }

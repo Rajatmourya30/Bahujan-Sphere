@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { BookOpen, UploadCloud, FileText, Loader2, AlertCircle } from 'lucide-react';
 import { auth, db, storage } from '@/lib/firebase';
-import { signInAnonymously, onAuthStateChanged, type User } from 'firebase/auth';
+import { onAuthStateChanged, type User } from 'firebase/auth';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, type Timestamp } from 'firebase/firestore';
 import Link from 'next/link';
@@ -26,7 +26,6 @@ interface ReadingRoomPdf {
 
 export default function ManageReadingRoomPage() {
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<User | null>(null);
 
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
@@ -43,26 +42,16 @@ export default function ManageReadingRoomPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const authStatus = localStorage.getItem('isAdminAuthenticated');
-    if (authStatus !== 'true') {
-      router.replace('/admin/login');
-    } else {
-      setIsAuthenticated(true);
-      const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
-        if (currentUser) {
-            setUser(currentUser);
-        } else {
-            try {
-                const userCredential = await signInAnonymously(auth);
-                setUser(userCredential.user);
-            } catch (error) {
-                console.error("Anonymous sign-in failed:", error);
-                setStatusMessage({ type: 'error', text: 'Authentication failed. Cannot manage PDFs.' });
-            }
-        }
-      });
-      return () => unsubscribeAuth();
-    }
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+          setUser(currentUser);
+      } else {
+        // This page is protected by AdminLayout, so user should always be present.
+        // If not, redirecting is a safe fallback.
+        router.replace('/admin/login');
+      }
+    });
+    return () => unsubscribeAuth();
   }, [router]);
   
   useEffect(() => {
@@ -93,7 +82,11 @@ export default function ManageReadingRoomPage() {
   };
 
   const handleUpload = async () => {
-    if (!fileToUpload || !title || !user) {
+    if (!user) {
+        setStatusMessage({ type: 'error', text: 'You must be signed in to upload files.' });
+        return;
+    }
+    if (!fileToUpload || !title) {
         setStatusMessage({ type: 'error', text: 'Please select a file and provide a title.' });
         return;
     }
@@ -147,14 +140,6 @@ export default function ManageReadingRoomPage() {
     );
   };
 
-  if (!isAuthenticated) {
-    return (
-      <div className="space-y-4 p-4">
-        <Skeleton className="h-10 w-1/3" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-8">

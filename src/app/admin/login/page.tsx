@@ -9,13 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/use-language';
-
-const rolesByEmail: Record<string, string> = {
-    'admin@example.com': 'Admin',
-    'editor@example.com': 'Editor',
-    'reviewer@example.com': 'Reviewer',
-    'contributor@example.com': 'Contributor',
-};
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { Loader2 } from 'lucide-react';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -23,20 +19,23 @@ export default function AdminLoginPage() {
   const { t } = useLanguage();
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = () => {
-    const userRole = rolesByEmail[email];
-    if (password === 'admin123' && userRole) {
-      localStorage.setItem('isAdminAuthenticated', 'true');
-      localStorage.setItem('adminUserRole', userRole);
-      localStorage.setItem('adminUserEmail', email);
+  const handleLogin = async () => {
+    setIsLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      // On successful login, Firebase automatically persists the session.
+      // The admin layout will now recognize the authenticated user.
       router.push('/admin');
-    } else {
+    } catch (error: any) {
       toast({
         title: t('admin_login.toast_failed_title'),
-        description: t('admin_login.toast_failed_description'),
+        description: 'Invalid credentials. Please check your email and password.',
         variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -46,11 +45,7 @@ export default function AdminLoginPage() {
         <CardHeader>
           <CardTitle className="text-2xl font-headline">{t('admin_login.title')}</CardTitle>
           <CardDescription>
-            Log in with different emails to test roles (password: admin123).
-            <br />- admin@example.com
-            <br />- editor@example.com
-            <br />- reviewer@example.com
-            <br />- contributor@example.com
+            Please log in with an admin account created in the Firebase Authentication console.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -63,6 +58,8 @@ export default function AdminLoginPage() {
                 placeholder="admin@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -72,10 +69,12 @@ export default function AdminLoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={t('admin_login.password_hint')}
+                required
+                disabled={isLoading}
               />
             </div>
-            <Button onClick={handleLogin} className="w-full">
+            <Button onClick={handleLogin} className="w-full" disabled={isLoading}>
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {t('admin_login.login_button')}
             </Button>
           </div>
