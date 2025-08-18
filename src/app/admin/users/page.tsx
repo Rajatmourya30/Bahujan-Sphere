@@ -5,8 +5,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Download, Users, Activity, UserPlus, Eye, Bookmark, Clock, Percent, BarChart3, Smartphone } from 'lucide-react';
-import { UserTable } from '@/components/admin/UserTable';
+import { Download, Users, Activity, Clock, Percent } from 'lucide-react';
+import { UserTable, type UserProfile } from '@/components/admin/UserTable';
 import * as XLSX from 'xlsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import dynamic from 'next/dynamic';
@@ -15,7 +15,9 @@ import { RetentionRateChart } from '@/components/admin/RetentionRateChart';
 import { FeatureUsageChart } from '@/components/admin/FeatureUsageChart';
 import { DeviceBreakdownChart } from '@/components/admin/DeviceBreakdownChart';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { collection, onSnapshot, query, orderBy, Timestamp } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 const UserGrowthChart = dynamic(
   () => import('@/components/admin/UserGrowthChart').then((mod) => mod.UserGrowthChart),
@@ -27,36 +29,42 @@ const UserDemographicsChart = dynamic(
   { ssr: false }
 );
 
-const sampleUsers = [
-    { id: 1, name: 'Ambedkar Fan', email: 'fan@example.com', country: 'India', state: 'Maharashtra', city: 'Nagpur', birthYear: 1991, createdAt: '2024-05-01T10:00:00Z', lastSeen: '2024-07-20T15:30:00Z', language: 'mr' },
-    { id: 2, name: 'Savitri Follower', email: 'savitri@example.com', country: 'India', state: 'Karnataka', city: 'Bengaluru', birthYear: 1985, createdAt: '2024-05-15T12:00:00Z', lastSeen: '2024-07-21T09:00:00Z', language: 'en' },
-    { id: 3, name: 'Jyotirao Admirer', email: 'jyotirao@example.com', country: 'USA', state: 'California', city: 'San Francisco', birthYear: 2000, createdAt: '2024-06-01T08:00:00Z', lastSeen: '2024-07-19T22:15:00Z', language: 'en' },
-    { id: 4, name: 'Birsa Supporter', email: 'birsa@example.com', country: 'India', state: 'Jharkhand', city: 'Ranchi', birthYear: 1995, createdAt: '2024-06-10T18:00:00Z', lastSeen: '2024-07-21T11:45:00Z', language: 'hi' },
-    { id: 5, name: 'Community Member', email: 'member@example.com', country: 'UK', state: 'London', city: 'London', birthYear: 1992, createdAt: '2024-07-01T14:00:00Z', lastSeen: '2024-07-18T18:00:00Z', language: 'en' },
-    { id: 6, name: 'New User One', email: 'new1@example.com', country: 'Canada', state: 'Ontario', city: 'Toronto', birthYear: 1998, createdAt: '2024-07-15T11:00:00Z', lastSeen: '2024-07-21T14:00:00Z', language: 'en' },
-    { id: 7, name: 'New User Two', email: 'new2@example.com', country: 'India', state: 'Delhi', city: 'New Delhi', birthYear: 2002, createdAt: '2024-07-18T09:30:00Z', lastSeen: '2024-07-20T10:00:00Z', language: 'hi' },
-    { id: 8, name: 'Tamil Friend', email: 'tamil@example.com', country: 'India', state: 'Tamil Nadu', city: 'Chennai', birthYear: 1993, createdAt: '2024-07-19T11:30:00Z', lastSeen: '2024-07-21T12:00:00Z', language: 'ta' },
-];
-
-
 export default function UserDashboardPage() {
   const router = useRouter();
+  const { toast } = useToast();
+  const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
-        setIsLoading(false);
+        const usersQuery = query(collection(db, "users"), orderBy("name"));
+        const unsubscribeFirestore = onSnapshot(usersQuery, (snapshot) => {
+          const fetchedUsers = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          } as UserProfile));
+          setUsers(fetchedUsers);
+          setIsLoading(false);
+        }, (error) => {
+          console.error("Error fetching users:", error);
+          toast({ title: 'Error', description: 'Could not fetch user data.', variant: 'destructive' });
+          setIsLoading(false);
+        });
+
+        return () => unsubscribeFirestore();
       } else {
         router.replace('/admin/login');
       }
     });
 
-    return () => unsubscribe();
-  }, [router]);
+    return () => unsubscribeAuth();
+  }, [router, toast]);
 
   const handleDownload = () => {
-    const worksheet = XLSX.utils.json_to_sheet(sampleUsers);
+    // We remove the ID for a cleaner export
+    const exportableData = users.map(({ id, ...rest }) => rest);
+    const worksheet = XLSX.utils.json_to_sheet(exportableData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
     XLSX.writeFile(workbook, "user_data.xlsx");
@@ -88,9 +96,9 @@ export default function UserDashboardPage() {
         <header className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
             <div>
                 <h1 className="font-headline text-3xl font-bold">User Dashboard</h1>
-                <p className="text-muted-foreground">Global app-wide performance metrics.</p>
+                <p className="text-muted-foreground">Real-time user data from Firestore.</p>
             </div>
-            <Button onClick={handleDownload}>
+            <Button onClick={handleDownload} disabled={users.length === 0}>
                 <Download className="mr-2 h-4 w-4" />
                 Export as XLSX
             </Button>
@@ -103,7 +111,7 @@ export default function UserDashboardPage() {
                 <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold">{sampleUsers.length}</div>
+                <div className="text-2xl font-bold">{users.length}</div>
                 <p className="text-xs text-muted-foreground">All registered users</p>
             </CardContent>
         </Card>
@@ -156,7 +164,7 @@ export default function UserDashboardPage() {
 
       <section>
         <h2 className="font-headline text-2xl font-bold mb-4">All Users</h2>
-        <UserTable users={sampleUsers} />
+        <UserTable users={users} />
       </section>
     </div>
   );

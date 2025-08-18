@@ -11,25 +11,25 @@ import {
 } from "@/components/ui/table"
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "../ui/badge";
-import { formatDistanceToNow } from 'date-fns';
 import { languages } from "@/lib/i18n/languages";
+import type { Timestamp } from "firebase/firestore";
 
 
-interface User {
-    id: number;
+export interface UserProfile {
+    id: string;
     name: string;
     email: string;
     country: string;
     state: string;
     city: string;
     birthYear: number;
-    createdAt: string;
-    lastSeen: string;
     language?: string;
+    createdAt?: Timestamp; // This might not be present on all user docs
+    lastSeen?: Timestamp; // This would require extra logic to track
 }
 
 interface UserTableProps {
-    users: User[];
+    users: UserProfile[];
 }
 
 const getLanguageName = (code?: string) => {
@@ -48,8 +48,7 @@ export function UserTable({ users }: UserTableProps) {
                             <TableHead>Name</TableHead>
                             <TableHead>Location</TableHead>
                             <TableHead>Language</TableHead>
-                            <TableHead>Joined</TableHead>
-                            <TableHead className="text-right">Last Seen</TableHead>
+                            <TableHead className="text-right">Birth Year</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -66,11 +65,8 @@ export function UserTable({ users }: UserTableProps) {
                                 <TableCell>
                                     {getLanguageName(user.language)}
                                 </TableCell>
-                                <TableCell>
-                                    {new Date(user.createdAt).toLocaleDateString()}
-                                </TableCell>
                                 <TableCell className="text-right">
-                                    {formatDistanceToNow(new Date(user.lastSeen), { addSuffix: true })}
+                                    {user.birthYear}
                                 </TableCell>
                             </TableRow>
                         ))}
