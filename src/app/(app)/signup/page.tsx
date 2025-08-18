@@ -51,6 +51,7 @@ export default function SignupPage() {
             country: '',
             state: '',
             city: '',
+            birthYear: undefined,
         },
     });
 
@@ -60,7 +61,11 @@ export default function SignupPage() {
             const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
             const user = userCredential.user;
 
-            const { password, ...profileData } = values;
+            const { password, ...rest } = values;
+            const profileData = {
+              ...rest,
+              birthYear: Number(values.birthYear) // Ensure birthYear is a number
+            };
 
             await setDoc(doc(db, "users", user.uid), profileData);
 
