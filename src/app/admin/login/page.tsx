@@ -25,13 +25,26 @@ export default function AdminLoginPage() {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // On successful login, Firebase automatically persists the session.
-      // The admin layout will now recognize the authenticated user.
       router.push('/admin');
     } catch (error: any) {
+      let description = 'An unexpected error occurred. Please try again.';
+      switch (error.code) {
+        case 'auth/user-not-found':
+          description = 'No user found with this email. Please check the email or create an account in Firebase Authentication.';
+          break;
+        case 'auth/wrong-password':
+          description = 'Incorrect password. Please check your password and try again.';
+          break;
+        case 'auth/invalid-credential':
+          description = 'Invalid credentials. Please check your email and password.';
+          break;
+        default:
+          description = 'Invalid credentials. Please check your email and password.';
+          break;
+      }
       toast({
         title: t('admin_login.toast_failed_title'),
-        description: 'Invalid credentials. Please check your email and password.',
+        description: description,
         variant: 'destructive',
       });
     } finally {
@@ -40,7 +53,7 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="flex justify-center items-center h-full">
+    <div className="flex justify-center items-center min-h-screen bg-muted">
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle className="text-2xl font-headline">{t('admin_login.title')}</CardTitle>
