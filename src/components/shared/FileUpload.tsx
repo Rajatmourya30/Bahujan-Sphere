@@ -23,6 +23,21 @@ interface FileUploadProps {
   className?: string;
 }
 
+// Helper to get storage reference from a download URL
+const getRefFromUrl = (url: string): StorageReference | null => {
+    try {
+        const urlObj = new URL(url);
+        // The pathname looks like /v0/b/bucket-name.appspot.com/o/path%2Fto%2Ffile.jpg
+        // We need to decode it and extract the path after the '/o/' part.
+        const path = decodeURIComponent(urlObj.pathname.split('/o/')[1].split('?')[0]);
+        return ref(storage, path);
+    } catch (error) {
+        console.error("Invalid Firebase Storage URL:", error);
+        return null;
+    }
+}
+
+
 export function FileUpload({
   label,
   filePath,
@@ -57,13 +72,15 @@ export function FileUpload({
     // First, delete the old file if it exists
     if (currentFileUrl) {
       try {
-        const oldFileRef = ref(storage, currentFileUrl);
-        await deleteObject(oldFileRef);
+        const oldFileRef = getRefFromUrl(currentFileUrl);
+        if (oldFileRef) {
+            await deleteObject(oldFileRef);
+        }
       } catch (error: any) {
         if (error.code === 'storage/object-not-found') {
-          console.log("Old file not found, proceeding with upload.");
+          console.log("Old file not found in storage, proceeding with upload.");
         } else {
-          console.warn("Could not delete old file, proceeding anyway:", error);
+          console.warn("Could not delete old file, but proceeding with upload anyway:", error);
         }
       }
     }
@@ -79,7 +96,7 @@ export function FileUpload({
       },
       (error) => {
         console.error("Upload error:", error);
-        toast({ title: 'Upload Failed', description: 'Please check your permissions and try again.', variant: 'destructive' });
+        toast({ title: 'Upload Failed', description: 'Please check storage rules and try again.', variant: 'destructive' });
         setIsUploading(false);
       },
       async () => {
@@ -100,8 +117,15 @@ export function FileUpload({
   const handleRemove = async () => {
     if (!currentFileUrl) return;
     setIsRemoving(true);
+    const fileRef = getRefFromUrl(currentFileUrl);
+
+    if (!fileRef) {
+        toast({ title: 'Removal Failed', description: 'Invalid file URL.', variant: 'destructive' });
+        setIsRemoving(false);
+        return;
+    }
+
     try {
-        const fileRef = ref(storage, currentFileUrl);
         await deleteObject(fileRef);
         toast({ title: 'File Removed' });
         if(onRemoveComplete) {
@@ -113,7 +137,7 @@ export function FileUpload({
             if(onRemoveComplete) onRemoveComplete(); // Sync state even if file not in storage
         } else {
             console.error("Error removing file:", error);
-            toast({ title: 'Removal Failed', description: 'Could not remove the file.', variant: 'destructive' });
+            toast({ title: 'Removal Failed', description: 'Could not remove the file. Check permissions.', variant: 'destructive' });
         }
     } finally {
         setIsRemoving(false);
