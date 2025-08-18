@@ -13,7 +13,7 @@ import { LanguageSwitcher } from '@/components/shared/LanguageSwitcher';
 import { Label } from '@/components/ui/label';
 import { ThemeSwitcher } from '@/components/shared/ThemeSwitcher';
 import { DonationDialog } from '@/components/profile/DonationDialog';
-import { auth, db } from '@/lib/firebase';
+import { auth, db, storage } from '@/lib/firebase';
 import { onAuthStateChanged, signOut, deleteUser, type User } from 'firebase/auth';
 import { doc, getDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { ref, deleteObject } from 'firebase/storage';
