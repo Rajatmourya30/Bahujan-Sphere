@@ -27,6 +27,20 @@ export default function AdminLoginPage() {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
+      
+      // IMPORTANT: Temporary super admin access for initial setup.
+      // This allows the specified user to log in and create the first real admin account.
+      // This should be removed after the first admin is created via the /admin/team page.
+      if (user.email === 'rajatmourya82@gmail.com') {
+          localStorage.setItem('isAdminAuthenticated', 'true');
+          router.push('/admin');
+          toast({
+              title: 'Temporary Admin Access Granted',
+              description: 'Please create a permanent admin account on the Team page.',
+          });
+          return;
+      }
+
 
       // Security Check: Verify if the user is in the teamMembers collection
       const teamQuery = query(collection(db, "teamMembers"), where("email", "==", user.email));
