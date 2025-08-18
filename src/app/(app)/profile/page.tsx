@@ -75,10 +75,12 @@ export default function ProfilePage() {
     const firebaseUser = auth.currentUser;
     if (!file || !firebaseUser) return;
 
-    // Delete old photo first
+    // Delete old photo first, but don't block upload if it fails
     if (user?.photoUrl) {
-        const oldPhotoRef = ref(storage, user.photoUrl);
-        deleteObject(oldPhotoRef).catch(err => console.log("Old photo not found, skipping delete.", err));
+      const oldPhotoRef = ref(storage, user.photoUrl);
+      deleteObject(oldPhotoRef).catch((error) => {
+        console.warn("Could not delete old photo, proceeding with upload:", error);
+      });
     }
 
     const storageRef = ref(storage, `profile-pictures/${firebaseUser.uid}/${file.name}`);
@@ -91,18 +93,23 @@ export default function ProfilePage() {
         },
         (error) => {
             console.error("Error uploading profile picture:", error);
-            toast({ title: "Upload Failed", description: "Could not upload your profile picture.", variant: "destructive" });
+            toast({ title: "Upload Failed", description: "Could not upload your profile picture. Check storage rules.", variant: "destructive" });
             setUploadProgress(null);
         },
         async () => {
-            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            const userDocRef = doc(db, 'users', firebaseUser.uid);
-            await updateDoc(userDocRef, { photoUrl: downloadURL });
+            try {
+                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                const userDocRef = doc(db, 'users', firebaseUser.uid);
+                await updateDoc(userDocRef, { photoUrl: downloadURL });
 
-            setUser(prevUser => prevUser ? { ...prevUser, photoUrl: downloadURL } : null);
-            toast({ title: "Profile Picture Updated", description: "Your new photo has been saved." });
-            
-            setTimeout(() => setUploadProgress(null), 1000);
+                setUser(prevUser => prevUser ? { ...prevUser, photoUrl: downloadURL } : null);
+                toast({ title: "Profile Picture Updated", description: "Your new photo has been saved." });
+            } catch (error) {
+                 console.error("Error updating profile:", error);
+                 toast({ title: "Update Failed", description: "Failed to save the new photo to your profile.", variant: "destructive" });
+            } finally {
+                setTimeout(() => setUploadProgress(null), 1000);
+            }
         }
     );
   };
@@ -113,25 +120,28 @@ export default function ProfilePage() {
       
       try {
           const photoRef = ref(storage, user.photoUrl);
+          // Attempt to delete the file from storage
           await deleteObject(photoRef);
-          
-          const userDocRef = doc(db, 'users', firebaseUser.uid);
-          await updateDoc(userDocRef, { photoUrl: '' });
-          
-          setUser(prevUser => prevUser ? { ...prevUser, photoUrl: '' } : null);
-          toast({ title: "Profile Picture Removed" });
-      } catch (error) {
-          console.error("Error removing profile picture:", error);
-          let description = "Could not remove your profile picture.";
-          // It's possible the file doesn't exist in storage but the URL is in firestore
-          if (error instanceof Error && 'code' in error && (error as any).code === 'storage/object-not-found') {
-              const userDocRef = doc(db, 'users', firebaseUser.uid);
-              await updateDoc(userDocRef, { photoUrl: '' });
-              setUser(prevUser => prevUser ? { ...prevUser, photoUrl: '' } : null);
-              toast({ title: "Profile Picture Removed" });
+      } catch (error: any) {
+          // If the file doesn't exist in storage, that's okay. We still want to clear the URL from the profile.
+          if (error.code === 'storage/object-not-found') {
+              console.log("Photo not found in storage, but clearing from profile.");
           } else {
-            toast({ title: "Removal Failed", description, variant: "destructive" });
+              // For other errors, log them but still proceed to update Firestore
+              console.error("Error removing profile picture from storage:", error);
           }
+      }
+
+      // Always update the Firestore document to remove the photo URL
+      try {
+        const userDocRef = doc(db, 'users', firebaseUser.uid);
+        await updateDoc(userDocRef, { photoUrl: '' });
+        
+        setUser(prevUser => prevUser ? { ...prevUser, photoUrl: '' } : null);
+        toast({ title: "Profile Picture Removed" });
+      } catch (firestoreError) {
+          console.error("Error updating Firestore:", firestoreError);
+          toast({ title: "Removal Failed", description: "Could not update your profile.", variant: "destructive" });
       }
   };
 
@@ -190,7 +200,7 @@ export default function ProfilePage() {
                     <CardHeader className="items-center text-center">
                         <div className="relative group">
                             <Avatar className="h-24 w-24 mb-4">
-                                <AvatarImage src={user.photoUrl} alt={user.name} />
+                                <AvatarImage src={user.photoUrl || undefined} alt={user.name} />
                                 <AvatarFallback className="bg-primary text-primary-foreground text-4xl">
                                     {user.name.charAt(0).toUpperCase()}
                                 </AvatarFallback>
@@ -309,5 +319,3 @@ export default function ProfilePage() {
     </>
   );
 }
-
-    
