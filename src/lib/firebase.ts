@@ -3,7 +3,6 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
-import { getProjectConfig } from "firebase/app-check";
 
 // Your web app's Firebase configuration will be fetched dynamically
 // Note: This requires your app to be hosted on Firebase Hosting or App Hosting
