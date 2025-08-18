@@ -1,6 +1,8 @@
 
 'use client';
 
+import { useEffect, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Sidebar,
   SidebarContent,
@@ -25,17 +27,27 @@ import {
   Users,
 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { Logo } from '@/components/shared/Logo';
-import { AdminAuthProvider, useAdminAuth } from '@/context/AdminAuthProvider';
 import { Skeleton } from '@/components/ui/skeleton';
 
 function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { user, isLoading } = useAdminAuth();
+  const router = useRouter();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Check for auth status in localStorage. This is faster and avoids race conditions.
+    const authStatus = localStorage.getItem('isAdminAuthenticated');
+    if (authStatus === 'true') {
+      setIsAuthenticated(true);
+    } else if (pathname !== '/admin/login') {
+      router.replace('/admin/login');
+    }
+    setIsLoading(false);
+  }, [pathname, router]);
 
   // For this simplified example, we'll grant all permissions to any logged-in user.
-  // A real app would use custom claims to manage roles.
   const permissions = {
     canManageDonations: true,
     canManageUsers: true,
@@ -58,15 +70,14 @@ function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
     { href: '/admin/google-ads', label: 'Google Ads', icon: Megaphone, visible: permissions.canManageAds },
   ].filter(item => item.visible);
 
-  // Render loading skeleton while auth state is being determined
   if (isLoading) {
     return (
-        <div className="flex h-screen w-full items-center justify-center">
-            <div className="space-y-4 p-4">
-                <Skeleton className="h-10 w-48" />
-                <Skeleton className="h-64 w-full" />
-            </div>
+      <div className="flex h-screen w-full items-center justify-center">
+        <div className="space-y-4 p-4">
+          <Skeleton className="h-10 w-48" />
+          <Skeleton className="h-64 w-full" />
         </div>
+      </div>
     );
   }
 
@@ -74,13 +85,11 @@ function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
   if (pathname === '/admin/login') {
     return <>{children}</>;
   }
-
-  // If loading is finished and there's no user, the provider will have already
-  // initiated the redirect, and we can render the children (the login page).
-  if (!user) {
-      return <>{children}</>;
+  
+  // After loading, if user is not authenticated, render children (which should be the login page due to the redirect)
+  if (!isAuthenticated) {
+    return <>{children}</>;
   }
-
 
   return (
     <SidebarProvider defaultOpen={false}>
@@ -120,15 +129,10 @@ function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-    return (
-        <AdminAuthProvider>
-            <AdminDashboardLayout>{children}</AdminDashboardLayout>
-        </AdminAuthProvider>
-    )
+    return <AdminDashboardLayout>{children}</AdminDashboardLayout>;
 }

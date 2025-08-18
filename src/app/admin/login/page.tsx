@@ -25,6 +25,8 @@ export default function AdminLoginPage() {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      // Set a flag in localStorage to indicate the user is authenticated
+      localStorage.setItem('isAdminAuthenticated', 'true');
       router.push('/admin');
     } catch (error: any) {
       let description = 'An unexpected error occurred. Please try again.';

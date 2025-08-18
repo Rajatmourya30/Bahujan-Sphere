@@ -56,7 +56,6 @@ export default function AdminDashboardPage() {
       if (user) {
         setFirebaseUser(user);
         
-        // Fetch user role from Firestore
         const teamQuery = query(collection(db, "teamMembers"), where("email", "==", user.email));
         const querySnapshot = await getDocs(teamQuery);
         
@@ -66,11 +65,8 @@ export default function AdminDashboardPage() {
           setUserRole(role);
           localStorage.setItem('adminUserRole', role || '');
         } else {
-          // If user is not in the teamMembers collection, they have no role.
           setUserRole(null);
           localStorage.removeItem('adminUserRole');
-          // Optional: redirect if they shouldn't be here
-          // router.replace('/admin/login'); 
         }
 
       } else {
@@ -85,6 +81,7 @@ export default function AdminDashboardPage() {
   const handleLogout = async () => {
     try {
         await signOut(auth);
+        localStorage.removeItem('isAdminAuthenticated');
         localStorage.removeItem('adminUserRole');
         router.push('/admin/login');
     } catch (error) {
