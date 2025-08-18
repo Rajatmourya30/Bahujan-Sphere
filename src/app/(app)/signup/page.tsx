@@ -64,7 +64,10 @@ export default function SignupPage() {
             // Don't store the password in the database
             const { password, ...profileData } = values;
 
-            await setDoc(doc(db, "users", user.uid), profileData);
+            await setDoc(doc(db, "users", user.uid), {
+                ...profileData,
+                birthYear: Number(profileData.birthYear) 
+            });
 
             toast({
                 title: t('signup_page.toast_success_title'),
