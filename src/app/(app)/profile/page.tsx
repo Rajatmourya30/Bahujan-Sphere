@@ -120,7 +120,7 @@ export default function ProfilePage() {
 
       setIsUploading(true);
       try {
-          const storageRef = ref(storage, `profilePictures/${firebaseUser.uid}`);
+          const storageRef = ref(storage, `profilePictures/${firebaseUser.uid}/profile.jpg`);
           await uploadBytes(storageRef, photoFile);
           const newPhotoUrl = await getDownloadURL(storageRef);
 
@@ -134,7 +134,7 @@ export default function ProfilePage() {
 
       } catch (error) {
           console.error("Error uploading photo:", error);
-          toast({ title: 'Upload Failed', description: 'Could not update your profile picture.', variant: 'destructive' });
+          toast({ title: 'Upload Failed', description: 'Could not update your profile picture. Please check storage rules in the Firebase Console.', variant: 'destructive' });
       } finally {
           setIsUploading(false);
       }
