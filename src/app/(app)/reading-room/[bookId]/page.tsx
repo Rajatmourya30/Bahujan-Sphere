@@ -4,8 +4,7 @@
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { PdfViewer } from '@/components/reading-room/PdfViewer';
-import { useLanguage } from '@/hooks/use-language';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, type Timestamp } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
@@ -21,7 +20,6 @@ interface ReadingRoomPdf {
 
 export default function BookViewerPage() {
   const params = useParams();
-  const { t } = useLanguage();
   const bookId = params.bookId as string;
   
   const [pdf, setPdf] = useState<ReadingRoomPdf | null>(null);
@@ -54,7 +52,7 @@ export default function BookViewerPage() {
 
   if (isLoading) {
       return (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex items-center justify-center h-full min-h-screen">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
       )
@@ -62,7 +60,7 @@ export default function BookViewerPage() {
 
   if (error || !pdf) {
     return (
-        <div className="flex items-center justify-center h-full">
+        <div className="flex items-center justify-center h-full min-h-screen">
             <Card className="max-w-md text-center">
                 <CardHeader>
                     <CardTitle>Error</CardTitle>
@@ -76,8 +74,8 @@ export default function BookViewerPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-theme(spacing.14))]">
-        <header className="p-4 border-b">
+    <div className="flex flex-col h-[calc(100vh_-_theme(spacing.14))]">
+        <header className="p-4 border-b bg-background">
             <h1 className="font-headline text-2xl font-bold">{pdf.title}</h1>
             {pdf.author && <p className="text-muted-foreground">{pdf.author}</p>}
         </header>

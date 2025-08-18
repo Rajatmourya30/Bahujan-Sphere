@@ -8,14 +8,13 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { collection, query, orderBy, onSnapshot, type Timestamp } from 'firebase/firestore';
-import { Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { BookOpen } from 'lucide-react';
 
 interface ReadingRoomPdf {
   id: string;
   title: string;
   author?: string;
-  url: string;
   uploadedAt: Timestamp;
 }
 
@@ -36,6 +35,7 @@ function ReadingRoomBookCard({ pdf }: { pdf: ReadingRoomPdf }) {
             <CardFooter className="mt-auto">
                 <Button asChild className="w-full">
                     <Link href={`/reading-room/${pdf.id}`}>
+                       <BookOpen className="mr-2 h-4 w-4" />
                         {t('reading_room.read_now_button')}
                     </Link>
                 </Button>
@@ -76,12 +76,13 @@ export default function ReadingRoomPage() {
             </header>
             
             {isLoading ? (
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
+                    <Skeleton className="h-64 w-full" />
                     <Skeleton className="h-64 w-full" />
                     <Skeleton className="h-64 w-full" />
                 </div>
             ) : pdfs.length > 0 ? (
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
                     {pdfs.map(pdf => (
                         <ReadingRoomBookCard key={pdf.id} pdf={pdf} />
                     ))}
