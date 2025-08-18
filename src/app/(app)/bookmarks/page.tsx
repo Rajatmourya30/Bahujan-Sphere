@@ -6,6 +6,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { allEvents, type CalendarEvent } from '@/lib/events';
 import { allKnowledgeOrganizations, type KnowledgeOrganization } from '@/lib/knowledge-hub';
 import { allBahujanStores, type BahujanStore } from '@/lib/store';
+import { allBooks, type Book } from '@/lib/books';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -133,12 +134,52 @@ function OrgBookmarkCard({ org, onRemove }: { org: KnowledgeOrganization, onRemo
     );
 }
 
+function BookBookmarkCard({ book, onRemove }: { book: Book, onRemove: (id: string) => void }) {
+    const { t } = useLanguage();
+    return (
+        <Card>
+            <CardHeader className="flex-row items-start gap-4">
+                 <div className="relative h-32 w-24 flex-shrink-0">
+                    <Image
+                        src={book.imageUrl}
+                        alt={t(book.titleKey)}
+                        fill
+                        className="object-cover rounded-md"
+                        data-ai-hint={book.imageAiHint}
+                    />
+                </div>
+                <div className="flex-grow">
+                    <CardTitle className="font-headline text-lg">{t(book.titleKey)}</CardTitle>
+                    <CardDescription className="text-sm font-medium">{t(book.authorKey)}</CardDescription>
+                </div>
+            </CardHeader>
+            <CardFooter className="flex flex-col gap-2">
+                 <Button asChild className="w-full">
+                    <Link href={book.affiliateUrl} target="_blank">
+                        {t('books_page.buy_now_button')}
+                    </Link>
+                </Button>
+                <Button
+                    size="sm"
+                    variant="ghost"
+                    className="w-full text-muted-foreground hover:text-destructive"
+                    onClick={() => onRemove(book.id)}
+                >
+                    <BookmarkX className="mr-2" />
+                    {t('bookmarks_page.remove_button')}
+                </Button>
+            </CardFooter>
+        </Card>
+    );
+}
+
 
 export default function BookmarksPage() {
   const { t } = useLanguage();
   const { bookmarkedIds: eventIds, removeBookmark: removeEvent } = useBookmarkStore('eventBookmarks');
   const { bookmarkedIds: storeIds, removeBookmark: removeStore } = useBookmarkStore('storeBookmarks');
   const { bookmarkedIds: orgIds, removeBookmark: removeOrg } = useBookmarkStore('knowledgeHubBookmarks');
+  const { bookmarkedIds: bookIds, removeBookmark: removeBook } = useBookmarkStore('bookBookmarks');
 
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
@@ -157,8 +198,9 @@ export default function BookmarksPage() {
   const bookmarkedEvents = allEvents.filter(event => eventIds.includes(event.id));
   const bookmarkedStores = allBahujanStores.filter(store => storeIds.includes(store.id));
   const bookmarkedOrgs = allKnowledgeOrganizations.filter(org => orgIds.includes(org.id));
+  const bookmarkedBooks = allBooks.filter(book => bookIds.includes(book.id));
 
-  const totalBookmarks = bookmarkedEvents.length + bookmarkedStores.length + bookmarkedOrgs.length;
+  const totalBookmarks = bookmarkedEvents.length + bookmarkedStores.length + bookmarkedOrgs.length + bookmarkedBooks.length;
 
   if (isLoading) {
     return (
@@ -184,10 +226,11 @@ export default function BookmarksPage() {
       
       {totalBookmarks > 0 ? (
         <Tabs defaultValue="events" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="events">Events ({bookmarkedEvents.length})</TabsTrigger>
             <TabsTrigger value="stores">Stores ({bookmarkedStores.length})</TabsTrigger>
             <TabsTrigger value="knowledge">Knowledge ({bookmarkedOrgs.length})</TabsTrigger>
+            <TabsTrigger value="books">Books ({bookmarkedBooks.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="events" className="mt-6">
@@ -218,6 +261,16 @@ export default function BookmarksPage() {
                     ))}
                 </div>
             ) : <p className="text-center text-muted-foreground py-8">No bookmarked organizations.</p>}
+          </TabsContent>
+          
+          <TabsContent value="books" className="mt-6">
+             {bookmarkedBooks.length > 0 ? (
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    {bookmarkedBooks.map(book => (
+                        <BookBookmarkCard key={book.id} book={book} onRemove={removeBook} />
+                    ))}
+                </div>
+            ) : <p className="text-center text-muted-foreground py-8">No bookmarked books.</p>}
           </TabsContent>
 
         </Tabs>

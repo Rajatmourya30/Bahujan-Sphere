@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, User, Bookmark, Library, Store } from 'lucide-react';
+import { Home, User, Bookmark, Library, Store, Book } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/hooks/use-language';
@@ -28,6 +28,7 @@ export function Header() {
     { href: '/', label: t('nav.calendar'), icon: Home, auth: false },
     { href: '/knowledge-hub', label: t('nav.knowledge'), icon: Library, auth: false },
     { href: '/store', label: t('nav.store'), icon: Store, auth: false },
+    { href: '/books', label: t('nav.books'), icon: Book, auth: false },
     { href: '/bookmarks', label: t('nav.bookmarks'), icon: Bookmark, auth: true },
   ];
 
