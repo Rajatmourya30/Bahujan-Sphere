@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
@@ -9,10 +9,8 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Loader2, ZoomIn, ZoomOut } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url,
-).toString();
+// Set the workerSrc to the public path
+pdfjs.GlobalWorkerOptions.workerSrc = `/static/js/pdf.worker.min.mjs`;
 
 interface PdfViewerProps {
   file: string;
@@ -46,6 +44,12 @@ export function PdfViewer({ file }: PdfViewerProps) {
       setScale(s => Math.max(s - 0.2, 0.5));
   }
   
+  // This is a workaround for a known issue in react-pdf with Next.js 13+ App Router
+  const [isClient, setIsClient] = useState(false)
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
 
   return (
     <div className="flex flex-col h-full">
@@ -71,7 +75,7 @@ export function PdfViewer({ file }: PdfViewerProps) {
         </div>
       </div>
       <div className="flex-grow overflow-auto p-4 flex justify-center">
-         <Document
+         {isClient && <Document
           file={file}
           onLoadSuccess={onDocumentLoadSuccess}
           loading={<LoaderWithSkeleton />}
@@ -84,7 +88,7 @@ export function PdfViewer({ file }: PdfViewerProps) {
             renderAnnotationLayer={true}
             loading={<LoaderWithSkeleton />}
           />
-        </Document>
+        </Document>}
       </div>
     </div>
   );
