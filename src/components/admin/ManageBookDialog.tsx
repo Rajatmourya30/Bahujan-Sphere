@@ -26,10 +26,11 @@ import { Textarea } from '@/components/ui/textarea';
 import type { Book } from '@/lib/books';
 import { ScrollArea } from '../ui/scroll-area';
 import { useState } from 'react';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { Progress } from '../ui/progress';
 
 const formSchema = z.object({
   titleKey: z.string().min(1, 'Key is required'),
@@ -55,11 +56,26 @@ interface ManageBookDialogProps {
   manageAffiliateUrl?: boolean;
 }
 
-const uploadFile = async (file: File, path: string): Promise<string> => {
-    const storageRef = ref(storage, path);
-    await uploadBytes(storageRef, file);
-    const downloadURL = await getDownloadURL(storageRef);
-    return downloadURL;
+const uploadFile = (file: File, path: string, onProgress: (progress: number) => void): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const storageRef = ref(storage, path);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+
+        uploadTask.on('state_changed',
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                onProgress(progress);
+            },
+            (error) => {
+                console.error("Upload error:", error);
+                reject(error);
+            },
+            async () => {
+                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                resolve(downloadURL);
+            }
+        );
+    });
 };
 
 export function ManageBookDialog({
@@ -71,6 +87,9 @@ export function ManageBookDialog({
 }: ManageBookDialogProps) {
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadMessage, setUploadMessage] = useState('');
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -85,6 +104,8 @@ export function ManageBookDialog({
 
   const onSubmit = async (values: FormValues) => {
     setIsUploading(true);
+    setUploadProgress(0);
+    
     try {
       let imageUrl = book?.imageUrl || '';
       let pdfUrl = book?.pdfUrl || '';
@@ -92,13 +113,17 @@ export function ManageBookDialog({
       if (values.imageFile && values.imageFile.length > 0) {
         const file = values.imageFile[0];
         const imagePath = `book-covers/${Date.now()}_${file.name}`;
-        imageUrl = await uploadFile(file, imagePath);
+        setUploadMessage('Uploading cover image...');
+        imageUrl = await uploadFile(file, imagePath, setUploadProgress);
       }
+      
+      setUploadProgress(0);
 
       if (managePdfUrl && values.pdfFile && values.pdfFile.length > 0) {
         const file = values.pdfFile[0];
         const pdfPath = `pdfs/${Date.now()}_${file.name}`;
-        pdfUrl = await uploadFile(file, pdfPath);
+        setUploadMessage('Uploading PDF...');
+        pdfUrl = await uploadFile(file, pdfPath, setUploadProgress);
       }
       
       const bookData: Omit<Book, 'id'> = {
@@ -122,6 +147,8 @@ export function ManageBookDialog({
         });
     } finally {
         setIsUploading(false);
+        setUploadMessage('');
+        setUploadProgress(0);
     }
   };
 
@@ -136,7 +163,7 @@ export function ManageBookDialog({
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-             <ScrollArea className="max-h-[70vh] -mr-3 pr-4">
+             <ScrollArea className="max-h-[60vh] -mr-3 pr-4">
                 <div className="space-y-4 py-4 px-1">
                     <FormField
                     control={form.control}
@@ -191,6 +218,7 @@ export function ManageBookDialog({
                                     onChange(e.target.files);
                                 }}
                                 {...rest} 
+                                disabled={isUploading}
                             />
                             </FormControl>
                             <FormMessage />
@@ -244,6 +272,7 @@ export function ManageBookDialog({
                                         onChange(e.target.files);
                                     }}
                                     {...rest} 
+                                    disabled={isUploading}
                                 />
                                 </FormControl>
                                 <FormMessage />
@@ -254,6 +283,13 @@ export function ManageBookDialog({
                             <div className="text-sm text-muted-foreground">Current PDF: <a href={book.pdfUrl} target="_blank" rel="noopener noreferrer" className="underline">View PDF</a></div>
                         )}
                     </>
+                    )}
+
+                    {isUploading && (
+                        <div className="space-y-2 pt-2">
+                           <Label>{uploadMessage} {uploadProgress.toFixed(0)}%</Label>
+                           <Progress value={uploadProgress} />
+                        </div>
                     )}
                 </div>
             </ScrollArea>
