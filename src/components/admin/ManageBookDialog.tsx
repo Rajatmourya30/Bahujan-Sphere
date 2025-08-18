@@ -31,6 +31,7 @@ import { storage } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Progress } from '../ui/progress';
+import { Label } from '../ui/label';
 
 const formSchema = z.object({
   titleKey: z.string().min(1, 'Key is required'),
@@ -115,14 +116,14 @@ export function ManageBookDialog({
 
         setUploadProgress(0);
 
-        let pdfUrl = book?.pdfUrl || '';
+        let pdfUrl = book?.pdfUrl;
         if (managePdfUrl && values.pdfFile && values.pdfFile.length > 0) {
             const file = values.pdfFile[0];
             const pdfPath = `pdfs/${Date.now()}_${file.name}`;
             setUploadMessage('Uploading PDF...');
             pdfUrl = await uploadFile(file, pdfPath, setUploadProgress);
         }
-
+        
         const newBookData: Omit<Book, 'id'> = {
             titleKey: values.titleKey,
             authorKey: values.authorKey,
@@ -132,8 +133,23 @@ export function ManageBookDialog({
             imageUrl: imageUrl,
             pdfUrl: pdfUrl,
         };
+        
+        if (book) {
+            // Editing existing book
+             onSave({
+                ...book,
+                ...newBookData,
+                pdfUrl: pdfUrl !== undefined ? pdfUrl : book.pdfUrl,
+            });
+        } else {
+            // Adding new book
+             onSave({
+                ...newBookData,
+                pdfUrl: pdfUrl,
+             });
+        }
 
-        onSave(newBookData);
+
         onOpenChange(false);
 
     } catch (error) {
