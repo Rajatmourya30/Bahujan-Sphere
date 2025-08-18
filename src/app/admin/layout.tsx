@@ -43,6 +43,12 @@ export default function AdminLayout({
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Do not run auth check on the login page itself
+    if (pathname === '/admin/login') {
+      setIsLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
@@ -53,7 +59,7 @@ export default function AdminLayout({
     });
 
     return () => unsubscribe();
-  }, [router]);
+  }, [router, pathname]);
 
   // For this simplified example, we'll grant all permissions to any logged-in user.
   // A real app would use custom claims to manage roles.
@@ -79,6 +85,11 @@ export default function AdminLayout({
     { href: '/admin/google-ads', label: 'Google Ads', icon: Megaphone, visible: permissions.canManageAds },
   ].filter(item => item.visible);
 
+  // Do not render layout on login page to avoid sidebar appearing
+  if (pathname === '/admin/login') {
+    return <>{children}</>;
+  }
+
   if (isLoading) {
     return (
         <div className="flex h-screen w-full items-center justify-center">
@@ -89,12 +100,6 @@ export default function AdminLayout({
         </div>
     )
   }
-
-  // Do not render layout on login page to avoid sidebar appearing
-  if (pathname === '/admin/login') {
-    return <>{children}</>;
-  }
-
 
   return (
     <SidebarProvider defaultOpen={false}>
