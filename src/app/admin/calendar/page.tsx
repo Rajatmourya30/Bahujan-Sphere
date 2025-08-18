@@ -39,8 +39,9 @@ export default function ManageCalendarPage() {
           const role = userDoc.role as UserRole;
           setUserRole(role);
         } else {
-          // If not a team member, treat as unauthorized for this page
-           setUserRole(null);
+           // If not a team member, they are not authorized for this page.
+           // Redirect them to the main admin dashboard which explains their role.
+           router.replace('/admin');
         }
 
       } else {
@@ -96,6 +97,17 @@ export default function ManageCalendarPage() {
   ].filter(tab => tab.visible);
   
   const defaultTab = availableTabs.length > 0 ? availableTabs[0].value : '';
+  
+  if (availableTabs.length === 0) {
+    return (
+        <div className="space-y-8">
+            <header>
+                <h1 className="font-headline text-3xl font-bold">Manage Calendar</h1>
+                <p className="text-muted-foreground">You do not have permission to access this page.</p>
+            </header>
+        </div>
+    )
+  }
 
   return (
     <div className="space-y-8">
