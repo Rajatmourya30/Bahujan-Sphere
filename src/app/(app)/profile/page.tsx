@@ -1,23 +1,24 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Globe, LogOut, Palette, Heart, Trash2 } from 'lucide-react';
+import { Globe, LogOut, Palette, Heart, Trash2, Camera, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { LanguageSwitcher } from '@/components/shared/LanguageSwitcher';
 import { Label } from '@/components/ui/label';
 import { ThemeSwitcher } from '@/components/shared/ThemeSwitcher';
 import { DonationDialog } from '@/components/profile/DonationDialog';
-import { auth, db } from '@/lib/firebase';
+import { auth, db, storage } from '@/lib/firebase';
 import { onAuthStateChanged, signOut, deleteUser, type User } from 'firebase/auth';
-import { doc, getDoc, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { DeleteAccountDialog } from '@/components/profile/DeleteAccountDialog';
 import { useToast } from '@/hooks/use-toast';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 
 interface UserProfile {
@@ -40,6 +41,12 @@ export default function ProfilePage() {
   const [isDonationDialogOpen, setIsDonationDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -47,7 +54,9 @@ export default function ProfilePage() {
         const docRef = doc(db, "users", user.uid);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-          setUserProfile(docSnap.data() as UserProfile);
+          const profileData = docSnap.data() as UserProfile;
+          setUserProfile(profileData);
+          setPhotoPreview(profileData.photoUrl || null);
         } else {
           router.replace('/login');
         }
@@ -94,6 +103,44 @@ export default function ProfilePage() {
     }
   };
 
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+        setPhotoFile(file);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setPhotoPreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+    }
+  };
+
+  const handlePhotoUpload = async () => {
+      if (!photoFile || !firebaseUser) return;
+
+      setIsUploading(true);
+      try {
+          const storageRef = ref(storage, `profilePictures/${firebaseUser.uid}`);
+          await uploadBytes(storageRef, photoFile);
+          const newPhotoUrl = await getDownloadURL(storageRef);
+
+          const userDocRef = doc(db, 'users', firebaseUser.uid);
+          await updateDoc(userDocRef, { photoUrl: newPhotoUrl });
+          
+          setUserProfile(prev => prev ? { ...prev, photoUrl: newPhotoUrl } : null);
+          setPhotoFile(null);
+
+          toast({ title: 'Success', description: 'Your profile picture has been updated.' });
+
+      } catch (error) {
+          console.error("Error uploading photo:", error);
+          toast({ title: 'Upload Failed', description: 'Could not update your profile picture.', variant: 'destructive' });
+      } finally {
+          setIsUploading(false);
+      }
+  };
+
+
   if (isLoading || !userProfile) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -115,12 +162,33 @@ export default function ProfilePage() {
             <div className="md:col-span-1">
                  <Card>
                     <CardHeader className="items-center text-center">
-                        <Avatar className="h-24 w-24 mb-4">
-                            <AvatarImage src={userProfile.photoUrl || undefined} alt={userProfile.name} />
-                            <AvatarFallback className="bg-primary text-primary-foreground text-4xl">
-                                {userProfile.name.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                        </Avatar>
+                         <div className="relative group">
+                            <Avatar
+                                className="h-24 w-24 mb-4 cursor-pointer"
+                                onClick={() => fileInputRef.current?.click()}
+                            >
+                                <AvatarImage src={photoPreview || undefined} alt={userProfile.name} />
+                                <AvatarFallback className="bg-primary text-primary-foreground text-4xl">
+                                    {userProfile.name.charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                            </Avatar>
+                            <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Camera className="h-8 w-8 text-white" />
+                            </div>
+                        </div>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            ref={fileInputRef}
+                            onChange={handlePhotoChange}
+                            className="hidden"
+                        />
+                        {photoFile && (
+                            <Button onClick={handlePhotoUpload} disabled={isUploading} size="sm" className="mb-2">
+                                {isUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Save Picture
+                            </Button>
+                        )}
                         
                         <div>
                             <CardTitle className="text-2xl font-headline">{userProfile.name}</CardTitle>
@@ -206,3 +274,5 @@ export default function ProfilePage() {
     </>
   );
 }
+
+    
