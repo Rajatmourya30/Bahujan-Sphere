@@ -3,9 +3,19 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    match /{allPaths=**} {
+    // Allow anyone to read files in the 'pdfs' folder
+    match /pdfs/{allPaths=**} {
       allow read;
+      // Allow authenticated users (admins) to write to the 'pdfs' folder
       allow write: if request.auth != null;
+    }
+
+    // Rules for Profile Pictures
+    match /profilePictures/{userId} {
+      // Allow anyone to read profile pictures
+      allow read;
+      // Allow a user to write (create, update, delete) to their own profile picture path
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
