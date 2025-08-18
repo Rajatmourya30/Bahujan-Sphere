@@ -61,14 +61,14 @@ export default function SignupPage() {
             const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
             const user = userCredential.user;
 
-            // Explicitly create the data object for Firestore, ensuring birthYear is a number.
             const profileData = {
               name: values.name,
               email: values.email,
               country: values.country,
               state: values.state,
               city: values.city,
-              birthYear: Number(values.birthYear)
+              birthYear: Number(values.birthYear),
+              photoUrl: '' // Initialize with an empty photoUrl
             };
 
             await setDoc(doc(db, "users", user.uid), profileData);
@@ -234,3 +234,5 @@ export default function SignupPage() {
     </div>
   );
 }
+
+    
