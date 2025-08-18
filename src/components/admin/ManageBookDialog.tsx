@@ -26,7 +26,7 @@ import { Textarea } from '@/components/ui/textarea';
 import type { Book } from '@/lib/books';
 import { ScrollArea } from '../ui/scroll-area';
 import { useState } from 'react';
-import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
+import { getDownloadURL, ref, uploadBytesResumable, UploadTask } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
@@ -105,39 +105,37 @@ export function ManageBookDialog({
   const onSubmit = async (values: FormValues) => {
     setIsUploading(true);
     setUploadProgress(0);
-    
-    try {
-      let imageUrl = book?.imageUrl || '';
-      let pdfUrl = book?.pdfUrl || '';
 
-      if (values.imageFile && values.imageFile.length > 0) {
-        const file = values.imageFile[0];
-        const imagePath = `book-covers/${Date.now()}_${file.name}`;
-        setUploadMessage('Uploading cover image...');
-        imageUrl = await uploadFile(file, imagePath, setUploadProgress);
-      }
-      
-      setUploadProgress(0);
-
-      if (managePdfUrl && values.pdfFile && values.pdfFile.length > 0) {
-        const file = values.pdfFile[0];
-        const pdfPath = `pdfs/${Date.now()}_${file.name}`;
-        setUploadMessage('Uploading PDF...');
-        pdfUrl = await uploadFile(file, pdfPath, setUploadProgress);
-      }
-      
-      const bookData: Omit<Book, 'id'> = {
+    const newBookData: Omit<Book, 'id'> = {
         titleKey: values.titleKey,
         authorKey: values.authorKey,
         descriptionKey: values.descriptionKey,
         imageAiHint: values.imageAiHint,
         affiliateUrl: values.affiliateUrl || '',
-        imageUrl: imageUrl,
-        pdfUrl: pdfUrl,
-      };
+        imageUrl: book?.imageUrl || '',
+        pdfUrl: book?.pdfUrl || '',
+    };
 
-      onSave(bookData);
-      onOpenChange(false);
+    try {
+        if (values.imageFile && values.imageFile.length > 0) {
+            const file = values.imageFile[0];
+            const imagePath = `book-covers/${Date.now()}_${file.name}`;
+            setUploadMessage('Uploading cover image...');
+            newBookData.imageUrl = await uploadFile(file, imagePath, setUploadProgress);
+        }
+
+        setUploadProgress(0);
+
+        if (managePdfUrl && values.pdfFile && values.pdfFile.length > 0) {
+            const file = values.pdfFile[0];
+            const pdfPath = `pdfs/${Date.now()}_${file.name}`;
+            setUploadMessage('Uploading PDF...');
+            newBookData.pdfUrl = await uploadFile(file, pdfPath, setUploadProgress);
+        }
+
+        onSave(newBookData);
+        onOpenChange(false);
+
     } catch (error) {
         console.error("Upload failed:", error);
         toast({
@@ -150,7 +148,7 @@ export function ManageBookDialog({
         setUploadMessage('');
         setUploadProgress(0);
     }
-  };
+};
 
   return (
     <Dialog open={true} onOpenChange={onOpenChange}>
@@ -163,8 +161,8 @@ export function ManageBookDialog({
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-             <ScrollArea className="max-h-[60vh] px-4">
-                <div className="space-y-4 py-4">
+             <ScrollArea className="max-h-[60vh] p-4">
+                <div className="space-y-4">
                     <FormField
                     control={form.control}
                     name="titleKey"
