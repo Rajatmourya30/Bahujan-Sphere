@@ -13,7 +13,7 @@ import { BulkUploadForm } from '@/components/submit/BulkUploadForm';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { ReviewSubmissionsTab } from '@/components/admin/ReviewSubmissionsTab';
-import { collection, onSnapshot, query, where, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { isValid } from 'date-fns';
 import { parseDate } from '@/lib/date-parser';
@@ -79,20 +79,18 @@ export default function ManageCalendarPage() {
     }
 
     try {
+        const dataToSave = {
+            ...eventData,
+            date: Timestamp.fromDate(eventData.date),
+        };
+
         if (editingEvent) {
-            // Update existing event
             const eventRef = doc(db, 'calendarEvents', editingEvent.id);
-            await updateDoc(eventRef, {
-                ...eventData,
-                // Firestore handles Timestamps, but JS Date needs to be compatible.
-                // If your database stores dates as strings or Timestamps, adjust accordingly.
-                // For this implementation, we assume it's fine to pass the JS Date object.
-            });
+            await updateDoc(eventRef, dataToSave);
             toast({ title: "Event Updated", description: "The event has been successfully updated." });
         } else {
-            // Add new event
             await addDoc(collection(db, 'calendarEvents'), {
-                ...eventData,
+                ...dataToSave,
                 status: 'approved',
                 approvedBy: firebaseUser.uid,
                 approvedAt: serverTimestamp(),
