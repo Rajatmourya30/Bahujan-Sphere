@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -33,9 +33,9 @@ export interface StagedPdf {
 function MetadataEditor({ pdf, onSave, onCoverImageChange }: { pdf: StagedPdf, onSave: (data: Partial<StagedPdf>) => void, onCoverImageChange: (file: File | null) => void }) {
     const [title, setTitle] = useState(pdf.title);
     const [author, setAuthor] = useState(pdf.author);
-    const coverInputRef = React.useRef<HTMLInputElement>(null);
+    const coverInputRef = useRef<HTMLInputElement>(null);
 
-    React.useEffect(() => {
+    useEffect(() => {
         setTitle(pdf.title);
         setAuthor(pdf.author);
     }, [pdf]);
