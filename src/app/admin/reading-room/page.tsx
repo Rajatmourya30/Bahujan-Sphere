@@ -155,11 +155,11 @@ export default function ManageReadingRoomPage() {
         <p className="text-muted-foreground">Add, edit, review, and manage all documents.</p>
       </header>
        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-4">
            <TabsTrigger value="manage">Manage Documents</TabsTrigger>
            <TabsTrigger value="single-doc">Submit Single Document</TabsTrigger>
            <TabsTrigger value="bulk-upload">Submit Bulk Upload</TabsTrigger>
-           <TabsTrigger value="review">Review Submissions</TabsTrigger>
+           <TabsTrigger value="review" disabled>Review Submissions (Coming Soon)</TabsTrigger>
         </TabsList>
          <TabsContent value="manage" className="mt-6">
             <Card>
