@@ -1,43 +1,26 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Function to check if a user is an admin by checking if their email
-    // exists in the teamMembers collection.
+    // Function to check if the user's email exists in the teamMembers collection.
     function isAdmin() {
-      return exists(/databases/$(database)/documents/teamMembers) &&
-             get(/databases/$(database)/documents/teamMembers).data.values().hasAny(['email'], request.auth.token.email);
+      return exists(/databases/$(database)/documents/teamMembers/$(request.auth.uid));
     }
-    
-    // Public collections are world-readable, but writable only by admins.
+
+    // Publicly readable collections
     match /readingRoomPdfs/{docId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if request.auth != null && exists(/databases/$(database)/documents/teamMembers/$(request.auth.uid));
     }
-    
-    match /events/{docId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-    
-    // User profiles can be read and updated by the user themselves,
-    // and read/written by admins.
+
     match /users/{userId} {
-      allow read, update: if request.auth.uid == userId || isAdmin();
-      allow create, delete: if isAdmin(); // Only admins can create/delete user docs directly
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Admin-only collections (submissions, team management)
-    match /teamMembers/{memberId} {
-      allow read, write: if isAdmin();
-    }
-    
-    match /eventSubmissions/{submissionId} {
-      allow read, write: if isAdmin();
-    }
-
-    match /readingRoomSubmissions/{submissionId} {
-      allow read, write: if isAdmin();
+    // All other collections are admin-only
+    match /{collection}/{docId} {
+      allow read, write: if request.auth != null && exists(/databases/$(database)/documents/teamMembers/$(request.auth.uid));
     }
   }
 }
