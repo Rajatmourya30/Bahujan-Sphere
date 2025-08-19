@@ -5,7 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { useState, useTransition, useEffect } from 'react';
-import { Wand2, X, Loader2 } from 'lucide-react';
+import { Wand2, X, Loader2, CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -27,10 +28,16 @@ import { useLanguage } from '@/hooks/use-language';
 import { auth, db } from '@/lib/firebase';
 import { addDoc, collection, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { onAuthStateChanged, type User } from 'firebase/auth';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Calendar } from '../ui/calendar';
+import { cn } from '@/lib/utils';
+import { Timestamp } from 'firebase/firestore';
 
 const formSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters long.'),
-  date: z.string().min(1, 'Date is required.'),
+  date: z.date({
+    required_error: "A date is required.",
+  }),
   summary: z.string().min(20, 'Summary needs to be at least 20 characters.'),
   readMoreUrl: z.string().url('Please enter a valid URL.').optional().or(z.literal('')),
   tags: z.array(z.string()).min(1, 'At least one tag is required.'),
@@ -70,7 +77,7 @@ export function EventSubmissionForm() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: '',
-      date: '',
+      date: undefined,
       summary: '',
       readMoreUrl: '',
       tags: [],
@@ -126,6 +133,7 @@ export function EventSubmissionForm() {
     try {
       const dataToSave: any = {
         ...values,
+        date: Timestamp.fromDate(values.date),
         status: status,
       };
 
@@ -133,7 +141,7 @@ export function EventSubmissionForm() {
         dataToSave.approvedBy = user.uid;
         dataToSave.approvedAt = serverTimestamp();
       } else {
-        dataToSave.submittedBy = user.uid;
+        dataToSave.submittedBy = user.email || 'Admin';
         dataToSave.submittedAt = serverTimestamp();
       }
 
@@ -181,11 +189,37 @@ export function EventSubmissionForm() {
               control={form.control}
               name="date"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="flex flex-col">
                   <FormLabel>{t('event_submission.date_label')}</FormLabel>
-                  <FormControl>
-                    <Input placeholder={t('event_submission.date_placeholder')} {...field} disabled={isSubmitting}/>
-                  </FormControl>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                          disabled={isSubmitting}
+                        >
+                          {field.value ? (
+                            format(field.value, "PPP")
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                   <FormDescription>
                     {t('event_submission.date_description')}
                   </FormDescription>
