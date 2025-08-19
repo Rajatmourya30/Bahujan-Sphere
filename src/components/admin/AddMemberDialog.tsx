@@ -33,6 +33,10 @@ import type { NewTeamMember } from '@/lib/team';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '@/lib/firebase';
+
+const createTeamUser = httpsCallable(functions, 'createTeamUser');
 
 const roles = ['Admin', 'Manager', 'Editor', 'Reviewer', 'Contributor'] as const;
 
@@ -67,19 +71,12 @@ export function AddMemberDialog({ onOpenChange, onSave }: AddMemberDialogProps) 
   const onSubmit = async (values: FormValues) => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/create-user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: values.email, password: values.password }),
-      });
-      
-      const result = await response.json();
+      const result: any = await createTeamUser({ email: values.email, password: values.password });
+      const { uid } = result.data;
 
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to create user');
+      if (!uid) {
+          throw new Error('Failed to create user: UID was not returned.');
       }
-      
-      const { uid } = result;
 
       await onSave({
         name: values.name,
