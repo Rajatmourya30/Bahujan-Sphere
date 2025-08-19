@@ -7,7 +7,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
-import { collection, query, orderBy, onSnapshot, type Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, type Timestamp, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BookOpen } from 'lucide-react';
 import Image from 'next/image';
@@ -18,6 +18,7 @@ interface ReadingRoomPdf {
   author?: string;
   uploadedAt: Timestamp;
   coverImageUrl?: string;
+  status?: 'approved' | 'pending' | 'rejected';
 }
 
 function ReadingRoomBookCard({ pdf }: { pdf: ReadingRoomPdf }) {
@@ -63,7 +64,11 @@ export default function ReadingRoomPage() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const q = query(collection(db, "readingRoomPdfs"), orderBy("uploadedAt", "desc"));
+        const q = query(
+            collection(db, "readingRoomPdfs"),
+            where("status", "==", "approved"),
+            orderBy("uploadedAt", "desc")
+        );
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const fetchedPdfs: ReadingRoomPdf[] = [];
             querySnapshot.forEach((doc) => {
