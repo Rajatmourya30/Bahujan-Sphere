@@ -8,7 +8,7 @@ import { BookOpen, Search, Trash2, Edit, PlusCircle } from 'lucide-react';
 import { auth, db, storage } from '@/lib/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { ref, deleteObject, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { collection, query, orderBy, onSnapshot, type Timestamp, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, type Timestamp, deleteDoc, doc, updateDoc, where } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { ManageDocumentDialog, type DocumentFormData } from '@/components/admin/ManageDocumentDialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -70,7 +70,11 @@ export default function ManageReadingRoomPage() {
   useEffect(() => {
     if (!user) return;
 
-    const q = query(collection(db, "readingRoomPdfs"), orderBy("uploadedAt", "desc"));
+    const q = query(
+        collection(db, "readingRoomPdfs"), 
+        where("status", "==", "approved"),
+        orderBy("uploadedAt", "desc")
+    );
     const unsubscribeFirestore = onSnapshot(q, (querySnapshot) => {
         const pdfs: ReadingRoomPdf[] = [];
         querySnapshot.forEach((doc) => {
