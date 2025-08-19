@@ -142,11 +142,9 @@ export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventM
                                 />
                             </PopoverContent>
                         </Popover>
-                        {hasActiveFilters && (
-                            <Button variant="ghost" onClick={clearFilters}>
-                                Clear
-                            </Button>
-                        )}
+                        <Button variant="ghost" onClick={clearFilters} disabled={!hasActiveFilters}>
+                            Show All
+                        </Button>
                     </div>
                      <Button onClick={onAdd} className="w-full sm:w-auto">
                         <PlusCircle className="mr-2 h-4 w-4" />
