@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { db, storage } from '@/lib/firebase';
-import { collection, onSnapshot, doc, deleteDoc, setDoc, serverTimestamp, query, where, writeBatch, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, serverTimestamp, query, where, writeBatch, getDoc } from 'firebase/firestore';
 import { ref, deleteObject, getMetadata } from 'firebase/storage';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
@@ -13,8 +13,6 @@ import type { PendingSubmission } from '@/components/admin/ReviewSubmissionsTabl
 import { RejectionNoteDialog } from '@/components/admin/RejectionNoteDialog';
 import { ReviewReadingRoomSubmissionsTable } from './ReviewReadingRoomSubmissionsTable';
 
-
-// Define a more specific type for Reading Room submissions
 export interface PendingReadingRoomItem extends PendingSubmission {
     author: string;
     description: string;
@@ -65,7 +63,7 @@ export function ReviewReadingRoomSubmissionsTab({ currentUser }: ReviewReadingRo
           if (error.code === 'storage/object-not-found') {
               return false;
           }
-          throw error; // Rethrow other errors
+          throw error;
       }
   }
 
@@ -83,7 +81,6 @@ export function ReviewReadingRoomSubmissionsTab({ currentUser }: ReviewReadingRo
 
         if (action === 'approve') {
             const { id, status, ...liveData } = submissionData;
-            // Create a new document in the live collection
             const liveDocRef = doc(collection(db, 'readingRoomPdfs'));
             
             batch.set(liveDocRef, {
@@ -100,13 +97,12 @@ export function ReviewReadingRoomSubmissionsTab({ currentUser }: ReviewReadingRo
                 title: 'Document Approved',
                 description: `"${submission.title}" is now live in the Reading Room.`,
             });
-        } else { // Reject
+        } else {
              if (!reason) {
                 toast({ title: 'Reason Required', description: 'Please provide a reason for rejection.', variant: 'destructive' });
                 return;
             }
             
-            // Delete associated files from storage only if they exist
             if (await fileExists(submissionData.storagePath)) {
                 await deleteObject(ref(storage, submissionData.storagePath));
             }
@@ -114,19 +110,13 @@ export function ReviewReadingRoomSubmissionsTab({ currentUser }: ReviewReadingRo
                 await deleteObject(ref(storage, submissionData.coverImageStoragePath));
             }
 
-            // Instead of deleting, we update the status to rejected
-            batch.update(submissionRef, {
-                status: 'rejected',
-                rejectionReason: reason,
-                reviewedBy: currentUser.uid,
-                reviewedAt: serverTimestamp(),
-            });
+            batch.delete(submissionRef);
             
             await batch.commit();
             
             toast({
                 title: 'Document Rejected',
-                description: `"${submission.title}" has been rejected and feedback has been saved.`,
+                description: `"${submission.title}" has been rejected and the submission has been deleted.`,
             });
         }
     } catch (error: any) {
