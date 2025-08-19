@@ -30,13 +30,13 @@ import {
 import Link from 'next/link';
 import { Logo } from '@/components/shared/Logo';
 import { Skeleton } from '@/components/ui/skeleton';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
 function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<any | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -56,6 +56,24 @@ function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
   }, [user, isLoading, pathname, router]);
 
 
+  // CRITICAL FIX: Do not render the main layout on the login page.
+  // This prevents permission checks and other authenticated logic from running
+  // before the user has a chance to log in, fixing the crash.
+  if (pathname === '/admin/login') {
+    return <>{children}</>;
+  }
+  
+  if (isLoading || !user) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <div className="space-y-4 p-4">
+          <Skeleton className="h-10 w-48" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </div>
+    );
+  }
+  
   // For this simplified example, we'll grant all permissions to any logged-in user.
   const permissions = {
     canManageDonations: true,
@@ -79,27 +97,6 @@ function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
     { href: '/admin/team', label: 'Team', icon: UserCog, visible: permissions.canManageTeam },
     { href: '/admin/google-ads', label: 'Google Ads', icon: Megaphone, visible: permissions.canManageAds },
   ].filter(item => item.visible);
-
-  if (isLoading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <div className="space-y-4 p-4">
-          <Skeleton className="h-10 w-48" />
-          <Skeleton className="h-64 w-full" />
-        </div>
-      </div>
-    );
-  }
-
-  // Do not render layout on login page to avoid sidebar appearing
-  if (pathname === '/admin/login') {
-    return <>{children}</>;
-  }
-  
-  // After loading, if user is not authenticated, render children (which should be the login page due to the redirect)
-  if (!user) {
-    return <>{children}</>;
-  }
 
   return (
     <SidebarProvider defaultOpen={false}>
