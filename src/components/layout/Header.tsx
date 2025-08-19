@@ -25,7 +25,7 @@ export function Header() {
   }, []);
 
   const navItems = [
-    { href: '/', label: t('nav.calendar'), icon: Home, auth: false },
+    { href: '/calendar', label: t('nav.calendar'), icon: Home, auth: false },
     { href: '/knowledge-hub', label: t('nav.knowledge'), icon: Library, auth: false },
     { href: '/store', label: t('nav.store'), icon: Store, auth: false },
     { href: '/books', label: t('nav.books'), icon: Book, auth: false },
@@ -42,7 +42,7 @@ export function Header() {
   
   const getNavItem = (item: typeof navItems[0]) => {
       const href = item.auth && !isAuthenticated ? '/login' : item.href;
-      const isActive = pathname.startsWith(href) && (href !== '/' || pathname === '/');
+      const isActive = pathname.startsWith(href);
       return (
           <Button key={item.label} asChild variant={isActive ? 'secondary' : 'ghost'}>
               <Link href={href}>
