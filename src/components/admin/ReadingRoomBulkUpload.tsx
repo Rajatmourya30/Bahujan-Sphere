@@ -5,8 +5,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
-import { Download, FileUp, Loader2, UploadCloud, X, FileCheck, AlertCircle } from 'lucide-react';
+import { Download, FileUp, Loader2, UploadCloud, X, FileCheck, AlertCircle, Table } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 import { writeBatch, collection, doc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, storage } from '@/lib/firebase';
@@ -14,11 +13,12 @@ import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import { Progress } from '../ui/progress';
 import { cn } from '@/lib/utils';
 import * as pdfjs from 'pdfjs-dist';
-
+import * as XLSX from 'xlsx';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
 // Helper function to generate cover image from PDF
 async function generateCoverFromPdf(pdfFile: File): Promise<File | null> {
-  pdfjs.GlobalWorkerOptions.workerSrc = `/static/js/pdf.worker.min.mjs`;
+  pdfjs.GlobalWorkerOptions.workerSrc = `/static/js/pdf.worker.min.js`;
 
   const fileReader = new FileReader();
   return new Promise((resolve, reject) => {
@@ -70,6 +70,16 @@ interface StagedFile {
   status: FileStatus;
   progress: number;
   errorMessage?: string;
+  metadata: {
+    title: string;
+    author: string;
+  }
+}
+
+interface MetadataRow {
+    filename: string;
+    title?: string;
+    author?: string;
 }
 
 export function ReadingRoomBulkUpload() {
@@ -77,18 +87,96 @@ export function ReadingRoomBulkUpload() {
   const [stagedFiles, setStagedFiles] = useState<StagedFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [metadata, setMetadata] = useState<Record<string, MetadataRow>>({});
+  const [metadataFileName, setMetadataFileName] = useState('');
+
+  const updateStagedFilesMetadata = (files: StagedFile[], newMetadata: Record<string, MetadataRow>) => {
+      return files.map(sf => {
+          const meta = newMetadata[sf.file.name];
+          return {
+              ...sf,
+              metadata: {
+                  title: meta?.title || sf.file.name.replace(/\.pdf$/i, '').replace(/_/g, ' '),
+                  author: meta?.author || '',
+              }
+          }
+      });
+  }
+
+  const handleMetadataFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setMetadataFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const data = e.target?.result;
+            const workbook = XLSX.read(data, { type: 'binary' });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            const json: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+            const newMetadata = json.reduce((acc, row) => {
+                if (row.filename) {
+                    acc[String(row.filename)] = {
+                        filename: String(row.filename),
+                        title: row.title ? String(row.title) : undefined,
+                        author: row.author ? String(row.author) : undefined,
+                    };
+                }
+                return acc;
+            }, {} as Record<string, MetadataRow>);
+            
+            setMetadata(newMetadata);
+            setStagedFiles(prev => updateStagedFilesMetadata(prev, newMetadata));
+            toast({ title: 'Metadata loaded', description: `Loaded metadata for ${Object.keys(newMetadata).length} files.` });
+        } catch (error: any) {
+            toast({ title: 'Error parsing metadata file', description: error.message, variant: 'destructive' });
+        }
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  const downloadTemplate = () => {
+    const headers = ["filename", "title", "author"];
+    const data = [
+      {
+        filename: "example_book.pdf",
+        title: "Example Book Title",
+        author: "Author Name"
+      }
+    ];
+    const worksheet = XLSX.utils.json_to_sheet(data, { header: headers });
+    const csv = XLSX.utils.sheet_to_csv(worksheet);
+    const dataStr = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "metadata_template.csv");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  }
+
 
   const handleFilesSelected = (files: FileList | null) => {
     if (!files) return;
     
     const newFiles: StagedFile[] = Array.from(files)
       .filter(file => file.type === 'application/pdf')
-      .map(file => ({
-        id: `${file.name}-${file.lastModified}`,
-        file,
-        status: 'pending',
-        progress: 0,
-      }));
+      .map(file => {
+          const meta = metadata[file.name];
+          return {
+            id: `${file.name}-${file.lastModified}`,
+            file,
+            status: 'pending',
+            progress: 0,
+            metadata: {
+                title: meta?.title || file.name.replace(/\.pdf$/i, '').replace(/_/g, ' '),
+                author: meta?.author || ''
+            }
+          }
+      });
       
     setStagedFiles(prev => {
         const existingIds = new Set(prev.map(f => f.id));
@@ -148,7 +236,7 @@ export function ReadingRoomBulkUpload() {
             let coverInfo: { downloadURL: string; storagePath: string } | null = null;
             if (coverFile) {
                 const coverPath = `bookCovers/${Date.now()}-${coverFile.name}`;
-                coverInfo = await uploadSingleFile(coverPath, coverPath, () => {});
+                coverInfo = await uploadSingleFile(coverFile, coverPath, () => {});
             }
 
             const pdfPath = `pdfs/${Date.now()}-${stagedFile.file.name}`;
@@ -159,7 +247,8 @@ export function ReadingRoomBulkUpload() {
             setStagedFiles(prev => prev.map(f => f.id === stagedFile.id ? { ...f, status: 'success' } : f));
             resolve({
                 id: stagedFile.id,
-                title: stagedFile.file.name.replace(/\.pdf$/i, '').replace(/_/g, ' '),
+                title: stagedFile.metadata.title,
+                author: stagedFile.metadata.author,
                 pdfInfo,
                 coverInfo
             });
@@ -198,7 +287,7 @@ export function ReadingRoomBulkUpload() {
                 const docRef = doc(readingRoomCollection);
                 batch.set(docRef, {
                     title: upload.title,
-                    author: "",
+                    author: upload.author,
                     url: upload.pdfInfo.downloadURL,
                     storagePath: upload.pdfInfo.storagePath,
                     coverImageUrl: upload.coverInfo?.downloadURL || null,
@@ -238,31 +327,68 @@ export function ReadingRoomBulkUpload() {
       <CardHeader>
         <CardTitle>Bulk Document Upload</CardTitle>
         <CardDescription>
-          Drag and drop multiple PDF files or use the button to select them. A cover image will be generated for each.
+          Upload a metadata file (CSV/XLSX) and your PDF files. Covers are auto-generated.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div 
-          className={cn(
-            "relative flex flex-col items-center justify-center w-full p-8 border-2 border-dashed rounded-lg cursor-pointer transition-colors",
-            isDragOver ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
-          )}
-          onDragOver={onDragOver}
-          onDragLeave={onDragLeave}
-          onDrop={onDrop}
-        >
-          <UploadCloud className="w-12 h-12 text-muted-foreground" />
-          <p className="mt-2 text-sm text-muted-foreground">Drag & drop files here, or click to browse</p>
-          <input 
-            id="bulk-pdf-upload"
-            type="file" 
-            accept=".pdf" 
-            multiple 
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-            onChange={(e) => handleFilesSelected(e.target.files)}
-            disabled={isUploading}
-          />
+        <Alert>
+            <Table className="h-4 w-4" />
+            <AlertTitle>Instructions</AlertTitle>
+            <AlertDescription>
+                1. Download the template and fill it with your book details. The `filename` must match your PDF files exactly.
+                <br />
+                2. Upload the completed metadata file.
+                <br />
+                3. Drag and drop or browse for your PDF files.
+            </AlertDescription>
+            <div className="mt-4">
+                <Button variant="outline" size="sm" onClick={downloadTemplate}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download Metadata Template
+                </Button>
+            </div>
+        </Alert>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+                <label htmlFor="metadata-upload" className="text-sm font-medium">1. Upload Metadata File</label>
+                <div className="flex items-center gap-2">
+                    <Input id="metadata-upload" type="file" accept=".csv, .xlsx, .xls" onChange={handleMetadataFile} className="hidden" />
+                    <Button asChild variant="outline">
+                        <label htmlFor="metadata-upload" className="cursor-pointer">
+                            <FileUp className="mr-2 h-4 w-4" /> Choose File
+                        </label>
+                    </Button>
+                    {metadataFileName && <p className="text-sm text-muted-foreground truncate">{metadataFileName}</p>}
+                </div>
+            </div>
         </div>
+
+        <div>
+             <label className="text-sm font-medium">2. Upload PDF Files</label>
+            <div 
+            className={cn(
+                "relative flex flex-col items-center justify-center w-full p-8 border-2 border-dashed rounded-lg cursor-pointer transition-colors mt-2",
+                isDragOver ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
+            )}
+            onDragOver={onDragOver}
+            onDragLeave={onDragLeave}
+            onDrop={onDrop}
+            >
+            <UploadCloud className="w-12 h-12 text-muted-foreground" />
+            <p className="mt-2 text-sm text-muted-foreground">Drag & drop PDF files here, or click to browse</p>
+            <input 
+                id="bulk-pdf-upload"
+                type="file" 
+                accept=".pdf" 
+                multiple 
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                onChange={(e) => handleFilesSelected(e.target.files)}
+                disabled={isUploading}
+            />
+            </div>
+        </div>
+
 
         {stagedFiles.length > 0 && (
           <div className="space-y-4">
@@ -278,8 +404,8 @@ export function ReadingRoomBulkUpload() {
                         {(item.status === 'pending' || item.status === 'uploading') && <Loader2 className={cn("text-muted-foreground", item.status === 'uploading' && "animate-spin")} />}
                     </div>
                     <div className="flex-grow overflow-hidden">
-                        <p className="text-sm font-semibold truncate">{item.file.name}</p>
-                        <p className="text-xs text-muted-foreground">{(item.file.size / (1024*1024)).toFixed(2)} MB</p>
+                        <p className="text-sm font-semibold truncate">{item.metadata.title}</p>
+                        <p className="text-xs text-muted-foreground">{item.metadata.author || 'No author'}</p>
                          {item.status === 'uploading' && <Progress value={item.progress} className="h-1 mt-1" />}
                          {item.status === 'error' && <p className="text-xs text-destructive truncate">{item.errorMessage}</p>}
                     </div>

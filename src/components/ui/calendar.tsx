@@ -48,6 +48,9 @@ function Calendar({
         border-radius: 50%;
         background-color: hsl(var(--primary));
       }
+      .rdp-day_selected.event-day div:first-child::after {
+        background-color: hsl(var(--primary-foreground));
+      }
     `}</style>
     <DayPicker
       showOutsideDays={showOutsideDays}

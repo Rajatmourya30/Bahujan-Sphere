@@ -4,22 +4,22 @@ service firebase.storage {
   match /b/{bucket}/o {
     // Allow read access on all files to authenticated users
     match /{allPaths=**} {
-      allow read: if request.auth != null;
+      allow read: if true;
     }
 
     // Allow write access for authenticated users in their own profile picture folder
     match /profilePictures/{userId}/{allPaths=**} {
-      allow write: if request.auth != null;
+      allow read, write: if request.auth != null;
     }
 
     // Allow write access for any authenticated user to the pdfs folder
     match /pdfs/{allPaths=**} {
-      allow write: if request.auth != null;
+      allow read, write: if request.auth != null;
     }
 
     // Allow write access for any authenticated user to the bookCovers folder
     match /bookCovers/{allPaths=**} {
-      allow write: if request.auth != null;
+      allow read, write: if request.auth != null;
     }
   }
 }
