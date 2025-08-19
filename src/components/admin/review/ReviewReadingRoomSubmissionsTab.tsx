@@ -10,8 +10,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import type { User } from 'firebase/auth';
 import type { PendingSubmission } from '@/components/admin/ReviewSubmissionsTable';
-import { ReviewSubmissionsTable } from '@/components/admin/ReviewSubmissionsTable';
 import { RejectionNoteDialog } from '@/components/admin/RejectionNoteDialog';
+import { ReviewReadingRoomSubmissionsTable } from './ReviewReadingRoomSubmissionsTable';
 
 
 // Define a more specific type for Reading Room submissions
@@ -160,7 +160,7 @@ export function ReviewReadingRoomSubmissionsTab({ currentUser }: ReviewReadingRo
         </CardHeader>
         <CardContent>
             {submissions.length > 0 ? (
-            <ReviewSubmissionsTable submissions={submissions} onReview={handleReview} openRejectionDialog={openRejectionDialog}/>
+            <ReviewReadingRoomSubmissionsTable submissions={submissions} onReview={handleReview} openRejectionDialog={openRejectionDialog}/>
             ) : (
             <div className="text-center py-16">
                 <h3 className="text-lg font-medium">All caught up!</h3>
