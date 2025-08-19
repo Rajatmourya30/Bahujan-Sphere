@@ -1,8 +1,10 @@
+
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import { getFunctions } from "firebase/functions";
 
 // Your web app's Firebase configuration will be fetched dynamically
 // Note: This requires your app to be hosted on Firebase Hosting or App Hosting
@@ -23,5 +25,6 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
+const functions = getFunctions(app);
 
-export { app, auth, db, storage };
+export { app, auth, db, storage, functions };

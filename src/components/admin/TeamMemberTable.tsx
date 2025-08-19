@@ -36,8 +36,8 @@ export interface TeamMemberWithId extends TeamMember {
 
 interface TeamMemberTableProps {
     members: TeamMemberWithId[];
-    onUpdateRole: (memberId: string, newRole: TeamMemberRole) => void;
-    onRemoveMember: (memberId: string) => void;
+    onUpdateRole: (member: TeamMemberWithId, newRole: TeamMemberRole) => void;
+    onRemoveMember: (member: TeamMemberWithId) => void;
 }
 
 const roleVariant: Record<TeamMemberRole, 'default' | 'secondary' | 'outline' | 'destructive'> = {
@@ -128,7 +128,7 @@ export function TeamMemberTable({ members, onUpdateRole, onRemoveMember }: TeamM
                     member={editingMember}
                     onOpenChange={(isOpen) => !isOpen && setEditingMember(null)}
                     onSave={(newRole) => {
-                        onUpdateRole(editingMember.id, newRole);
+                        onUpdateRole(editingMember, newRole);
                         setEditingMember(null);
                     }}
                 />
@@ -138,7 +138,7 @@ export function TeamMemberTable({ members, onUpdateRole, onRemoveMember }: TeamM
                     member={removingMember}
                     onOpenChange={(isOpen) => !isOpen && setRemovingMember(null)}
                     onConfirm={() => {
-                        onRemoveMember(removingMember.id);
+                        onRemoveMember(removingMember);
                         setRemovingMember(null);
                     }}
                 />

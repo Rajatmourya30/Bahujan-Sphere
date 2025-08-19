@@ -13,6 +13,11 @@ import { auth, db } from '@/lib/firebase';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { NewTeamMember, TeamMemberWithId } from '@/lib/team';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '@/lib/firebase';
+
+
+const setAdminClaim = httpsCallable(functions, 'setAdminClaim');
 
 export default function TeamManagementPage() {
   const router = useRouter();
@@ -54,10 +59,12 @@ export default function TeamManagementPage() {
     return () => unsubscribeFirestore();
   }, [user, toast]);
 
-  const handleUpdateRole = async (memberId: string, newRole: TeamMember['role']) => {
-    const memberDocRef = doc(db, 'teamMembers', memberId);
+  const handleUpdateRole = async (member: TeamMemberWithId, newRole: TeamMember['role']) => {
+    const memberDocRef = doc(db, 'teamMembers', member.id);
     try {
       await updateDoc(memberDocRef, { role: newRole });
+       // Set custom claim
+      await setAdminClaim({ email: member.email, admin: true });
       toast({ title: 'Success', description: 'Team member role updated.' });
     } catch (error) {
       console.error("Error updating role:", error);
@@ -65,10 +72,12 @@ export default function TeamManagementPage() {
     }
   };
 
-  const handleRemoveMember = async (memberId: string) => {
-    const memberDocRef = doc(db, 'teamMembers', memberId);
+  const handleRemoveMember = async (member: TeamMemberWithId) => {
+    const memberDocRef = doc(db, 'teamMembers', member.id);
     try {
       await deleteDoc(memberDocRef);
+      // Revoke custom claim
+      await setAdminClaim({ email: member.email, admin: false });
       toast({ title: 'Success', description: 'Team member removed.' });
     } catch (error) {
       console.error("Error removing member:", error);
@@ -82,6 +91,8 @@ export default function TeamManagementPage() {
         ...newMember,
         joinedAt: serverTimestamp(),
       });
+      // Set custom claim for the new user
+      await setAdminClaim({ email: newMember.email, admin: true });
       toast({ title: 'Success', description: 'New team member added and their login has been created.' });
       setIsAddDialogOpen(false);
     } catch (error) {
