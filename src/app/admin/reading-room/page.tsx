@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { BookOpen, Search, Trash2, Edit, PlusCircle } from 'lucide-react';
 import { auth, db, storage } from '@/lib/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { ref, deleteObject, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, deleteObject } from 'firebase/storage';
 import { collection, query, orderBy, onSnapshot, type Timestamp, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { ManageDocumentDialog, type DocumentFormData } from '@/components/admin/ManageDocumentDialog';
@@ -125,7 +125,7 @@ export default function ManageReadingRoomPage() {
             // Upload new cover image
             const newCoverPath = `bookCovers/${Date.now()}-${data.newCoverImage.name}`;
             const newCoverRef = ref(storage, newCoverPath);
-            await uploadBytes(newCoverRef, data.newCoverImage);
+            await uploadBytesResumable(newCoverRef, data.newCoverImage);
             const newCoverUrl = await getDownloadURL(newCoverRef);
             
             updateData.coverImageUrl = newCoverUrl;

@@ -27,6 +27,8 @@ import { useState, useRef } from 'react';
 import { Loader2, UploadCloud } from 'lucide-react';
 import Image from 'next/image';
 import { Textarea } from '../ui/textarea';
+import { uploadBytesResumable, getDownloadURL, ref } from 'firebase/storage';
+import { storage } from '@/lib/firebase';
 
 const formSchema = z.object({
   title: z.string().min(1, 'Title is required'),
