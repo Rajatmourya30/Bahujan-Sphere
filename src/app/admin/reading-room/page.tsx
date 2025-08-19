@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { BookOpen, Search, Trash2, Edit, PlusCircle } from 'lucide-react';
 import { auth, db, storage } from '@/lib/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { ref, deleteObject } from 'firebase/storage';
+import { ref, deleteObject, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { collection, query, orderBy, onSnapshot, type Timestamp, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { ManageDocumentDialog, type DocumentFormData } from '@/components/admin/ManageDocumentDialog';
@@ -20,7 +20,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ReadingRoomSubmissionForm } from '@/components/admin/ReadingRoomSubmissionForm';
 import { ReadingRoomBulkUpload } from '@/components/admin/ReadingRoomBulkUpload';
-import { ReviewReadingRoomSubmissionsTab } from '@/components/admin/ReviewReadingRoomSubmissionsTab';
+import { ReviewReadingRoomSubmissionsTab } from '@/components/admin/review/ReviewReadingRoomSubmissionsTab';
 
 export interface ReadingRoomPdf {
   id: string;
@@ -52,7 +52,7 @@ export default function ManageReadingRoomPage() {
   const [isLoadingPdfs, setIsLoadingPdfs] = useState(true);
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingDocument, setEditingDocument] = useState<ReadingRoomPdf | null>([]);
+  const [editingDocument, setEditingDocument] = useState<ReadingRoomPdf | null>(null);
   
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -90,7 +90,7 @@ export default function ManageReadingRoomPage() {
   const filteredPdfs = useMemo(() => {
     return availablePdfs.filter(pdf => 
       pdf.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      pdf.author?.toLowerCase().includes(searchTerm.toLowerCase())
+      (pdf.author && pdf.author.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [searchTerm, availablePdfs]);
 
@@ -144,17 +144,22 @@ export default function ManageReadingRoomPage() {
 
   const handleDelete = async (pdf: ReadingRoomPdf) => {
     try {
-        const fileRef = ref(storage, pdf.storagePath);
-        await deleteObject(fileRef);
-        
-        if (pdf.coverImageStoragePath) {
-          const coverImageRef = ref(storage, pdf.coverImageStoragePath);
-          await deleteObject(coverImageRef);
-        }
-
+        // First, delete the Firestore document
         await deleteDoc(doc(db, "readingRoomPdfs", pdf.id));
 
-        toast({ title: "PDF Deleted", description: `"${pdf.title}" has been removed.` });
+        // Then, delete the file from Storage
+        if (pdf.storagePath) {
+            const fileRef = ref(storage, pdf.storagePath);
+            await deleteObject(fileRef).catch((error) => console.warn("Could not delete PDF file, it may have been removed already:", error));
+        }
+        
+        // And the cover image from Storage
+        if (pdf.coverImageStoragePath) {
+          const coverImageRef = ref(storage, pdf.coverImageStoragePath);
+          await deleteObject(coverImageRef).catch((error) => console.warn("Could not delete cover image, it may have been removed already:", error));
+        }
+
+        toast({ title: "PDF Deleted", description: `"${pdf.title}" has been removed from Firestore and Storage.` });
     } catch (error) {
         console.error("Error deleting PDF:", error);
         toast({ title: "Deletion Failed", description: "Could not delete the PDF. Check console for details.", variant: "destructive" });
@@ -236,7 +241,7 @@ export default function ManageReadingRoomPage() {
                                                 <AlertDialogHeader>
                                                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                                 <AlertDialogDescription>
-                                                    This will permanently delete "{pdf.title}". This action cannot be undone.
+                                                    This will permanently delete "{pdf.title}" from the database and storage. This action cannot be undone.
                                                 </AlertDialogDescription>
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter>
@@ -266,7 +271,7 @@ export default function ManageReadingRoomPage() {
         </TabsContent>
       </Tabs>
     </div>
-     {isDialogOpen && (
+     {isDialogOpen && editingDocument && (
         <ManageDocumentDialog
           document={editingDocument}
           onOpenChange={setIsDialogOpen}
