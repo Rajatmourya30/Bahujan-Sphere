@@ -72,6 +72,11 @@ export default function AdminLoginPage() {
       setIsLoading(false);
     }
   };
+  
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    handleLogin();
+  }
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-muted">
@@ -83,7 +88,7 @@ export default function AdminLoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">{t('admin_login.email_label')}</Label>
               <Input
@@ -107,11 +112,11 @@ export default function AdminLoginPage() {
                 disabled={isLoading}
               />
             </div>
-            <Button onClick={handleLogin} className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {t('admin_login.login_button')}
             </Button>
-          </div>
+          </form>
         </CardContent>
       </Card>
     </div>
