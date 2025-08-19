@@ -152,7 +152,12 @@ export function ManageEventDialog({ event, onOpenChange, onSave }: ManageEventDi
                 <FormItem>
                   <FormLabel>Tag Keys</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. tag_ambedkarite,tag_buddhist" {...field} value={Array.isArray(field.value) ? field.value.join(', ') : ''} />
+                    <Input 
+                      placeholder="e.g. tag_ambedkarite,tag_buddhist" 
+                      {...field} 
+                      value={Array.isArray(field.value) ? field.value.join(', ') : field.value}
+                      onChange={(e) => field.onChange(e.target.value)}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
