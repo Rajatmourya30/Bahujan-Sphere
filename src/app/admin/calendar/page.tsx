@@ -75,9 +75,9 @@ export default function ManageCalendarPage() {
       <Tabs defaultValue="manage" className="w-full">
         <TabsList className="grid w-full grid-cols-1 sm:grid-cols-4">
            <TabsTrigger value="manage">Manage Events</TabsTrigger>
-           <TabsTrigger value="review">Review Submissions</TabsTrigger>
            <TabsTrigger value="single-event">Submit Single Event</TabsTrigger>
            <TabsTrigger value="bulk-upload">Submit Bulk Upload</TabsTrigger>
+           <TabsTrigger value="review">Review Submissions</TabsTrigger>
         </TabsList>
 
         <TabsContent value="manage" className="mt-6">
@@ -88,16 +88,16 @@ export default function ManageCalendarPage() {
               onAdd={() => handleOpenDialog()}
             />
         </TabsContent>
-
-        <TabsContent value="review" className="mt-6">
-          <ReviewSubmissionsTab />
-        </TabsContent>
         
         <TabsContent value="single-event" className="mt-6">
           <EventSubmissionForm />
         </TabsContent>
         <TabsContent value="bulk-upload" className="mt-6">
           <BulkUploadForm />
+        </TabsContent>
+        
+        <TabsContent value="review" className="mt-6">
+          <ReviewSubmissionsTab />
         </TabsContent>
         
       </Tabs>

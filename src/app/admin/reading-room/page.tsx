@@ -171,9 +171,9 @@ export default function ManageReadingRoomPage() {
        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-1 sm:grid-cols-4">
            <TabsTrigger value="manage">Manage Documents</TabsTrigger>
-           <TabsTrigger value="review">Review Submissions</TabsTrigger>
            <TabsTrigger value="single-doc">Submit Single Document</TabsTrigger>
            <TabsTrigger value="bulk-upload">Submit Bulk Upload</TabsTrigger>
+           <TabsTrigger value="review">Review Submissions</TabsTrigger>
         </TabsList>
          <TabsContent value="manage" className="mt-6">
             <Card>
@@ -255,14 +255,14 @@ export default function ManageReadingRoomPage() {
                 </CardContent>
             </Card>
         </TabsContent>
-        <TabsContent value="review" className="mt-6">
-            <ReviewReadingRoomSubmissionsTab currentUser={user}/>
-        </TabsContent>
          <TabsContent value="single-doc" className="mt-6">
           <ReadingRoomSubmissionForm />
         </TabsContent>
          <TabsContent value="bulk-upload" className="mt-6">
           <ReadingRoomBulkUpload />
+        </TabsContent>
+        <TabsContent value="review" className="mt-6">
+            <ReviewReadingRoomSubmissionsTab currentUser={user}/>
         </TabsContent>
       </Tabs>
     </div>
