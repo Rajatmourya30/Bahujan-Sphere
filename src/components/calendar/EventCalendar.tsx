@@ -113,7 +113,8 @@ export function EventCalendar() {
 
   const eventDates = useMemo(() => {
     if (isLoading) return [];
-    return events.map(event => event.date);
+    // Filter out invalid dates to prevent calendar component from crashing
+    return events.filter(event => isValid(event.date)).map(event => event.date);
   }, [events, isLoading]);
 
   const dayEvents = useMemo(() => {
