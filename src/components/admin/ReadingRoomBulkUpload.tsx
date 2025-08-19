@@ -1,191 +1,223 @@
 
 'use client';
 
-import { useState } from 'react';
-import * as XLSX from 'xlsx';
+import { useState, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
-import { Download, FileUp, Loader2, Table } from 'lucide-react';
+import { Download, FileUp, Loader2, Table, UploadCloud, X, FileCheck, AlertCircle } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+import { addDoc, collection, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { auth, db, storage } from '@/lib/firebase';
+import { getDownloadURL, ref, uploadBytesResumable, type UploadTask } from 'firebase/storage';
+import { Progress } from '../ui/progress';
+import { cn } from '@/lib/utils';
 
-interface StagedDocument {
-  title: string;
-  author?: string;
+type FileStatus = 'pending' | 'uploading' | 'success' | 'error';
+
+interface StagedFile {
+  id: string;
+  file: File;
+  status: FileStatus;
+  progress: number;
+  errorMessage?: string;
 }
 
 export function ReadingRoomBulkUpload() {
   const { toast } = useToast();
-  const [stagedDocs, setStagedDocs] = useState<StagedDocument[]>([]);
-  const [fileName, setFileName] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [stagedFiles, setStagedFiles] = useState<StagedFile[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const allowedExtensions = ['.xlsx', '.xls', '.csv'];
-    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+  const handleFilesSelected = (files: FileList | null) => {
+    if (!files) return;
     
-    if (!fileExtension || !allowedExtensions.includes(`.${fileExtension}`)) {
-        toast({
-            title: 'Invalid File Type',
-            description: 'Please upload a valid Excel or CSV file.',
-            variant: 'destructive',
-        });
-        return;
-    }
+    const newFiles: StagedFile[] = Array.from(files)
+      .filter(file => file.type === 'application/pdf')
+      .map(file => ({
+        id: `${file.name}-${file.lastModified}`,
+        file,
+        status: 'pending',
+        progress: 0,
+      }));
+      
+    setStagedFiles(prev => {
+        const existingIds = new Set(prev.map(f => f.id));
+        const trulyNewFiles = newFiles.filter(f => !existingIds.has(f.id));
+        return [...prev, ...trulyNewFiles];
+    });
+  };
 
-    setFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = e.target?.result;
-        const workbook = XLSX.read(data, { type: 'binary' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const json: any[] = XLSX.utils.sheet_to_json(worksheet);
+  const onDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+  const onDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+  const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    handleFilesSelected(e.dataTransfer.files);
+  };
 
-        const parsedDocs = json.map(row => {
-            if (!row.title) {
-                throw new Error('Each row must have a `title` column.');
+  const removeFile = (id: string) => {
+    setStagedFiles(prev => prev.filter(f => f.id !== id));
+  };
+  
+  const uploadFile = (file: StagedFile): Promise<{ downloadURL: string, storagePath: string }> => {
+    return new Promise((resolve, reject) => {
+        const uniqueFileName = `${Date.now()}-${file.file.name}`;
+        const storagePath = `pdfs/${uniqueFileName}`;
+        const storageRef = ref(storage, storagePath);
+        const uploadTask = uploadBytesResumable(storageRef, file.file);
+
+        uploadTask.on('state_changed',
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                setStagedFiles(prev => prev.map(f => f.id === file.id ? { ...f, progress } : f));
+            },
+            (error) => {
+                console.error('Upload Error:', error);
+                setStagedFiles(prev => prev.map(f => f.id === file.id ? { ...f, status: 'error', errorMessage: error.message } : f));
+                reject(error);
+            },
+            async () => {
+                try {
+                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                    setStagedFiles(prev => prev.map(f => f.id === file.id ? { ...f, status: 'success', progress: 100 } : f));
+                    resolve({ downloadURL, storagePath });
+                } catch (error) {
+                    setStagedFiles(prev => prev.map(f => f.id === file.id ? { ...f, status: 'error', errorMessage: 'Failed to get URL.' } : f));
+                    reject(error);
+                }
             }
-            // This is a simplified version; real uploads would need URLs to PDFs.
-            return {
-                title: String(row.title),
-                author: row.author ? String(row.author) : undefined,
-            };
-        });
-
-        setStagedDocs(parsedDocs);
-      } catch (error: any) {
-        toast({
-          title: 'Error Parsing File',
-          description: error.message || 'There was an issue reading the file.',
-          variant: 'destructive',
-        });
-        setStagedDocs([]);
-        setFileName('');
-      }
-    };
-    reader.readAsBinaryString(file);
+        );
+    });
   };
 
   const handleSubmit = async () => {
-    setIsLoading(true);
     const user = auth.currentUser;
     if (!user) {
-        toast({ title: 'Not Authenticated', description: 'You must be logged in.', variant: 'destructive' });
-        setIsLoading(false);
-        return;
+      toast({ title: 'Not Authenticated', description: 'You must be logged in.', variant: 'destructive' });
+      return;
+    }
+    
+    setIsUploading(true);
+    setStagedFiles(prev => prev.map(f => ({ ...f, status: 'uploading' })));
+
+    const uploadPromises = stagedFiles.map(file => uploadFile(file).catch(e => e));
+    const results = await Promise.allSettled(uploadPromises);
+    
+    const successfulUploads = stagedFiles.filter((_, i) => results[i].status === 'fulfilled');
+    
+    if (successfulUploads.length > 0) {
+        try {
+            const batch = writeBatch(db);
+            successfulUploads.forEach((file, index) => {
+                const result = results.find(r => r.status === 'fulfilled' && (r.value as any).storagePath.includes(file.file.name))?.value as any;
+                if(result) {
+                    const docRef = collection(db, "readingRoomPdfs");
+                    const title = file.file.name.replace(/\.pdf$/i, '').replace(/_/g, ' ');
+                     batch.set(addDoc(docRef).withConverter(null), {
+                        title: title,
+                        author: "", // Can be edited later
+                        url: result.downloadURL,
+                        storagePath: result.storagePath,
+                        coverImageUrl: null,
+                        coverImageStoragePath: null,
+                        uploadedAt: serverTimestamp(),
+                        uploaderUid: user.uid,
+                    });
+                }
+            });
+            await batch.commit();
+            
+             toast({
+                title: 'Bulk Upload Complete',
+                description: `${successfulUploads.length} of ${stagedFiles.length} documents uploaded successfully.`,
+            });
+            setStagedFiles(prev => prev.filter(f => f.status !== 'success'));
+        } catch (error) {
+             toast({ title: 'Firestore Error', description: 'Files uploaded, but failed to save metadata.', variant: 'destructive' });
+        }
+    } else {
+         toast({ title: 'Upload Failed', description: 'No documents were uploaded successfully.', variant: 'destructive' });
     }
 
-    // NOTE: This is a placeholder for a real bulk upload implementation.
-    // A real implementation would require a more complex process:
-    // 1. Upload all associated PDF files to Firebase Storage.
-    // 2. Get the download URLs for each.
-    // 3. Match URLs to the data from the CSV.
-    // 4. Write all entries to Firestore in a batch operation.
-    // For now, we will just add the metadata to Firestore as a demonstration.
-    
-    try {
-        for (const doc of stagedDocs) {
-            await addDoc(collection(db, "readingRoomPdfs"), {
-                ...doc,
-                url: "https://example.com/placeholder.pdf", // Placeholder URL
-                storagePath: "placeholders/placeholder.pdf",
-                coverImageUrl: null,
-                coverImageStoragePath: null,
-                uploadedAt: serverTimestamp(),
-                uploaderUid: user.uid
-            });
-        }
-        
-        toast({
-            title: `${stagedDocs.length} Documents Submitted`,
-            description: 'The document metadata has been added. Note: This is a demo; PDFs are not actually uploaded.',
-        });
-        setStagedDocs([]);
-        setFileName('');
-    } catch (error) {
-        console.error("Error submitting documents:", error);
-        toast({ title: 'Submission Failed', description: 'Could not save document metadata to the database.', variant: 'destructive' });
-    } finally {
-        setIsLoading(false);
-    }
+    setIsUploading(false);
   };
   
-  const downloadTemplate = () => {
-    const headers = ["title", "author"];
-    const data = [{ "title": "Sample Document Title", "author": "Sample Author" }];
-    const worksheet = XLSX.utils.json_to_sheet(data, { header: headers });
-    const csv = XLSX.utils.sheet_to_csv(worksheet);
-    const dataStr = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "document_template.csv");
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
-  }
+  const overallProgress = useMemo(() => {
+    if (stagedFiles.length === 0) return 0;
+    const totalProgress = stagedFiles.reduce((acc, file) => acc + file.progress, 0);
+    return totalProgress / stagedFiles.length;
+  }, [stagedFiles]);
+  
+  const filesReadyToUpload = stagedFiles.filter(f => f.status === 'pending');
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Bulk Document Upload</CardTitle>
         <CardDescription>
-          Upload an Excel or CSV file with document metadata. Note: This feature is for demonstration and does not upload actual PDF files.
+          Drag and drop multiple PDF files or use the button to select them.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <Alert>
-            <Table className="h-4 w-4" />
-            <AlertTitle>Instructions</AlertTitle>
-            <AlertDescription>
-                The file must have a `title` column. `author` is optional.
-            </AlertDescription>
-            <div className="mt-4">
-                <Button variant="outline" size="sm" onClick={downloadTemplate}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Download CSV Template
-                </Button>
-            </div>
-        </Alert>
-        
-        <div className="space-y-2">
-          <Label htmlFor="file-upload-bulk">Upload Excel/CSV File</Label>
-          <div className="flex items-center gap-2">
-            <Input id="file-upload-bulk" type="file" accept=".xlsx, .xls, .csv" onChange={handleFileChange} className="hidden" />
-            <Button asChild variant="outline">
-                <label htmlFor="file-upload-bulk" className="cursor-pointer">
-                    <FileUp className="mr-2 h-4 w-4" /> Choose File
-                </label>
-            </Button>
-            {fileName && <p className="text-sm text-muted-foreground">{fileName}</p>}
-          </div>
+        <div 
+          className={cn(
+            "relative flex flex-col items-center justify-center w-full p-8 border-2 border-dashed rounded-lg cursor-pointer transition-colors",
+            isDragOver ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
+          )}
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
+          onDrop={onDrop}
+        >
+          <UploadCloud className="w-12 h-12 text-muted-foreground" />
+          <p className="mt-2 text-sm text-muted-foreground">Drag & drop files here, or click to browse</p>
+          <input 
+            id="bulk-pdf-upload"
+            type="file" 
+            accept=".pdf" 
+            multiple 
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            onChange={(e) => handleFilesSelected(e.target.files)}
+            disabled={isUploading}
+          />
         </div>
 
-        {stagedDocs.length > 0 && (
+        {stagedFiles.length > 0 && (
           <div className="space-y-4">
-            <h3 className="font-medium">Staged for Upload ({stagedDocs.length} documents)</h3>
-            <ScrollArea className="h-48 w-full rounded-md border p-4">
-              <div className="space-y-2">
-                {stagedDocs.map((doc, index) => (
-                  <div key={index} className="text-sm">
-                    <p className="font-semibold">{doc.title}</p>
-                    {doc.author && <p className="text-muted-foreground">{doc.author}</p>}
+            <h3 className="font-medium">Staged for Upload ({stagedFiles.length} files)</h3>
+            {isUploading && <Progress value={overallProgress} className="w-full" />}
+            <ScrollArea className="h-64 w-full rounded-md border">
+              <div className="p-2 space-y-2">
+                {stagedFiles.map((item) => (
+                  <div key={item.id} className="flex items-center gap-3 p-2 rounded-md bg-muted/50">
+                    <div className="flex-shrink-0">
+                        {item.status === 'success' && <FileCheck className="text-green-500" />}
+                        {item.status === 'error' && <AlertCircle className="text-destructive" />}
+                        {(item.status === 'pending' || item.status === 'uploading') && <Loader2 className={cn("text-muted-foreground", item.status === 'uploading' && "animate-spin")} />}
+                    </div>
+                    <div className="flex-grow overflow-hidden">
+                        <p className="text-sm font-semibold truncate">{item.file.name}</p>
+                        <p className="text-xs text-muted-foreground">{(item.file.size / (1024*1024)).toFixed(2)} MB</p>
+                         {item.status === 'uploading' && <Progress value={item.progress} className="h-1 mt-1" />}
+                         {item.status === 'error' && <p className="text-xs text-destructive truncate">{item.errorMessage}</p>}
+                    </div>
+                    <Button variant="ghost" size="icon" className="flex-shrink-0 w-6 h-6" onClick={() => removeFile(item.id)} disabled={isUploading}>
+                        <X className="w-4 h-4" />
+                    </Button>
                   </div>
                 ))}
               </div>
             </ScrollArea>
-            <Button onClick={handleSubmit} disabled={isLoading} className="w-full">
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {isLoading ? 'Submitting...' : `Submit ${stagedDocs.length} Documents`}
+            <Button onClick={handleSubmit} disabled={isUploading || filesReadyToUpload.length === 0} className="w-full">
+                {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {isUploading ? `Uploading... (${Math.round(overallProgress)}%)` : `Upload ${filesReadyToUpload.length} File(s)`}
             </Button>
           </div>
         )}
@@ -193,5 +225,3 @@ export function ReadingRoomBulkUpload() {
     </Card>
   );
 }
-
-    
