@@ -44,7 +44,7 @@ export const setAdminClaim = https.onCall(async (data, context) => {
 
 // New function to create a user and return their UID
 export const createTeamUser = https.onCall(async (data, context) => {
-    if (!context.auth) {
+    if (!context.auth || !context.auth.token.email) {
         throw new HttpsError("unauthenticated", "The function must be called while authenticated.");
     }
 
@@ -82,4 +82,3 @@ export const createTeamUser = https.onCall(async (data, context) => {
         throw new HttpsError("internal", "An unknown error occurred.");
     }
 });
-
