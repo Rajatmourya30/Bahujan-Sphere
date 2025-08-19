@@ -1,6 +1,5 @@
 
 import type { TranslationKey } from './i18n/translations';
-import type { Timestamp } from 'firebase/firestore';
 
 export interface KnowledgeOrganization {
   id: string;
@@ -9,16 +8,39 @@ export interface KnowledgeOrganization {
   logoUrl: string;
   logoStoragePath?: string;
   websiteUrl: string;
-  status?: 'pending' | 'approved' | 'rejected';
-  submittedBy?: string;
-  submittedAt?: Timestamp;
-  approvedBy?: string;
-  approvedAt?: Timestamp;
-  rejectionReason?: string;
-  // This field is added to pending submissions for easier display in review tables
-  title?: string;
+  imageAiHint: string;
 }
 
+export interface KnowledgeArticle {
+    id: string;
+    titleKey: TranslationKey;
+    descriptionKey: TranslationKey;
+    fullArticleUrl: string;
+}
 
-// This static data is no longer used by the live app but is kept for reference.
-export const allKnowledgeOrganizations: KnowledgeOrganization[] = [];
+export const allKnowledgeOrganizations: KnowledgeOrganization[] = [
+    {
+        id: 'org-1',
+        nameKey: 'org_1_name',
+        descriptionKey: 'org_1_desc',
+        logoUrl: 'https://placehold.co/400x400.png',
+        websiteUrl: '#',
+        imageAiHint: 'organization logo'
+    },
+    {
+        id: 'org-2',
+        nameKey: 'org_2_name',
+        descriptionKey: 'org_2_desc',
+        logoUrl: 'https://placehold.co/400x400.png',
+        websiteUrl: '#',
+        imageAiHint: 'organization logo'
+    },
+    {
+        id: 'org-3',
+        nameKey: 'org_3_name',
+        descriptionKey: 'org_3_desc',
+        logoUrl: 'https://placehold.co/400x400.png',
+        websiteUrl: '#',
+        imageAiHint: 'organization logo'
+    }
+]

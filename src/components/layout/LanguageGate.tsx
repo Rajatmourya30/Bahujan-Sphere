@@ -12,6 +12,10 @@ export function LanguageGate({ children }: { children: React.ReactNode }) {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
+    if (pathname.startsWith('/admin')) {
+      setIsReady(true);
+      return;
+    }
     if (!isLanguageLoading) {
       if (!language) {
         if (pathname !== '/language-selection') {

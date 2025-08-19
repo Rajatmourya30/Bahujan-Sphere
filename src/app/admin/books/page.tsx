@@ -5,16 +5,13 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth, db, storage } from '@/lib/firebase';
-import { collection, onSnapshot, query, where, doc, deleteDoc, writeBatch, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, doc, deleteDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BookManagementTable } from '@/components/admin/BookManagementTable';
 import type { Book } from '@/lib/books';
 import { PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { BookSubmissionForm } from '@/components/admin/submissions/BookSubmissionForm';
-import { ReviewBookSubmissionsTab } from '@/components/admin/review/ReviewBookSubmissionsTab';
+import { BookManagementTable } from '@/components/admin/BookManagementTable';
 import { ManageBookDialog } from '@/components/admin/ManageBookDialog';
 import { getDownloadURL, ref, uploadBytes, deleteObject } from 'firebase/storage';
 
@@ -40,7 +37,7 @@ export default function ManageBooksPage() {
 
   useEffect(() => {
     if (!user) return;
-    const q = query(collection(db, 'books'), where('status', '==', 'approved'));
+    const q = query(collection(db, 'books'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetchedBooks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Book));
       setBooks(fetchedBooks);
@@ -59,36 +56,52 @@ export default function ManageBooksPage() {
   };
   
   const handleSave = async (bookData: Omit<Book, 'id' | 'imageUrl'>, newImageFile?: File) => {
-    if (!editingBook) return;
-
     try {
-      let newImageUrl = editingBook.imageUrl;
-      
-      if (newImageFile) {
-        // Delete old image if it exists and has a path
-        if (editingBook.imageStoragePath) {
-          const oldImageRef = ref(storage, editingBook.imageStoragePath);
-          await deleteObject(oldImageRef).catch(err => console.error("Old image delete failed, continuing:", err));
+      if (editingBook) { // Editing existing book
+        let newImageUrl = editingBook.imageUrl;
+        let newImageStoragePath = editingBook.imageStoragePath;
+        
+        if (newImageFile) {
+          if (editingBook.imageStoragePath) {
+            const oldImageRef = ref(storage, editingBook.imageStoragePath);
+            await deleteObject(oldImageRef).catch(err => console.error("Old image delete failed:", err));
+          }
+          const newImageRef = ref(storage, `images/books/${Date.now()}-${newImageFile.name}`);
+          const uploadResult = await uploadBytes(newImageRef, newImageFile);
+          newImageUrl = await getDownloadURL(uploadResult.ref);
+          newImageStoragePath = newImageRef.fullPath;
         }
 
-        // Upload new image
+        await updateDoc(doc(db, 'books', editingBook.id), {
+          ...bookData,
+          imageUrl: newImageUrl,
+          imageStoragePath: newImageStoragePath,
+        });
+
+        toast({ title: 'Book Updated', description: 'The book has been successfully updated.' });
+
+      } else { // Adding new book
+        if (!newImageFile) {
+            toast({ title: 'Image Required', description: 'Please provide an image for the new book.', variant: 'destructive' });
+            return;
+        }
+
         const newImageRef = ref(storage, `images/books/${Date.now()}-${newImageFile.name}`);
         const uploadResult = await uploadBytes(newImageRef, newImageFile);
-        newImageUrl = await getDownloadURL(uploadResult.ref);
-        
-        // Add storage path for future deletions
-        (bookData as Book).imageStoragePath = newImageRef.fullPath;
+        const newImageUrl = await getDownloadURL(uploadResult.ref);
+
+        await addDoc(collection(db, 'books'), {
+            ...bookData,
+            imageUrl: newImageUrl,
+            imageStoragePath: newImageRef.fullPath,
+            createdAt: serverTimestamp(),
+        });
+
+        toast({ title: 'Book Added', description: 'The new book has been successfully added.' });
       }
-
-      await updateDoc(doc(db, 'books', editingBook.id), {
-        ...bookData,
-        imageUrl: newImageUrl
-      });
-
-      toast({ title: 'Book Updated', description: 'The book has been successfully updated.' });
     } catch (error) {
-      console.error('Error updating book:', error);
-      toast({ title: 'Error', description: 'Could not update the book.', variant: 'destructive' });
+      console.error('Error saving book:', error);
+      toast({ title: 'Error', description: 'Could not save the book.', variant: 'destructive' });
     }
   };
 
@@ -116,36 +129,22 @@ export default function ManageBooksPage() {
 
   return (
     <div className="space-y-8">
-      <header>
-        <h1 className="font-headline text-3xl font-bold">Manage Books</h1>
-        <p className="text-muted-foreground">Add, edit, or remove books for the affiliate section.</p>
+      <header className="flex justify-between items-center">
+        <div>
+          <h1 className="font-headline text-3xl font-bold">Manage Books</h1>
+          <p className="text-muted-foreground">Add, edit, or remove books for the affiliate section.</p>
+        </div>
+        <Button onClick={() => handleOpenDialog()}>
+          <PlusCircle className="mr-2" />
+          Add Book
+        </Button>
       </header>
       
-       <Tabs defaultValue="manage" className="w-full">
-        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
-           <TabsTrigger value="manage">Manage Books</TabsTrigger>
-           <TabsTrigger value="single-book">Submit Book</TabsTrigger>
-           <TabsTrigger value="review">Review Submissions</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="manage" className="mt-6">
-            <BookManagementTable
-              books={books}
-              onEdit={handleOpenDialog}
-              onRemove={handleRemove}
-            />
-        </TabsContent>
-        
-        <TabsContent value="single-book" className="mt-6">
-          <BookSubmissionForm />
-        </TabsContent>
-        
-        <TabsContent value="review" className="mt-6">
-          <ReviewBookSubmissionsTab currentUser={user} />
-        </TabsContent>
-        
-      </Tabs>
-
+      <BookManagementTable
+        books={books}
+        onEdit={handleOpenDialog}
+        onRemove={handleRemove}
+      />
 
       {isDialogOpen && (
         <ManageBookDialog

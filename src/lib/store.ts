@@ -1,6 +1,5 @@
 
 import type { TranslationKey } from './i18n/translations';
-import type { Timestamp } from 'firebase/firestore';
 
 export interface BahujanStore {
   id: string;
@@ -9,15 +8,40 @@ export interface BahujanStore {
   imageUrl: string;
   imageStoragePath?: string;
   storeUrl: string;
-  status?: 'pending' | 'approved' | 'rejected';
-  submittedBy?: string;
-  submittedAt?: Timestamp;
-  approvedBy?: string;
-  approvedAt?: Timestamp;
-  rejectionReason?: string;
-  // This field is added to pending submissions for easier display in review tables
-  title?: string;
+  imageAiHint: string;
 }
 
-// This static data is no longer used by the live app but is kept for reference.
-export const allBahujanStores: BahujanStore[] = [];
+export const allBahujanStores: BahujanStore[] = [
+    {
+        id: 'store-1',
+        nameKey: 'store_name_1',
+        descriptionKey: 'store_desc_1',
+        imageUrl: 'https://placehold.co/400x400.png',
+        storeUrl: '#',
+        imageAiHint: 'store logo'
+    },
+    {
+        id: 'store-2',
+        nameKey: 'store_name_2',
+        descriptionKey: 'store_desc_2',
+        imageUrl: 'https://placehold.co/400x400.png',
+        storeUrl: '#',
+        imageAiHint: 'bookstore'
+    },
+    {
+        id: 'store-3',
+        nameKey: 'store_name_3',
+        descriptionKey: 'store_desc_3',
+        imageUrl: 'https://placehold.co/400x400.png',
+        storeUrl: '#',
+        imageAiHint: 'art supplies'
+    },
+    {
+        id: 'store-4',
+        nameKey: 'store_name_4',
+        descriptionKey: 'store_desc_4',
+        imageUrl: 'https://placehold.co/400x400.png',
+        storeUrl: '#',
+        imageAiHint: 't-shirt'
+    }
+]

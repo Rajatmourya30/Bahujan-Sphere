@@ -5,16 +5,15 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth, db, storage } from '@/lib/firebase';
-import { collection, onSnapshot, query, where, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, doc, deleteDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { KnowledgeOrganization } from '@/lib/knowledge-hub';
 import { KnowledgeHubTable } from '@/components/admin/KnowledgeHubTable';
-import { KnowledgeHubSubmissionForm } from '@/components/admin/submissions/KnowledgeHubSubmissionForm';
-import { ReviewKnowledgeHubSubmissionsTab } from '@/components/admin/review/ReviewKnowledgeHubSubmissionsTab';
 import { ManageOrganizationDialog } from '@/components/admin/ManageOrganizationDialog';
 import { getDownloadURL, ref, uploadBytes, deleteObject } from 'firebase/storage';
+import { Button } from '@/components/ui/button';
+import { PlusCircle } from 'lucide-react';
 
 export default function ManageKnowledgeHubPage() {
   const router = useRouter();
@@ -38,7 +37,7 @@ export default function ManageKnowledgeHubPage() {
 
   useEffect(() => {
     if (!user) return;
-    const q = query(collection(db, 'knowledgeHub'), where('status', '==', 'approved'));
+    const q = query(collection(db, 'knowledgeHub'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetchedOrgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as KnowledgeOrganization));
       setOrganizations(fetchedOrgs);
@@ -57,33 +56,48 @@ export default function ManageKnowledgeHubPage() {
   };
   
   const handleSave = async (orgData: Omit<KnowledgeOrganization, 'id' | 'logoUrl'>, newImageFile?: File) => {
-    if (!editingOrg) return;
-
     try {
-        let newLogoUrl = editingOrg.logoUrl;
-        
-        if (newImageFile) {
-            if (editingOrg.logoStoragePath) {
-                const oldImageRef = ref(storage, editingOrg.logoStoragePath);
-                await deleteObject(oldImageRef).catch(err => console.error("Old image delete failed, continuing:", err));
+        if (editingOrg) { // Editing existing org
+            let newLogoUrl = editingOrg.logoUrl;
+            let newLogoStoragePath = editingOrg.logoStoragePath;
+            
+            if (newImageFile) {
+                if (editingOrg.logoStoragePath) {
+                    const oldImageRef = ref(storage, editingOrg.logoStoragePath);
+                    await deleteObject(oldImageRef).catch(err => console.error("Old image delete failed:", err));
+                }
+                const newImageRef = ref(storage, `images/logos/${Date.now()}-${newImageFile.name}`);
+                const uploadResult = await uploadBytes(newImageRef, newImageFile);
+                newLogoUrl = await getDownloadURL(uploadResult.ref);
+                newLogoStoragePath = newImageRef.fullPath;
             }
 
+            await updateDoc(doc(db, 'knowledgeHub', editingOrg.id), {
+                ...orgData,
+                logoUrl: newLogoUrl,
+                logoStoragePath: newLogoStoragePath
+            });
+            toast({ title: 'Organization Updated', description: 'The organization has been successfully updated.' });
+        } else { // Adding new org
+            if (!newImageFile) {
+                toast({ title: 'Image Required', description: 'Please provide a logo for the new organization.', variant: 'destructive' });
+                return;
+            }
             const newImageRef = ref(storage, `images/logos/${Date.now()}-${newImageFile.name}`);
             const uploadResult = await uploadBytes(newImageRef, newImageFile);
-            newLogoUrl = await getDownloadURL(uploadResult.ref);
-            
-            (orgData as KnowledgeOrganization).logoStoragePath = newImageRef.fullPath;
+            const newLogoUrl = await getDownloadURL(uploadResult.ref);
+
+            await addDoc(collection(db, 'knowledgeHub'), {
+                ...orgData,
+                logoUrl: newLogoUrl,
+                logoStoragePath: newImageRef.fullPath,
+                createdAt: serverTimestamp(),
+            });
+            toast({ title: 'Organization Added', description: 'The new organization has been successfully added.' });
         }
-
-        await updateDoc(doc(db, 'knowledgeHub', editingOrg.id), {
-            ...orgData,
-            logoUrl: newLogoUrl
-        });
-
-        toast({ title: 'Organization Updated', description: 'The organization has been successfully updated.' });
     } catch (error) {
-        console.error('Error updating organization:', error);
-        toast({ title: 'Error', description: 'Could not update the organization.', variant: 'destructive' });
+        console.error('Error saving organization:', error);
+        toast({ title: 'Error', description: 'Could not save the organization.', variant: 'destructive' });
     }
   };
 
@@ -110,36 +124,22 @@ export default function ManageKnowledgeHubPage() {
 
   return (
     <div className="space-y-8">
-      <header>
-        <h1 className="font-headline text-3xl font-bold">Manage Knowledge Hub</h1>
-        <p className="text-muted-foreground">Add, edit, or remove organizations.</p>
+      <header className="flex justify-between items-center">
+        <div>
+          <h1 className="font-headline text-3xl font-bold">Manage Knowledge Hub</h1>
+          <p className="text-muted-foreground">Add, edit, or remove organizations.</p>
+        </div>
+        <Button onClick={() => handleOpenDialog()}>
+            <PlusCircle className="mr-2" />
+            Add Organization
+        </Button>
       </header>
 
-      <Tabs defaultValue="manage" className="w-full">
-        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
-           <TabsTrigger value="manage">Manage Organizations</TabsTrigger>
-           <TabsTrigger value="single-org">Submit Organization</TabsTrigger>
-           <TabsTrigger value="review">Review Submissions</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="manage" className="mt-6">
-            <KnowledgeHubTable
-              organizations={organizations}
-              onEdit={handleOpenDialog}
-              onRemove={handleRemove}
-            />
-        </TabsContent>
-        
-        <TabsContent value="single-org" className="mt-6">
-          <KnowledgeHubSubmissionForm />
-        </TabsContent>
-        
-        <TabsContent value="review" className="mt-6">
-          <ReviewKnowledgeHubSubmissionsTab currentUser={user} />
-        </TabsContent>
-        
-      </Tabs>
-
+      <KnowledgeHubTable
+        organizations={organizations}
+        onEdit={handleOpenDialog}
+        onRemove={handleRemove}
+      />
 
       {isDialogOpen && (
         <ManageOrganizationDialog

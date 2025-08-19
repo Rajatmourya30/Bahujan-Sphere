@@ -23,11 +23,10 @@ interface PendingReadingRoomItem extends PendingSubmission {
 
 interface ReviewReadingRoomSubmissionsTableProps {
     submissions: PendingReadingRoomItem[];
-    onReview: (submission: PendingSubmission, action: 'approve' | 'reject', reason?: string) => void;
-    openRejectionDialog: (submission: PendingSubmission) => void;
+    onReview: (submission: PendingSubmission, action: 'approve' | 'reject') => void;
 }
 
-export function ReviewReadingRoomSubmissionsTable({ submissions, onReview, openRejectionDialog }: ReviewReadingRoomSubmissionsTableProps) {
+export function ReviewReadingRoomSubmissionsTable({ submissions, onReview }: ReviewReadingRoomSubmissionsTableProps) {
     return (
         <Table>
             <TableHeader>
@@ -95,7 +94,7 @@ export function ReviewReadingRoomSubmissionsTable({ submissions, onReview, openR
                                     variant="outline"
                                     size="sm"
                                     className="text-red-600 border-red-600/40 hover:bg-red-50 hover:text-red-700"
-                                    onClick={() => openRejectionDialog(submission)}
+                                    onClick={() => onReview(submission, 'reject')}
                                 >
                                     <X className="mr-2 h-4 w-4" />
                                     Reject
