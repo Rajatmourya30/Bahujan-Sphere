@@ -101,7 +101,7 @@ export default function SignupPage() {
                 description: t('signup_page.toast_success_description'),
             });
             
-            router.push('/profile');
+            router.push('/');
         } catch (error: any) {
             let description = 'An unexpected error occurred. Please try again.';
             if (error.code === 'auth/email-already-in-use') {
