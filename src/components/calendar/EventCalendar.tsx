@@ -95,18 +95,16 @@ export function EventCalendar({ events = [] }: EventCalendarProps) {
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-5">
         <div className="lg:col-span-2">
-            <Card>
-              <CardContent className="flex justify-center p-0">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={setDate}
-                  className="p-4"
-                  eventDates={eventDates}
-                />
-              </CardContent>
+            <Card className="p-0">
+              <Calendar
+                mode="single"
+                selected={date}
+                onSelect={setDate}
+                className="p-4"
+                eventDates={eventDates}
+              />
             </Card>
         </div>
         
@@ -119,7 +117,7 @@ export function EventCalendar({ events = [] }: EventCalendarProps) {
             })}
           </h2>
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-6">
               {dayEvents.length > 0 ? (
                 <div className="w-full space-y-4">
                   {dayEvents.map((event, index) => (
@@ -131,7 +129,9 @@ export function EventCalendar({ events = [] }: EventCalendarProps) {
                   ))}
                 </div>
               ) : (
-                <p className="py-8 text-center text-muted-foreground">{t('event_calendar.no_events')}</p>
+                <div className="flex items-center justify-center h-48">
+                    <p className="text-center text-muted-foreground">{t('event_calendar.no_events')}</p>
+                </div>
               )}
             </CardContent>
           </Card>
