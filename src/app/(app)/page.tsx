@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { CalendarEvent } from "@/lib/events";
 import { collection, onSnapshot, query, where, type Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { parse } from 'date-fns';
 
 export default function Home() {
   const { t } = useLanguage();
@@ -22,20 +23,17 @@ export default function Home() {
             let eventDate: Date;
 
             if (data.date && typeof data.date.toDate === 'function') {
-                // Handle Firestore Timestamp
                 eventDate = (data.date as Timestamp).toDate();
             } else if (data.date && typeof data.date === 'string') {
-                // Handle string date from CSV upload or other sources
-                const parsedDate = new Date(data.date);
+                // Use a robust parser instead of new Date()
+                const parsedDate = parse(data.date, 'd MMMM yyyy', new Date());
                  if (!isNaN(parsedDate.getTime())) {
                     eventDate = parsedDate;
                 } else {
                     console.warn(`Invalid date string encountered: "${data.date}" for doc ID ${doc.id}`);
-                    // Assign a fallback date to prevent crashing, but this indicates a data quality issue.
                     eventDate = new Date(); 
                 }
             } else {
-                // Fallback for invalid, missing, or null date field
                  console.warn(`Missing or invalid date field for doc ID ${doc.id}:`, data.date);
                 eventDate = new Date();
             }
