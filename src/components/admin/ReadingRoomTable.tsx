@@ -46,7 +46,6 @@ export function ReadingRoomTable({ documents, onEdit, onDelete }: ReadingRoomTab
                                                 alt={doc.title}
                                                 fill
                                                 className="object-cover rounded-md"
-                                                data-ai-hint="book cover"
                                             />
                                         </div>
                                         <span className="font-bold">{doc.title}</span>
@@ -61,7 +60,7 @@ export function ReadingRoomTable({ documents, onEdit, onDelete }: ReadingRoomTab
                                     <div className="flex items-center gap-2">
                                         <Button asChild size="sm" variant="outline">
                                             <Link href={`/reading-room/${doc.id}`} target="_blank" rel="noopener noreferrer">
-                                                <BookOpen className="mr-2" />
+                                                <BookOpen className="mr-2 h-4 w-4" />
                                                 View
                                             </Link>
                                         </Button>
@@ -81,7 +80,7 @@ export function ReadingRoomTable({ documents, onEdit, onDelete }: ReadingRoomTab
                                                     className="text-destructive focus:text-destructive focus:bg-destructive/10"
                                                     onClick={() => onDelete(doc)}
                                                 >
-                                                    <Trash2 className="mr-2" />
+                                                    <Trash2 className="mr-2 h-4 w-4" />
                                                     Delete
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
