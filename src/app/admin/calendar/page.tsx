@@ -13,7 +13,7 @@ import { BulkUploadForm } from '@/components/submit/BulkUploadForm';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { ReviewSubmissionsTab } from '@/components/admin/ReviewSubmissionsTab';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { isValid } from 'date-fns';
 import { parseDate } from '@/lib/date-parser';
@@ -72,16 +72,52 @@ export default function ManageCalendarPage() {
     setIsDialogOpen(true);
   };
 
-  const handleSave = (eventData: Omit<CalendarEvent, 'id'>) => {
-    // This logic would need to be updated to save to Firestore
-    console.log("Saving event:", eventData);
-    toast({ title: "Note", description: "Editing functionality is not yet fully implemented in this view." });
+  const handleSave = async (eventData: Omit<CalendarEvent, 'id'>) => {
+    if (!firebaseUser) {
+        toast({ title: "Authentication Error", description: "You must be logged in to save.", variant: "destructive" });
+        return;
+    }
+
+    try {
+        if (editingEvent) {
+            // Update existing event
+            const eventRef = doc(db, 'calendarEvents', editingEvent.id);
+            await updateDoc(eventRef, {
+                ...eventData,
+                // Firestore handles Timestamps, but JS Date needs to be compatible.
+                // If your database stores dates as strings or Timestamps, adjust accordingly.
+                // For this implementation, we assume it's fine to pass the JS Date object.
+            });
+            toast({ title: "Event Updated", description: "The event has been successfully updated." });
+        } else {
+            // Add new event
+            await addDoc(collection(db, 'calendarEvents'), {
+                ...eventData,
+                status: 'approved',
+                approvedBy: firebaseUser.uid,
+                approvedAt: serverTimestamp(),
+            });
+            toast({ title: "Event Added", description: "The new event has been added to the calendar." });
+        }
+        setIsDialogOpen(false);
+        setEditingEvent(null);
+    } catch (error) {
+        console.error("Error saving event:", error);
+        toast({ title: "Error", description: "Could not save the event.", variant: "destructive" });
+    }
   };
 
-  const handleRemove = (eventId: string) => {
-    // This logic would need to be updated to remove from Firestore
-     console.log("Removing event:", eventId);
-     toast({ title: "Note", description: "Removal functionality is not yet fully implemented in this view." });
+  const handleRemove = async (eventId: string) => {
+     if (!window.confirm("Are you sure you want to delete this event? This action cannot be undone.")) {
+        return;
+    }
+    try {
+        await deleteDoc(doc(db, 'calendarEvents', eventId));
+        toast({ title: "Event Deleted", description: "The event has been successfully removed." });
+    } catch (error) {
+        console.error("Error deleting event:", error);
+        toast({ title: "Error", description: "Could not delete the event.", variant: "destructive" });
+    }
   };
   
   if (isLoading) {
