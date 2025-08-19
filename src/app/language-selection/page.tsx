@@ -13,7 +13,7 @@ export default function LanguageSelectionPage() {
 
   const handleLanguageSelect = (langCode: string) => {
     setLanguage(langCode);
-    router.push('/');
+    router.push('/signup');
   };
 
   return (
