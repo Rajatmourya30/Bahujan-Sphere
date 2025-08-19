@@ -39,7 +39,7 @@ export default function UserLoginPage() {
   };
 
   return (
-    <div className="flex flex-grow items-center justify-center">
+    <div className="flex flex-grow items-center justify-center min-h-[calc(100vh-10rem)]">
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle className="text-2xl font-headline">{t('login_page.title')}</CardTitle>
