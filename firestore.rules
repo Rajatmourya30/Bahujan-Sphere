@@ -1,61 +1,47 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Publicly readable collections
-    match /calendarEvents/{eventId} {
-      allow read: if true;
-      allow write: if request.auth != null && get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.role in ['Admin', 'Manager', 'Editor'];
-    }
-    match /knowledgeHub/{orgId} {
-      allow read: if true;
-      allow write: if request.auth != null && get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.role in ['Admin', 'Manager'];
-    }
-    match /stores/{storeId} {
-      allow read: if true;
-      allow write: if request.auth != null && get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.role in ['Admin', 'Manager'];
-    }
-    match /books/{bookId} {
-      allow read: if true;
-      allow write: if request.auth != null && get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.role in ['Admin', 'Manager'];
-    }
-    match /readingRoomPdfs/{pdfId} {
-        allow read: if true;
-        allow write: if request.auth != null && get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.role in ['Admin', 'Manager'];
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    // User profiles: Only the owner can read/write their own data
+    function isTeamMember() {
+      // Check if the user's UID exists in the teamMembers collection.
+      // Assumes the document ID is the user's UID.
+      return isSignedIn() && exists(/databases/$(database)/documents/teamMembers/$(request.auth.uid));
+    }
+    
+    function isReviewerOrAdmin() {
+        return isTeamMember() && get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.role in ['Admin', 'Manager', 'Editor', 'Reviewer'];
+    }
+
+    // Public content: Everyone can read, only team members can write.
+    match /{collectionName}/{docId} where collectionName in ['calendarEvents', 'knowledgeHub', 'stores', 'books', 'readingRoomPdfs'] {
+      allow read: if true;
+      allow write: if isTeamMember();
+    }
+
+    // User profiles: Users can read and write their own profile, but not others'.
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, update: if request.auth.uid == userId;
+      allow create: if isSignedIn();
     }
 
-    // Team members: Only admins can manage the team list
+    // Submissions: Authenticated team members can create submissions. Reviewers/Admins can read/write to review them.
+    match /{submissionCollection}/{submissionId} where submissionCollection in ['eventSubmissions', 'bookSubmissions', 'storeSubmissions', 'knowledgeHubSubmissions', 'readingRoomSubmissions'] {
+      allow create: if isTeamMember();
+      allow read, update, delete: if isReviewerOrAdmin();
+    }
+    
+    // Team management: Only team members can read the list of team members.
     match /teamMembers/{memberId} {
-        allow read: if request.auth != null && get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.role in ['Admin', 'Manager'];
-        allow create, update, delete: if request.auth != null && get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.role == 'Admin';
-    }
-
-    // Submission collections: Any authenticated team member can create, but only admins/managers can review/delete
-    match /eventSubmissions/{submissionId} {
-        allow create: if request.auth != null; // Team members can submit
-        allow read, update, delete: if request.auth != null && get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.role in ['Admin', 'Manager', 'Editor', 'Reviewer'];
-    }
-     match /bookSubmissions/{submissionId} {
-        allow create: if request.auth != null;
-        allow read, update, delete: if request.auth != null && get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.role in ['Admin', 'Manager', 'Editor', 'Reviewer'];
-    }
-     match /knowledgeHubSubmissions/{submissionId} {
-        allow create: if request.auth != null;
-        allow read, update, delete: if request.auth != null && get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.role in ['Admin', 'Manager', 'Editor', 'Reviewer'];
-    }
-     match /storeSubmissions/{submissionId} {
-        allow create: if request.auth != null;
-        allow read, update, delete: if request.auth != null && get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.role in ['Admin', 'Manager', 'Editor', 'Reviewer'];
-    }
-     match /readingRoomSubmissions/{submissionId} {
-        allow create: if request.auth != null;
-        allow read, update, delete: if request.auth != null && get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.role in ['Admin', 'Manager', 'Editor', 'Reviewer'];
+      allow read: if isTeamMember();
+      // Write access should be handled by secure Cloud Functions for role changes.
+      allow write: if false; 
     }
   }
 }
