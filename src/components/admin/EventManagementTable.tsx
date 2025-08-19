@@ -18,7 +18,7 @@ import type { CalendarEvent } from "@/lib/events";
 import { Badge } from "../ui/badge";
 import { Input } from "../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { format, isSameDay } from "date-fns";
+import { format, isSameDay, isValid } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
 import { cn } from "@/lib/utils";
@@ -43,12 +43,14 @@ export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventM
     }));
     
     const years = useMemo(() => {
-        const eventYears = new Set(events.map(event => event.date.getFullYear()));
+        const eventYears = new Set(events.map(event => isValid(event.date) ? event.date.getFullYear() : 0).filter(y => y > 0));
         return Array.from(eventYears).sort((a, b) => b - a);
     }, [events]);
 
     const filteredEvents = useMemo(() => {
         return events.filter(event => {
+            if (!isValid(event.date)) return false;
+
             const title = event.title?.toLowerCase() || '';
             const matchesSearch = title.includes(searchTerm.toLowerCase());
             
@@ -140,12 +142,14 @@ export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventM
                                 />
                             </PopoverContent>
                         </Popover>
-                        <Button
-                            variant={hasActiveFilters ? "secondary" : "ghost"}
-                            onClick={clearFilters}
-                        >
-                            Show All
-                        </Button>
+                        {hasActiveFilters && (
+                            <Button
+                                variant="ghost"
+                                onClick={clearFilters}
+                            >
+                                Clear
+                            </Button>
+                        )}
                     </div>
                      <Button onClick={onAdd} className="w-full sm:w-auto">
                         <PlusCircle className="mr-2 h-4 w-4" />
@@ -170,7 +174,7 @@ export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventM
                                     <TableCell className="font-medium">
                                         <span className="font-bold">{event.title}</span>
                                     </TableCell>
-                                    <TableCell>{format(event.date, 'PPP')}</TableCell>
+                                    <TableCell>{isValid(event.date) ? format(event.date, 'PPP') : 'Invalid Date'}</TableCell>
                                     <TableCell>
                                         <div className="flex flex-wrap gap-1">
                                             {event.tags?.map(tag => (

@@ -25,8 +25,7 @@ export default function Home() {
             if (data.date && typeof data.date.toDate === 'function') {
                 eventDate = (data.date as Timestamp).toDate();
             } else if (data.date && typeof data.date === 'string') {
-                // Use a robust parser instead of new Date()
-                const parsedDate = parse(data.date, 'd MMMM yyyy', new Date());
+                const parsedDate = parse(data.date, 'd MMMM yyyy', new Date(0));
                  if (!isNaN(parsedDate.getTime())) {
                     eventDate = parsedDate;
                 } else {
