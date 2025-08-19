@@ -4,7 +4,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLanguage } from '@/hooks/use-language';
-import { allBooks, type Book } from '@/lib/books';
+import { type Book } from '@/lib/books';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -14,8 +14,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useBookmarkStore } from '@/hooks/use-bookmarks';
 import { cn } from '@/lib/utils';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 
 function BookCard({ book }: { book: Book }) {
     const { t } = useLanguage();
@@ -86,12 +87,16 @@ export default function BooksPage() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const fetchBooks = async () => {
-            // Simulate API fetch
-            setBooks(allBooks);
-            setIsLoading(false);
-        };
-        fetchBooks();
+        const q = query(collection(db, 'books'), where('status', '==', 'approved'));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+          const fetchedBooks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Book));
+          setBooks(fetchedBooks);
+          setIsLoading(false);
+        }, (error) => {
+          console.error("Error fetching books:", error);
+          setIsLoading(false);
+        });
+        return () => unsubscribe();
     }, []);
 
     const filteredBooks = useMemo(() => {

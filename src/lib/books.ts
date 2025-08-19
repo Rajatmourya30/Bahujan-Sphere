@@ -1,5 +1,6 @@
 
 import type { TranslationKey } from './i18n/translations';
+import type { Timestamp } from 'firebase/firestore';
 
 export interface Book {
   id: string;
@@ -10,8 +11,14 @@ export interface Book {
   imageAiHint: string;
   affiliateUrl: string;
   pdfUrl?: string;
+  status?: 'pending' | 'approved' | 'rejected';
+  submittedBy?: string;
+  submittedAt?: Timestamp;
+  approvedBy?: string;
+  approvedAt?: Timestamp;
 }
 
+// This static data is no longer used by the live app but is kept for reference.
 export const allBooks: Book[] = [
   {
     id: 'book-1',

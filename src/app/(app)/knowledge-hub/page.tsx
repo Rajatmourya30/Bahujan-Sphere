@@ -4,7 +4,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useLanguage } from '@/hooks/use-language';
-import { allKnowledgeOrganizations, type KnowledgeOrganization } from '@/lib/knowledge-hub';
+import { type KnowledgeOrganization } from '@/lib/knowledge-hub';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,9 +13,11 @@ import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useBookmarkStore } from '@/hooks/use-bookmarks';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
+
 
 function OrganizationCard({ organization }: { organization: KnowledgeOrganization }) {
     const { t } = useLanguage();
@@ -85,12 +87,16 @@ export default function KnowledgeHubPage() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const fetchOrgs = async () => {
-            // Simulate API fetch
-            setOrganizations(allKnowledgeOrganizations);
+        const q = query(collection(db, 'knowledgeHub'), where('status', '==', 'approved'));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const fetchedOrgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as KnowledgeOrganization));
+            setOrganizations(fetchedOrgs);
             setIsLoading(false);
-        };
-        fetchOrgs();
+        }, (error) => {
+            console.error("Error fetching organizations:", error);
+            setIsLoading(false);
+        });
+        return () => unsubscribe();
     }, []);
 
     const filteredOrganizations = useMemo(() => {

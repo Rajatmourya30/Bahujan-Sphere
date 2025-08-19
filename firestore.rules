@@ -1,101 +1,101 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper Functions
+  
+    // Helper function to check if a user is authenticated
     function isAuthenticated() {
       return request.auth != null;
     }
 
+    // Helper function to get a user's role from the teamMembers collection
     function getRole() {
       return get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.role;
     }
 
-    // Rules for Team Members Collection
+    // Rules for the teamMembers collection
     match /teamMembers/{userId} {
-      allow read: if isAuthenticated() && (request.auth.uid == userId || getRole() == 'Admin');
-      allow create, update, delete: if isAuthenticated() && getRole() == 'Admin';
+      // Allow a user to read their own role
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      // Only admins can create, update, or delete team members
+      allow write: if isAuthenticated() && getRole() == 'admin';
+    }
+
+    // --- SUBMISSION COLLECTIONS ---
+
+    // Rules for eventSubmissions
+    match /eventSubmissions/{submissionId} {
+      allow read, delete: if isAuthenticated() && getRole() == 'admin';
+      allow create: if isAuthenticated()
+                    && getRole() in ['member', 'admin']
+                    && request.resource.data.status == 'pending'
+                    && request.resource.data.submittedBy == request.auth.uid;
+    }
+
+    // Rules for readingRoomSubmissions
+    match /readingRoomSubmissions/{submissionId} {
+      allow read, delete: if isAuthenticated() && getRole() == 'admin';
+      allow create: if isAuthenticated()
+                    && getRole() in ['member', 'admin']
+                    && request.resource.data.status == 'pending'
+                    && request.resource.data.submittedBy == request.auth.uid;
     }
     
-    // Rules for Users Collection
-    match /users/{userId} {
-        allow read: if true;
-        allow create: if isAuthenticated();
-        allow update: if isAuthenticated() && request.auth.uid == userId;
-        allow delete: if isAuthenticated() && request.auth.uid == userId;
+    // Rules for bookSubmissions
+    match /bookSubmissions/{submissionId} {
+      allow read, delete: if isAuthenticated() && getRole() == 'admin';
+      allow create: if isAuthenticated()
+                    && getRole() in ['member', 'admin']
+                    && request.resource.data.status == 'pending'
+                    && request.resource.data.submittedBy == request.auth.uid;
     }
 
-    // Generic Content Submission Collection Rules
-    function submissionRules() {
-      return {
-        // Any authenticated team member can create a submission
-        'allow create': function() {
-          return isAuthenticated() && getRole() in ['Contributor', 'Reviewer', 'Editor', 'Admin']
-                 && request.resource.data.status == 'pending'
-                 && request.resource.data.submittedBy == request.auth.uid;
-        },
-        // Only Admins can read, update (approve/reject), or delete submissions
-        'allow read, update, delete': function() {
-          return isAuthenticated() && getRole() == 'Admin';
-        }
-      }
+    // Rules for storeSubmissions
+    match /storeSubmissions/{submissionId} {
+      allow read, delete: if isAuthenticated() && getRole() == 'admin';
+      allow create: if isAuthenticated()
+                    && getRole() in ['member', 'admin']
+                    && request.resource.data.status == 'pending'
+                    && request.resource.data.submittedBy == request.auth.uid;
     }
     
-    match /eventSubmissions/{docId} {
-        allow create: if submissionRules()['allow create']();
-        allow read, update, delete: if submissionRules()['allow read, update, delete']();
-    }
-    match /readingRoomSubmissions/{docId} {
-        allow create: if submissionRules()['allow create']();
-        allow read, update, delete: if submissionRules()['allow read, update, delete']();
-    }
-     match /storeSubmissions/{docId} {
-        allow create: if submissionRules()['allow create']();
-        allow read, update, delete: if submissionRules()['allow read, update, delete']();
-    }
-     match /knowledgeHubSubmissions/{docId} {
-        allow create: if submissionRules()['allow create']();
-        allow read, update, delete: if submissionRules()['allow read, update, delete']();
-    }
-     match /bookSubmissions/{docId} {
-        allow create: if submissionRules()['allow create']();
-        allow read, update, delete: if submissionRules()['allow read, update, delete']();
+    // Rules for knowledgeHubSubmissions
+    match /knowledgeHubSubmissions/{submissionId} {
+      allow read, delete: if isAuthenticated() && getRole() == 'admin';
+      allow create: if isAuthenticated()
+                    && getRole() in ['member', 'admin']
+                    && request.resource.data.status == 'pending'
+                    && request.resource.data.submittedBy == request.auth.uid;
     }
 
-    // Generic Live Content Collection Rules
-    function liveContentRules() {
-      return {
-         'allow read': function() {
-          // Public can read approved content. Admins can read anything.
-          return resource.data.status == 'approved' || (isAuthenticated() && getRole() == 'Admin');
-        },
-        'allow create, update, delete': function() {
-          // Only admins can directly manipulate live content
-          return isAuthenticated() && getRole() == 'Admin';
-        }
-      }
+
+    // --- LIVE CONTENT COLLECTIONS ---
+
+    // Public read-only, admin write
+    match /readingRoomPdfs/{pdfId} {
+      allow read: if true;
+      allow write: if isAuthenticated() && getRole() == 'admin';
+    }
+    
+    match /books/{bookId} {
+      allow read: if resource.data.status == 'approved';
+      allow write: if isAuthenticated() && getRole() == 'admin';
     }
 
-    match /events/{docId} {
-        allow read: if liveContentRules()['allow read']();
-        allow create, update, delete: if liveContentRules()['allow create, update, delete']();
+    match /stores/{storeId} {
+      allow read: if resource.data.status == 'approved';
+      allow write: if isAuthenticated() && getRole() == 'admin';
     }
-     match /readingRoomPdfs/{docId} {
-        allow read: if liveContentRules()['allow read']();
-        allow create, update, delete: if liveContentRules()['allow create, update, delete']();
+
+    match /knowledgeHub/{orgId} {
+      allow read: if resource.data.status == 'approved';
+      allow write: if isAuthenticated() && getRole() == 'admin';
     }
-      match /stores/{docId} {
-        allow read: if liveContentRules()['allow read']();
-        allow create, update, delete: if liveContentRules()['allow create, update, delete']();
-    }
-      match /knowledgeHub/{docId} {
-        allow read: if liveContentRules()['allow read']();
-        allow create, update, delete: if liveContentRules()['allow create, update, delete']();
-    }
-     match /books/{docId} {
-        allow read: if liveContentRules()['allow read']();
-        allow create, update, delete: if liveContentRules()['allow create, update, delete']();
+    
+    // Default deny all other collections
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

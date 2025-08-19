@@ -4,7 +4,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLanguage } from '@/hooks/use-language';
-import { allBahujanStores, type BahujanStore } from '@/lib/store';
+import { type BahujanStore } from '@/lib/store';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -14,8 +14,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useBookmarkStore } from '@/hooks/use-bookmarks';
 import { cn } from '@/lib/utils';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 
 function StoreCard({ store }: { store: BahujanStore }) {
     const { t } = useLanguage();
@@ -85,12 +86,16 @@ export default function StorePage() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const fetchStores = async () => {
-            // Simulate API fetch
-            setStores(allBahujanStores);
+        const q = query(collection(db, 'stores'), where('status', '==', 'approved'));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const fetchedStores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BahujanStore));
+            setStores(fetchedStores);
             setIsLoading(false);
-        };
-        fetchStores();
+        }, (error) => {
+            console.error("Error fetching stores:", error);
+            setIsLoading(false);
+        });
+        return () => unsubscribe();
     }, []);
 
     const filteredStores = useMemo(() => {

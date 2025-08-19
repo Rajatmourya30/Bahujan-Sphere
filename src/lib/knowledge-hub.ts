@@ -1,5 +1,6 @@
 
 import type { TranslationKey } from './i18n/translations';
+import type { Timestamp } from 'firebase/firestore';
 
 export interface KnowledgeOrganization {
   id: string;
@@ -8,8 +9,14 @@ export interface KnowledgeOrganization {
   logoUrl: string;
   imageAiHint: string;
   websiteUrl: string;
+  status?: 'pending' | 'approved' | 'rejected';
+  submittedBy?: string;
+  submittedAt?: Timestamp;
+  approvedBy?: string;
+  approvedAt?: Timestamp;
 }
 
+// This static data is no longer used by the live app but is kept for reference.
 export const allKnowledgeOrganizations: KnowledgeOrganization[] = [
   {
     id: 'org-1',
