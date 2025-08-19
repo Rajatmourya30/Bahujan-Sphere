@@ -7,7 +7,7 @@ import type { PendingReadingRoomItem } from '@/components/admin/ReviewReadingRoo
 
 type SampleSubmission = Omit<PendingReadingRoomItem, 'id' | 'submittedAt' | 'submittedBy' | 'status'>;
 
-export const sampleSubmissions: SampleSubmission[] = [
+const sampleSubmissions: SampleSubmission[] = [
     {
         title: "The Buddha and His Dhamma",
         author: "Dr. B. R. Ambedkar",
