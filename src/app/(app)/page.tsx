@@ -6,7 +6,7 @@ import { useLanguage } from "@/hooks/use-language";
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { CalendarEvent } from "@/lib/events";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { collection, onSnapshot, query, where, type Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 export default function Home() {
@@ -19,8 +19,27 @@ export default function Home() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
         const fetchedEvents = snapshot.docs.map(doc => {
             const data = doc.data();
-            // Convert Firestore timestamp to JS Date
-            const eventDate = data.date.toDate ? data.date.toDate() : new Date();
+            let eventDate: Date;
+
+            if (data.date && typeof data.date.toDate === 'function') {
+                // Handle Firestore Timestamp
+                eventDate = (data.date as Timestamp).toDate();
+            } else if (data.date && typeof data.date === 'string') {
+                // Handle string date from CSV upload or other sources
+                const parsedDate = new Date(data.date);
+                 if (!isNaN(parsedDate.getTime())) {
+                    eventDate = parsedDate;
+                } else {
+                    console.warn(`Invalid date string encountered: "${data.date}" for doc ID ${doc.id}`);
+                    // Assign a fallback date to prevent crashing, but this indicates a data quality issue.
+                    eventDate = new Date(); 
+                }
+            } else {
+                // Fallback for invalid, missing, or null date field
+                 console.warn(`Missing or invalid date field for doc ID ${doc.id}:`, data.date);
+                eventDate = new Date();
+            }
+
             return { id: doc.id, ...data, date: eventDate } as CalendarEvent;
         });
         setEvents(fetchedEvents);
