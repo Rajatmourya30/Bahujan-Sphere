@@ -16,7 +16,12 @@ import { EventDetailModal } from './EventDetailModal';
 import { Separator } from '../ui/separator';
 import { isSameDay } from 'date-fns';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { parseDate } from '@/lib/date-parser';
+import { isValid } from 'date-fns';
+import { Skeleton } from '../ui/skeleton';
+
 
 function EventDetail({ event, onReadMoreClick }: { event: CalendarEvent, onReadMoreClick: () => void }) {
   const { t } = useLanguage();
@@ -51,7 +56,7 @@ function EventDetail({ event, onReadMoreClick }: { event: CalendarEvent, onReadM
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
-        {tagsToDisplay.map((tag) => (
+        {tagsToDisplay?.map((tag) => (
           <Badge key={tag} variant="secondary">{tag}</Badge>
         ))}
       </div>
@@ -78,23 +83,43 @@ function EventDetail({ event, onReadMoreClick }: { event: CalendarEvent, onReadM
   );
 }
 
-interface EventCalendarProps {
-    events?: CalendarEvent[];
-}
-
-export function EventCalendar({ events = [] }: EventCalendarProps) {
+export function EventCalendar() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const { t } = useLanguage();
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const q = query(collection(db, 'calendarEvents'), where('status', '==', 'approved'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const fetchedEvents = snapshot.docs.map(doc => {
+            const data = doc.data();
+            const eventDate = parseDate(data.date);
+            if (!isValid(eventDate)) {
+                console.warn(`Invalid date value for doc ID ${doc.id}:`, data.date);
+            }
+            return { id: doc.id, ...data, date: eventDate } as CalendarEvent;
+        });
+        setEvents(fetchedEvents);
+        setIsLoading(false);
+    }, (error) => {
+        console.error("Error fetching events:", error);
+        setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const eventDates = useMemo(() => {
+    if (isLoading) return [];
     return events.map(event => event.date);
-  }, [events]);
+  }, [events, isLoading]);
 
   const dayEvents = useMemo(() => {
-    if (!date) return [];
-    return events.filter(event => isSameDay(event.date, date));
-  }, [date, events]);
+    if (!date || isLoading) return [];
+    return events.filter(event => isValid(event.date) && isSameDay(event.date, date));
+  }, [date, events, isLoading]);
 
   return (
     <>
@@ -107,6 +132,7 @@ export function EventCalendar({ events = [] }: EventCalendarProps) {
                 onSelect={setDate}
                 className="p-4"
                 eventDates={eventDates}
+                disabled={isLoading}
               />
             </Card>
         </div>
@@ -121,7 +147,13 @@ export function EventCalendar({ events = [] }: EventCalendarProps) {
           </h2>
           <Card>
             <CardContent className="p-6">
-              {dayEvents.length > 0 ? (
+              {isLoading ? (
+                <div className="space-y-4">
+                    <Skeleton className="h-6 w-3/4" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-1/2" />
+                </div>
+              ) : dayEvents.length > 0 ? (
                 <div className="w-full space-y-4">
                   {dayEvents.map((event, index) => (
                      <div key={event.id} className="space-y-2">
