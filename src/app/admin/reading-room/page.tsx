@@ -24,13 +24,22 @@ import { ReadingRoomBulkUpload } from '@/components/admin/ReadingRoomBulkUpload'
 export interface ReadingRoomPdf {
   id: string;
   title: string;
-  author?: string;
+  author: string;
+  description: string;
   url: string;
   storagePath: string;
   uploadedAt: Timestamp;
-  coverImageUrl?: string;
-  coverImageStoragePath?: string;
+  uploaderUid: string;
+  coverImageUrl: string;
+  coverImageStoragePath: string;
+  fileName: string;
+  fileSize: number; // in bytes
+  pageCount: number;
+  tags?: string[];
+  language?: string;
+  publicationYear?: number;
 }
+
 
 export default function ManageReadingRoomPage() {
   const router = useRouter();
@@ -100,6 +109,10 @@ export default function ManageReadingRoomPage() {
         const updateData: Partial<ReadingRoomPdf> = {
             title: data.title,
             author: data.author,
+            description: data.description,
+            tags: data.tags,
+            language: data.language,
+            publicationYear: data.publicationYear,
         };
 
         if (data.newCoverImage) {

@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,53 +13,9 @@ import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth, db, storage } from '@/lib/firebase';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { Textarea } from '../ui/textarea';
+import Image from 'next/image';
 import * as pdfjs from 'pdfjs-dist';
-
-// Helper function to generate cover image from PDF
-async function generateCoverFromPdf(pdfFile: File): Promise<File | null> {
-  pdfjs.GlobalWorkerOptions.workerSrc = `/static/js/pdf.worker.min.mjs`;
-
-  const fileReader = new FileReader();
-  return new Promise((resolve, reject) => {
-    fileReader.onload = async (event) => {
-      if (!event.target?.result) {
-        return reject(new Error("Failed to read file."));
-      }
-      try {
-        const loadingTask = pdfjs.getDocument({ data: event.target.result as ArrayBuffer });
-        const pdf = await loadingTask.promise;
-        const page = await pdf.getPage(1); // Get the first page
-        const viewport = page.getViewport({ scale: 1.5 });
-
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        if (!context) {
-            return reject(new Error('Could not get canvas context'));
-        }
-        
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-
-        await page.render({ canvasContext: context, viewport: viewport }).promise;
-
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const coverFile = new File([blob], `${pdfFile.name}.jpg`, { type: 'image/jpeg' });
-            resolve(coverFile);
-          } else {
-            reject(new Error("Canvas to Blob conversion failed."));
-          }
-        }, 'image/jpeg', 0.8);
-      } catch (error) {
-        console.error("Error generating cover:", error);
-        reject(error);
-      }
-    };
-    fileReader.onerror = () => reject(new Error("FileReader error."));
-    fileReader.readAsArrayBuffer(pdfFile);
-  });
-}
-
 
 export function ReadingRoomSubmissionForm() {
     const { toast } = useToast();
@@ -67,12 +23,26 @@ export function ReadingRoomSubmissionForm() {
 
     const [title, setTitle] = useState('');
     const [author, setAuthor] = useState('');
-    const [pdfFile, setPdfFile] = useState<File | null>(null);
+    const [description, setDescription] = useState('');
+    const [tags, setTags] = useState('');
+    const [language, setLanguage] = useState('');
+    const [publicationYear, setPublicationYear] = useState('');
 
+    const [pdfFile, setPdfFile] = useState<File | null>(null);
+    const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
+    const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
+    const pdfInputRef = useRef<HTMLInputElement>(null);
+    const coverInputRef = useRef<HTMLInputElement>(null);
+    
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
 
+    const [fileName, setFileName] = useState('');
+    const [fileSize, setFileSize] = useState(0);
+    const [pageCount, setPageCount] = useState(0);
+
     useEffect(() => {
+        pdfjs.GlobalWorkerOptions.workerSrc = `/static/js/pdf.worker.min.mjs`;
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             setUser(currentUser);
         });
@@ -82,10 +52,57 @@ export function ReadingRoomSubmissionForm() {
     const resetForm = () => {
         setTitle('');
         setAuthor('');
+        setDescription('');
+        setTags('');
+        setLanguage('');
+        setPublicationYear('');
         setPdfFile(null);
+        setCoverImageFile(null);
+        setCoverImagePreview(null);
+        setFileName('');
+        setFileSize(0);
+        setPageCount(0);
+        if (pdfInputRef.current) pdfInputRef.current.value = '';
+        if (coverInputRef.current) coverInputRef.current.value = '';
         setIsUploading(false);
         setUploadProgress(0);
     }
+
+    const handlePdfChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setPdfFile(file);
+        setFileName(file.name);
+        setFileSize(file.size);
+
+        // Extract metadata
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            if (!event.target?.result) return;
+            try {
+                const loadingTask = pdfjs.getDocument({ data: event.target.result as ArrayBuffer });
+                const pdf = await loadingTask.promise;
+                setPageCount(pdf.numPages);
+            } catch (error) {
+                console.error("Failed to get page count", error);
+                toast({ title: "Could not read PDF metadata.", variant: "destructive" });
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    };
+
+    const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setCoverImageFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setCoverImagePreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
     const uploadFile = (file: File, path: string, onProgress?: (progress: number) => void): Promise<{ downloadURL: string, storagePath: string }> => {
         return new Promise((resolve, reject) => {
@@ -106,8 +123,15 @@ export function ReadingRoomSubmissionForm() {
     };
 
     const handleUpload = async () => {
-        if (!user || !pdfFile || !title) {
-            toast({ title: "Missing Information", description: "A title and PDF file are required.", variant: "destructive" });
+        const requiredFields = { title, author, description, pdfFile, coverImageFile };
+        for (const [key, value] of Object.entries(requiredFields)) {
+            if (!value) {
+                toast({ title: "Missing Information", description: `Please provide a value for ${key}.`, variant: "destructive" });
+                return;
+            }
+        }
+        if (!user) {
+            toast({ title: "Not Authenticated", description: "You must be logged in.", variant: "destructive" });
             return;
         }
 
@@ -115,24 +139,26 @@ export function ReadingRoomSubmissionForm() {
         setUploadProgress(0);
 
         try {
-            const coverImageFile = await generateCoverFromPdf(pdfFile);
-            let coverImageInfo: { downloadURL: string; storagePath: string } | null = null;
-            
-            if (coverImageFile) {
-                const coverPath = `bookCovers/${Date.now()}-${coverImageFile.name}`;
-                coverImageInfo = await uploadFile(coverImageFile, coverPath);
-            }
-            
-            const pdfPath = `pdfs/${Date.now()}-${pdfFile.name}`;
-            const pdfInfo = await uploadFile(pdfFile, pdfPath, setUploadProgress);
+            const coverPath = `bookCovers/${Date.now()}-${coverImageFile!.name}`;
+            const coverImageInfo = await uploadFile(coverImageFile!, coverPath);
+
+            const pdfPath = `pdfs/${Date.now()}-${pdfFile!.name}`;
+            const pdfInfo = await uploadFile(pdfFile!, pdfPath, setUploadProgress);
 
             await addDoc(collection(db, "readingRoomPdfs"), {
-                title: title,
-                author: author,
+                title,
+                author,
+                description,
+                tags: tags.split(',').map(s => s.trim()).filter(Boolean),
+                language: language || null,
+                publicationYear: publicationYear ? Number(publicationYear) : null,
                 url: pdfInfo.downloadURL,
                 storagePath: pdfInfo.storagePath,
-                coverImageUrl: coverImageInfo?.downloadURL || null,
-                coverImageStoragePath: coverImageInfo?.storagePath || null,
+                coverImageUrl: coverImageInfo.downloadURL,
+                coverImageStoragePath: coverImageInfo.storagePath,
+                fileName,
+                fileSize,
+                pageCount,
                 uploadedAt: serverTimestamp(),
                 uploaderUid: user.uid
             });
@@ -142,7 +168,7 @@ export function ReadingRoomSubmissionForm() {
             
         } catch (error) {
             console.error("Error during upload:", error);
-            toast({ title: "Upload Failed", description: "Something went wrong during the upload. Cover generation might have failed.", variant: "destructive" });
+            toast({ title: "Upload Failed", description: "Something went wrong during the upload.", variant: "destructive" });
         } finally {
             setIsUploading(false);
         }
@@ -153,26 +179,57 @@ export function ReadingRoomSubmissionForm() {
             <CardHeader>
                 <CardTitle>Submit a Single Document</CardTitle>
                 <CardDescription>
-                    Upload a new PDF document. The cover image will be generated automatically.
+                    Upload a new PDF document with its metadata. All fields are required except where noted.
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="title">Title</Label>
+                        <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} disabled={isUploading} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="author">Author</Label>
+                        <Input id="author" value={author} onChange={(e) => setAuthor(e.target.value)} disabled={isUploading} />
+                    </div>
+                </div>
                 <div className="space-y-2">
-                    <Label htmlFor="title">Title</Label>
-                    <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} disabled={isUploading} />
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} disabled={isUploading} />
                 </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="author">Author (Optional)</Label>
-                    <Input id="author" value={author} onChange={(e) => setAuthor(e.target.value)} disabled={isUploading} />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="pdf">PDF File</Label>
+                        <Input id="pdf" type="file" accept=".pdf" onChange={handlePdfChange} disabled={isUploading} ref={pdfInputRef}/>
+                        {pageCount > 0 && <p className="text-xs text-muted-foreground">{pageCount} pages, {(fileSize / 1024 / 1024).toFixed(2)} MB</p>}
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="cover">Cover Image</Label>
+                        <Input id="cover" type="file" accept="image/*" onChange={handleCoverImageChange} disabled={isUploading} ref={coverInputRef} />
+                        {coverImagePreview && <Image src={coverImagePreview} alt="Cover preview" width={60} height={80} className="mt-2 rounded-md border" />}
+                    </div>
                 </div>
-                <div className="space-y-2">
-                    <Label htmlFor="pdf">PDF File</Label>
-                    <Input id="pdf" type="file" accept=".pdf" onChange={(e) => setPdfFile(e.target.files?.[0] || null)} disabled={isUploading} />
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="tags">Tags (optional, comma-separated)</Label>
+                        <Input id="tags" value={tags} onChange={(e) => setTags(e.target.value)} disabled={isUploading} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="language">Language (optional)</Label>
+                        <Input id="language" placeholder="e.g., en" value={language} onChange={(e) => setLanguage(e.target.value)} disabled={isUploading} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="pubYear">Publication Year (optional)</Label>
+                        <Input id="pubYear" type="number" placeholder="e.g., 1936" value={publicationYear} onChange={(e) => setPublicationYear(e.target.value)} disabled={isUploading} />
+                    </div>
                 </div>
+
                 {isUploading && <Progress value={uploadProgress} />}
             </CardContent>
             <CardFooter>
-                <Button onClick={handleUpload} disabled={isUploading || !pdfFile || !title} className="w-full">
+                <Button onClick={handleUpload} disabled={isUploading || !pdfFile || !title || !author || !description || !coverImageFile} className="w-full">
                     {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
                     {isUploading ? 'Uploading...' : 'Upload Document'}
                 </Button>

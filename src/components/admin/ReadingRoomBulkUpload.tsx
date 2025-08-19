@@ -2,12 +2,13 @@
 'use client';
 
 import { useState, useMemo, useRef, useEffect } from 'react';
+import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { FileUp, Loader2, UploadCloud, X, FileCheck, AlertCircle, Settings, CheckCircle, ImageUp } from 'lucide-react';
+import { FileUp, Loader2, UploadCloud, X, FileCheck, AlertCircle, Settings, CheckCircle, ImageUp, Download } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
-import { writeBatch, collection, doc, serverTimestamp, addDoc } from 'firebase/firestore';
+import { writeBatch, collection, doc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, storage } from '@/lib/firebase';
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import { Progress } from '../ui/progress';
@@ -15,6 +16,8 @@ import { cn } from '@/lib/utils';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import Image from 'next/image';
+import * as pdfjs from 'pdfjs-dist';
+import { Textarea } from '../ui/textarea';
 
 type FileStatus = 'pending' | 'configured' | 'uploading' | 'success' | 'error';
 
@@ -24,24 +27,51 @@ export interface StagedPdf {
   status: FileStatus;
   progress: number;
   errorMessage?: string;
+  // Metadata
   title: string;
   author: string;
+  description: string;
   coverImageFile: File | null;
   coverImagePreviewUrl: string | null;
+  tags: string[];
+  language: string;
+  publicationYear: number | undefined;
+  // Auto-extracted
+  fileName: string;
+  fileSize: number;
+  pageCount: number;
 }
+
 
 function MetadataEditor({ pdf, onSave, onCoverImageChange }: { pdf: StagedPdf, onSave: (data: Partial<StagedPdf>) => void, onCoverImageChange: (file: File | null) => void }) {
     const [title, setTitle] = useState(pdf.title);
     const [author, setAuthor] = useState(pdf.author);
+    const [description, setDescription] = useState(pdf.description);
+    const [tags, setTags] = useState(pdf.tags.join(', '));
+    const [language, setLanguage] = useState(pdf.language);
+    const [publicationYear, setPublicationYear] = useState(pdf.publicationYear);
+
     const coverInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         setTitle(pdf.title);
         setAuthor(pdf.author);
+        setDescription(pdf.description);
+        setTags(pdf.tags.join(', '));
+        setLanguage(pdf.language);
+        setPublicationYear(pdf.publicationYear);
     }, [pdf]);
 
     const handleSave = () => {
-        onSave({ title, author, status: 'configured' });
+        onSave({ 
+            title, 
+            author, 
+            description,
+            tags: tags.split(',').map(s => s.trim()).filter(Boolean),
+            language,
+            publicationYear,
+            status: 'configured' 
+        });
     }
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -54,17 +84,21 @@ function MetadataEditor({ pdf, onSave, onCoverImageChange }: { pdf: StagedPdf, o
             <CardHeader>
                 <CardTitle>Edit Metadata</CardTitle>
                 <CardDescription className="truncate">
-                    Editing: <span className="font-semibold">{pdf.file.name}</span>
+                    Editing: <span className="font-semibold">{pdf.fileName}</span>
                 </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
                  <div className="space-y-2">
                     <Label htmlFor="pdf-title">Title</Label>
                     <Input id="pdf-title" value={title} onChange={(e) => setTitle(e.target.value)} />
                 </div>
                  <div className="space-y-2">
-                    <Label htmlFor="pdf-author">Author (Optional)</Label>
+                    <Label htmlFor="pdf-author">Author</Label>
                     <Input id="pdf-author" value={author} onChange={(e) => setAuthor(e.target.value)} />
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="pdf-description">Description</Label>
+                    <Textarea id="pdf-description" value={description} onChange={(e) => setDescription(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                     <Label>Cover Image</Label>
@@ -87,6 +121,21 @@ function MetadataEditor({ pdf, onSave, onCoverImageChange }: { pdf: StagedPdf, o
                         </div>
                     </div>
                 </div>
+                <div className="space-y-2">
+                    <Label htmlFor="pdf-tags">Tags (comma-separated)</Label>
+                    <Input id="pdf-tags" value={tags} onChange={(e) => setTags(e.target.value)} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="pdf-lang">Language</Label>
+                        <Input id="pdf-lang" value={language} onChange={(e) => setLanguage(e.target.value)} placeholder="e.g., en" />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="pdf-year">Publication Year</Label>
+                        <Input id="pdf-year" type="number" value={publicationYear || ''} onChange={(e) => setPublicationYear(Number(e.target.value))} placeholder="e.g., 1936" />
+                    </div>
+                </div>
+
             </CardContent>
             <CardFooter>
                 <Button onClick={handleSave} className="w-full">Save Metadata</Button>
@@ -95,30 +144,55 @@ function MetadataEditor({ pdf, onSave, onCoverImageChange }: { pdf: StagedPdf, o
     );
 }
 
-
 export function ReadingRoomBulkUpload() {
   const { toast } = useToast();
   const [stagedPdfs, setStagedPdfs] = useState<StagedPdf[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [selectedPdfId, setSelectedPdfId] = useState<string | null>(null);
+  const [metadataFile, setMetadataFile] = useState<File | null>(null);
 
-  const handleFilesSelected = (files: FileList | null) => {
+  useEffect(() => {
+    pdfjs.GlobalWorkerOptions.workerSrc = `/static/js/pdf.worker.min.mjs`;
+  }, []);
+
+  const handleFilesSelected = async (files: FileList | null) => {
     if (!files) return;
     
-    const newFiles: StagedPdf[] = Array.from(files)
+    const newFilesPromises: Promise<StagedPdf>[] = Array.from(files)
       .filter(file => file.type === 'application/pdf')
-      .map(file => ({
-        id: `${file.name}-${file.lastModified}`,
-        file,
-        status: 'pending',
-        progress: 0,
-        title: file.name.replace(/\.pdf$/i, '').replace(/_/g, ' '),
-        author: '',
-        coverImageFile: null,
-        coverImagePreviewUrl: null,
-      }));
+      .map(async file => {
+        let pageCount = 0;
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const loadingTask = pdfjs.getDocument({ data: arrayBuffer });
+            const pdf = await loadingTask.promise;
+            pageCount = pdf.numPages;
+        } catch (error) {
+            console.error("Could not read PDF for page count", error);
+        }
+
+        return {
+            id: `${file.name}-${file.lastModified}`,
+            file,
+            status: 'pending',
+            progress: 0,
+            title: file.name.replace(/\.pdf$/i, '').replace(/_/g, ' '),
+            author: '',
+            description: '',
+            coverImageFile: null,
+            coverImagePreviewUrl: null,
+            tags: [],
+            language: '',
+            publicationYear: undefined,
+            fileName: file.name,
+            fileSize: file.size,
+            pageCount,
+        };
+      });
       
+    const newFiles = await Promise.all(newFilesPromises);
+
     setStagedPdfs(prev => {
         const existingIds = new Set(prev.map(f => f.id));
         const trulyNewFiles = newFiles.filter(f => !existingIds.has(f.id));
@@ -126,25 +200,52 @@ export function ReadingRoomBulkUpload() {
     });
   };
 
-  const onDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragOver(true);
+  const handleMetadataFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      setMetadataFile(file);
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+            const data = e.target?.result;
+            const workbook = XLSX.read(data, { type: 'binary' });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            const json: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+            setStagedPdfs(prev => {
+                return prev.map(pdf => {
+                    const meta = json.find(row => row.filename === pdf.fileName);
+                    if (meta) {
+                        return {
+                            ...pdf,
+                            title: meta.title || pdf.title,
+                            author: meta.author || pdf.author,
+                            description: meta.description || pdf.description,
+                            tags: meta.tags ? String(meta.tags).split(',').map(s => s.trim()) : pdf.tags,
+                            language: meta.language || pdf.language,
+                            publicationYear: meta.publicationYear || pdf.publicationYear,
+                        };
+                    }
+                    return pdf;
+                });
+            });
+            toast({ title: "Metadata applied", description: "Matched metadata from your file to staged PDFs." });
+        } catch (error) {
+            toast({ title: "Error reading metadata file", variant: "destructive" });
+        }
+      };
+      reader.readAsBinaryString(file);
   };
-  const onDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragOver(false);
-  };
-  const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    handleFilesSelected(e.dataTransfer.files);
-  };
+
+  const onDragOver = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragOver(true); };
+  const onDragLeave = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragOver(false); };
+  const onDrop = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragOver(false); handleFilesSelected(e.dataTransfer.files); };
 
   const removeFile = (id: string) => {
     setStagedPdfs(prev => prev.filter(f => f.id !== id));
-    if (selectedPdfId === id) {
-        setSelectedPdfId(null);
-    }
+    if (selectedPdfId === id) setSelectedPdfId(null);
   };
 
   const handleSaveMetadata = (data: Partial<StagedPdf>) => {
@@ -156,15 +257,8 @@ export function ReadingRoomBulkUpload() {
   const handleCoverImageChange = (id: string, file: File | null) => {
       setStagedPdfs(prev => prev.map(p => {
           if (p.id === id) {
-              // Clean up old object URL if it exists
-              if (p.coverImagePreviewUrl && p.coverImagePreviewUrl.startsWith('blob:')) {
-                  URL.revokeObjectURL(p.coverImagePreviewUrl);
-              }
-              return {
-                  ...p,
-                  coverImageFile: file,
-                  coverImagePreviewUrl: file ? URL.createObjectURL(file) : null,
-              }
+              if (p.coverImagePreviewUrl && p.coverImagePreviewUrl.startsWith('blob:')) URL.revokeObjectURL(p.coverImagePreviewUrl);
+              return { ...p, coverImageFile: file, coverImagePreviewUrl: file ? URL.createObjectURL(file) : null };
           }
           return p;
       }));
@@ -174,164 +268,118 @@ export function ReadingRoomBulkUpload() {
     return new Promise((resolve, reject) => {
         const storageRef = ref(storage, path);
         const uploadTask = uploadBytesResumable(storageRef, file);
-
-        uploadTask.on('state_changed',
-            (snapshot) => {
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                onProgress(progress);
-            },
-            (error) => {
-                console.error('Upload Error:', error);
-                reject(error);
-            },
-            async () => {
-                try {
-                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                    resolve({ downloadURL, storagePath: path });
-                } catch (error) {
-                    reject(error);
-                }
-            }
-        );
+        uploadTask.on('state_changed', (s) => onProgress((s.bytesTransferred / s.totalBytes) * 100), reject, async () => {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            resolve({ downloadURL, storagePath: path });
+        });
     });
   };
 
-  const processAndUploadFile = (stagedPdf: StagedPdf): Promise<any> => {
+  const processAndUploadFile = (pdf: StagedPdf): Promise<any> => {
      return new Promise(async (resolve, reject) => {
         try {
-            let coverInfo: { downloadURL: string; storagePath: string } | null = null;
-            if (stagedPdf.coverImageFile) {
-                const coverPath = `bookCovers/${Date.now()}-${stagedPdf.coverImageFile.name}`;
-                coverInfo = await uploadSingleFile(stagedPdf.coverImageFile, coverPath, () => {});
-            }
-
-            const pdfPath = `pdfs/${Date.now()}-${stagedPdf.file.name}`;
-            const pdfInfo = await uploadSingleFile(stagedPdf.file, pdfPath, (progress) => {
-                setStagedPdfs(prev => prev.map(f => f.id === stagedPdf.id ? { ...f, progress } : f));
-            });
+            if (!pdf.coverImageFile) throw new Error("Cover image is missing.");
             
-            setStagedPdfs(prev => prev.map(f => f.id === stagedPdf.id ? { ...f, status: 'success' } : f));
-            resolve({
-                id: stagedPdf.id,
-                title: stagedPdf.title,
-                author: stagedPdf.author,
-                pdfInfo,
-                coverInfo
-            });
+            const coverPath = `bookCovers/${Date.now()}-${pdf.coverImageFile.name}`;
+            const coverInfo = await uploadSingleFile(pdf.coverImageFile, coverPath, () => {});
+
+            const pdfPath = `pdfs/${Date.now()}-${pdf.file.name}`;
+            const pdfInfo = await uploadSingleFile(pdf.file, pdfPath, (p) => setStagedPdfs(prev => prev.map(f => f.id === pdf.id ? { ...f, progress: p } : f)));
+            
+            setStagedPdfs(prev => prev.map(f => f.id === pdf.id ? { ...f, status: 'success' } : f));
+            resolve({ ...pdf, pdfInfo, coverInfo });
         } catch (error: any) {
-            setStagedPdfs(prev => prev.map(f => f.id === stagedPdf.id ? { ...f, status: 'error', errorMessage: error.message } : f));
-            reject({id: stagedPdf.id, error});
+            setStagedPdfs(prev => prev.map(f => f.id === pdf.id ? { ...f, status: 'error', errorMessage: error.message } : f));
+            reject({id: pdf.id, error});
         }
     });
   }
 
   const handleSubmit = async () => {
     const user = auth.currentUser;
-    if (!user) {
-      toast({ title: 'Not Authenticated', description: 'You must be logged in.', variant: 'destructive' });
-      return;
-    }
+    if (!user) { toast({ title: 'Not Authenticated', variant: 'destructive' }); return; }
 
     const filesToUpload = stagedPdfs.filter(pdf => pdf.status === 'configured');
-    if (filesToUpload.length === 0) {
-        toast({ title: 'No Configured Files', description: 'Please configure metadata for at least one file before uploading.', variant: 'destructive' });
-        return;
-    }
+    if (filesToUpload.length === 0) { toast({ title: 'No Configured Files', description: 'Please configure metadata for at least one file.', variant: 'destructive' }); return; }
     
     setIsUploading(true);
     setStagedPdfs(prev => prev.map(f => f.status === 'configured' ? { ...f, status: 'uploading', progress: 0 } : f));
 
-    const uploadPromises = filesToUpload.map(processAndUploadFile);
-    const results = await Promise.allSettled(uploadPromises);
+    const results = await Promise.allSettled(filesToUpload.map(processAndUploadFile));
     
-    const successfulUploads = results
-        .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
-        .map(r => r.value);
+    const successfulUploads = results.filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled').map(r => r.value);
 
     if (successfulUploads.length > 0) {
         try {
             const batch = writeBatch(db);
-            const readingRoomCollection = collection(db, "readingRoomPdfs");
-
             successfulUploads.forEach(upload => {
-                const docRef = doc(readingRoomCollection);
+                const docRef = doc(collection(db, "readingRoomPdfs"));
                 batch.set(docRef, {
-                    title: upload.title,
-                    author: upload.author,
-                    url: upload.pdfInfo.downloadURL,
-                    storagePath: upload.pdfInfo.storagePath,
-                    coverImageUrl: upload.coverInfo?.downloadURL || null,
-                    coverImageStoragePath: upload.coverInfo?.storagePath || null,
-                    uploadedAt: serverTimestamp(),
-                    uploaderUid: user.uid,
+                    title: upload.title, author: upload.author, description: upload.description,
+                    tags: upload.tags, language: upload.language || null, publicationYear: upload.publicationYear || null,
+                    url: upload.pdfInfo.downloadURL, storagePath: upload.pdfInfo.storagePath,
+                    coverImageUrl: upload.coverInfo.downloadURL, coverImageStoragePath: upload.coverInfo.storagePath,
+                    fileName: upload.fileName, fileSize: upload.fileSize, pageCount: upload.pageCount,
+                    uploadedAt: serverTimestamp(), uploaderUid: user.uid,
                 });
             });
             await batch.commit();
-            
-             toast({
-                title: 'Bulk Upload Complete',
-                description: `${successfulUploads.length} of ${filesToUpload.length} documents uploaded successfully.`,
-            });
+            toast({ title: 'Bulk Upload Complete', description: `${successfulUploads.length}/${filesToUpload.length} documents uploaded.` });
             setStagedPdfs(prev => prev.filter(f => f.status !== 'success'));
             setSelectedPdfId(null);
         } catch (error) {
-            console.error("Firestore batch commit error:", error);
              toast({ title: 'Firestore Error', description: 'Files uploaded, but failed to save metadata.', variant: 'destructive' });
         }
-    } else {
-         toast({ title: 'Upload Failed', description: 'No documents were uploaded successfully.', variant: 'destructive' });
     }
-
+    if (results.some(r => r.status === 'rejected')) {
+        toast({ title: 'Upload Failed', description: 'Some documents failed to upload.', variant: 'destructive' });
+    }
     setIsUploading(false);
   };
   
+  const downloadTemplate = () => {
+    const headers = ["filename", "title", "author", "description", "tags", "language", "publicationYear"];
+    const data = [{ "filename": "MyBook.pdf", "title": "My Book Title", "author": "Author Name", "description": "A short summary.", "tags": "history, politics", "language": "en", "publicationYear": 2024 }];
+    const ws = XLSX.utils.json_to_sheet(data, { header: headers });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Metadata");
+    XLSX.writeFile(wb, "metadata_template.xlsx");
+  };
+  
   const overallProgress = useMemo(() => {
-    const uploadingFiles = stagedPdfs.filter(f => f.status === 'uploading');
-    if (uploadingFiles.length === 0) return 0;
-    const totalProgress = uploadingFiles.reduce((acc, file) => acc + file.progress, 0);
-    return totalProgress / uploadingFiles.length;
+    const uploading = stagedPdfs.filter(f => f.status === 'uploading');
+    if (uploading.length === 0) return 0;
+    return uploading.reduce((acc, f) => acc + f.progress, 0) / uploading.length;
   }, [stagedPdfs]);
   
-  const filesToUploadCount = stagedPdfs.filter(f => f.status === 'configured' || f.status === 'uploading').length;
-
-  const currentlySelectedPdf = useMemo(() => {
-      return stagedPdfs.find(p => p.id === selectedPdfId) || null;
-  }, [selectedPdfId, stagedPdfs]);
+  const filesToUploadCount = stagedPdfs.filter(f => f.status === 'configured').length;
+  const currentlySelectedPdf = useMemo(() => stagedPdfs.find(p => p.id === selectedPdfId) || null, [selectedPdfId, stagedPdfs]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
         <Card>
             <CardHeader>
-                <CardTitle>1. Select & Stage Files</CardTitle>
-                <CardDescription>
-                Select multiple PDFs to begin the bulk upload process.
-                </CardDescription>
+                <CardTitle>1. Select Files & Metadata</CardTitle>
+                <CardDescription>Upload PDFs and an optional metadata file.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
                 <div>
+                    <Label>PDF Files</Label>
                     <div 
-                    className={cn(
-                        "relative flex flex-col items-center justify-center w-full p-8 border-2 border-dashed rounded-lg cursor-pointer transition-colors",
-                        isDragOver ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
-                    )}
-                    onDragOver={onDragOver}
-                    onDragLeave={onDragLeave}
-                    onDrop={onDrop}
-                    >
-                    <UploadCloud className="w-12 h-12 text-muted-foreground" />
-                    <p className="mt-2 text-sm text-muted-foreground">Drag & drop PDF files here, or click to browse</p>
-                    <input 
-                        id="bulk-pdf-upload"
-                        type="file" 
-                        accept=".pdf" 
-                        multiple 
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        onChange={(e) => handleFilesSelected(e.target.files)}
-                        disabled={isUploading}
-                    />
+                        className={cn("relative flex flex-col items-center justify-center w-full p-4 border-2 border-dashed rounded-lg cursor-pointer", isDragOver ? "border-primary bg-primary/10" : "border-border hover:border-primary/50")}
+                        onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
+                        <UploadCloud className="w-8 h-8 text-muted-foreground" />
+                        <p className="mt-2 text-sm text-muted-foreground">Drag & drop PDF files here, or click</p>
+                        <input id="bulk-pdf-upload" type="file" accept=".pdf" multiple className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleFilesSelected(e.target.files)} disabled={isUploading}/>
                     </div>
                 </div>
-
+                 <div>
+                    <Label>Metadata File (Optional)</Label>
+                    <div className="flex items-center gap-2">
+                        <Input id="metadata-file" type="file" accept=".xlsx, .xls, .csv" onChange={handleMetadataFileChange} className="flex-grow"/>
+                        <Button variant="outline" size="sm" onClick={downloadTemplate}><Download className="mr-2 h-4 w-4" /> Template</Button>
+                    </div>
+                 </div>
 
                 {stagedPdfs.length > 0 && (
                 <div className="space-y-4">
@@ -340,12 +388,7 @@ export function ReadingRoomBulkUpload() {
                     <ScrollArea className="h-64 w-full rounded-md border">
                     <div className="p-2 space-y-2">
                         {stagedPdfs.map((item) => (
-                        <div key={item.id} 
-                            className={cn("flex items-center gap-3 p-2 rounded-md transition-colors cursor-pointer",
-                                selectedPdfId === item.id ? "bg-muted" : "bg-muted/50 hover:bg-muted"
-                            )}
-                             onClick={() => setSelectedPdfId(item.id)}
-                        >
+                        <div key={item.id} className={cn("flex items-center gap-3 p-2 rounded-md transition-colors cursor-pointer", selectedPdfId === item.id ? "bg-muted" : "hover:bg-muted/50")} onClick={() => setSelectedPdfId(item.id)}>
                             <div className="flex-shrink-0">
                                 {item.status === 'success' && <FileCheck className="text-green-500" />}
                                 {item.status === 'error' && <AlertCircle className="text-destructive" />}
@@ -355,19 +398,15 @@ export function ReadingRoomBulkUpload() {
                             </div>
                             <div className="flex-grow overflow-hidden">
                                 <p className="text-sm font-semibold truncate">{item.title}</p>
-                                <p className="text-xs text-muted-foreground">{item.file.name}</p>
+                                <p className="text-xs text-muted-foreground">{item.fileName}</p>
                                 {item.status === 'uploading' && <Progress value={item.progress} className="h-1 mt-1" />}
                                 {item.status === 'error' && <p className="text-xs text-destructive truncate">{item.errorMessage}</p>}
                             </div>
-                            <Button variant="ghost" size="icon" className="flex-shrink-0 w-6 h-6" onClick={(e) => { e.stopPropagation(); removeFile(item.id); }} disabled={isUploading}>
-                                <X className="w-4 h-4" />
-                            </Button>
-                        </div>
-                        ))}
+                            <Button variant="ghost" size="icon" className="flex-shrink-0 w-6 h-6" onClick={(e) => { e.stopPropagation(); removeFile(item.id); }} disabled={isUploading}><X className="w-4 h-4" /></Button>
+                        </div>))}
                     </div>
                     </ScrollArea>
-                </div>
-                )}
+                </div>)}
             </CardContent>
             <CardFooter>
                 <Button onClick={handleSubmit} disabled={isUploading || filesToUploadCount === 0} className="w-full">
@@ -379,11 +418,7 @@ export function ReadingRoomBulkUpload() {
 
         <div>
             {currentlySelectedPdf ? (
-                <MetadataEditor 
-                    pdf={currentlySelectedPdf} 
-                    onSave={handleSaveMetadata}
-                    onCoverImageChange={(file) => handleCoverImageChange(currentlySelectedPdf.id, file)}
-                />
+                <MetadataEditor pdf={currentlySelectedPdf} onSave={handleSaveMetadata} onCoverImageChange={(file) => handleCoverImageChange(currentlySelectedPdf.id, file)} />
             ) : (
                  <Card className="h-full flex items-center justify-center">
                     <CardContent className="text-center text-muted-foreground p-6">

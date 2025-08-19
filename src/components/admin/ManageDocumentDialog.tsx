@@ -26,17 +26,19 @@ import { type ReadingRoomPdf } from '@/app/admin/reading-room/page';
 import { useState, useRef } from 'react';
 import { Loader2, UploadCloud } from 'lucide-react';
 import Image from 'next/image';
+import { Textarea } from '../ui/textarea';
 
-// Zod schema for validation
 const formSchema = z.object({
   title: z.string().min(1, 'Title is required'),
-  author: z.string().optional(),
+  author: z.string().min(1, 'Author is required'),
+  description: z.string().min(1, 'Description is required'),
+  tags: z.array(z.string()).optional(),
+  language: z.string().optional(),
+  publicationYear: z.coerce.number().optional(),
 });
 
-// Type for form values based on the schema
 type FormValues = z.infer<typeof formSchema>;
 
-// Type for the data passed to the onSave function
 export interface DocumentFormData extends FormValues {
     newCoverImage?: File | null;
 }
@@ -58,6 +60,10 @@ export function ManageDocumentDialog({ document, onOpenChange, onSave }: ManageD
     defaultValues: {
       title: document?.title || '',
       author: document?.author || '',
+      description: document?.description || '',
+      tags: document?.tags || [],
+      language: document?.language || '',
+      publicationYear: document?.publicationYear || undefined,
     },
   });
 
@@ -76,7 +82,11 @@ export function ManageDocumentDialog({ document, onOpenChange, onSave }: ManageD
 
   const onSubmit = async (values: FormValues) => {
     setIsSaving(true);
-    await onSave({ ...values, newCoverImage: coverImageFile });
+    const dataToSave: DocumentFormData = {
+      ...values,
+      newCoverImage: coverImageFile,
+    };
+    await onSave(dataToSave);
     setIsSaving(false);
     onOpenChange(false);
   };
@@ -92,7 +102,7 @@ export function ManageDocumentDialog({ document, onOpenChange, onSave }: ManageD
         </DialogHeader>
         {document ? (
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
               <FormField
                 control={form.control}
                 name="title"
@@ -111,9 +121,22 @@ export function ManageDocumentDialog({ document, onOpenChange, onSave }: ManageD
                 name="author"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Author (optional)</FormLabel>
+                    <FormLabel>Author</FormLabel>
                     <FormControl>
                       <Input placeholder="Name of the author" {...field} value={field.value ?? ''} disabled={isSaving} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="A brief summary of the content..." {...field} disabled={isSaving} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -154,8 +177,52 @@ export function ManageDocumentDialog({ document, onOpenChange, onSave }: ManageD
                     </div>
                 </div>
               </FormItem>
+              
+              <FormField
+                control={form.control}
+                name="tags"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tags (optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="sociology, history, politics" {...field} value={Array.isArray(field.value) ? field.value.join(', ') : ''} onChange={(e) => field.onChange(e.target.value.split(',').map(s => s.trim()))} disabled={isSaving} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="language"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Language (optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., en" {...field} value={field.value ?? ''} disabled={isSaving} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="publicationYear"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Publication Year (optional)</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="e.g., 1936" {...field} value={field.value ?? ''} disabled={isSaving} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-              <DialogFooter className="pt-4">
+
+              <DialogFooter className="pt-4 sticky bottom-0 bg-background">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
                   Cancel
                 </Button>
@@ -180,5 +247,3 @@ export function ManageDocumentDialog({ document, onOpenChange, onSave }: ManageD
     </Dialog>
   );
 }
-
-    
