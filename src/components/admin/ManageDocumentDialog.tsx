@@ -27,13 +27,11 @@ import { useState, useRef } from 'react';
 import { Loader2, UploadCloud } from 'lucide-react';
 import Image from 'next/image';
 import { Textarea } from '../ui/textarea';
-import { uploadBytesResumable, getDownloadURL, ref } from 'firebase/storage';
-import { storage } from '@/lib/firebase';
 
 const formSchema = z.object({
   title: z.string().min(1, 'Title is required'),
-  author: z.string().min(1, 'Author is required'),
-  description: z.string().min(1, 'Description is required'),
+  author: z.string().optional(),
+  description: z.string().optional(),
   tags: z.array(z.string()).optional(),
   language: z.string().optional(),
   publicationYear: z.coerce.number().optional(),
@@ -138,7 +136,7 @@ export function ManageDocumentDialog({ document, onOpenChange, onSave }: ManageD
                   <FormItem>
                     <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="A brief summary of the content..." {...field} disabled={isSaving} />
+                      <Textarea placeholder="A brief summary of the content..." {...field} value={field.value ?? ''} disabled={isSaving} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -215,7 +213,7 @@ export function ManageDocumentDialog({ document, onOpenChange, onSave }: ManageD
                     <FormItem>
                       <FormLabel>Publication Year (optional)</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="e.g., 1936" {...field} value={field.value ?? ''} disabled={isSaving} />
+                        <Input type="number" placeholder="e.g., 1936" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))} disabled={isSaving} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
