@@ -1,6 +1,3 @@
-
-'use server';
-
 import { isValid, parse } from 'date-fns';
 import type { Timestamp } from 'firebase/firestore';
 
