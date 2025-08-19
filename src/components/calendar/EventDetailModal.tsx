@@ -23,14 +23,18 @@ interface EventDetailModalProps {
 export function EventDetailModal({ event, isOpen, onClose }: EventDetailModalProps) {
   const { t } = useLanguage();
 
+  const title = event.titleKey ? t(event.titleKey) : event.title;
+  const description = event.descriptionKey ? t(event.descriptionKey) : event.summary;
+
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="rounded-2xl shadow-lg sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="font-headline text-2xl">{t(event.titleKey)}</DialogTitle>
+          <DialogTitle className="font-headline text-2xl">{title}</DialogTitle>
         </DialogHeader>
         <ScrollArea className="max-h-[50vh] pr-4">
-          <p className="text-muted-foreground">{t(event.descriptionKey)}</p>
+          <p className="text-muted-foreground">{description}</p>
         </ScrollArea>
         
         {/* Placeholder for banner ad */}
@@ -41,11 +45,13 @@ export function EventDetailModal({ event, isOpen, onClose }: EventDetailModalPro
         <DialogFooter className="flex-col-reverse items-center gap-2 sm:flex-row sm:justify-between sm:gap-0">
           <p className="text-xs text-muted-foreground">{t('event_modal.powered_by')}</p>
           <div className="flex items-center gap-2">
-            <Button asChild>
-                <Link href={event.readMoreUrl} target="_blank" onClick={onClose}>
-                {t('event_calendar.read_full_article_button')}
-                </Link>
-            </Button>
+            {event.readMoreUrl && (
+                <Button asChild>
+                    <Link href={event.readMoreUrl} target="_blank" onClick={onClose}>
+                    {t('event_calendar.read_full_article_button')}
+                    </Link>
+                </Button>
+            )}
           </div>
         </DialogFooter>
       </DialogContent>

@@ -39,17 +39,20 @@ function EventDetail({ event, onReadMoreClick }: { event: CalendarEvent, onReadM
     }
   }
 
-  const descriptionText = t(event.descriptionKey);
+  const descriptionText = event.descriptionKey ? t(event.descriptionKey) : event.summary;
   const isLongDescription = descriptionText.length > 150;
   const displayDescription = isLongDescription
     ? `${descriptionText.substring(0, 150)}...`
     : descriptionText;
+  
+  const tagsToDisplay = event.tagKeys ? event.tagKeys.map(t) : event.tags;
+
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
-        {event.tagKeys.map((tagKey) => (
-          <Badge key={tagKey} variant="secondary">{t(tagKey)}</Badge>
+        {tagsToDisplay.map((tag) => (
+          <Badge key={tag} variant="secondary">{tag}</Badge>
         ))}
       </div>
       <p className="text-sm">
@@ -123,7 +126,7 @@ export function EventCalendar({ events = [] }: EventCalendarProps) {
                   {dayEvents.map((event, index) => (
                      <div key={event.id} className="space-y-2">
                         {index > 0 && <Separator className="my-4" />}
-                        <h3 className="font-semibold">{t(event.titleKey)}</h3>
+                        <h3 className="font-semibold">{event.titleKey ? t(event.titleKey) : event.title}</h3>
                         <EventDetail event={event} onReadMoreClick={() => setSelectedEvent(event)} />
                      </div>
                   ))}
