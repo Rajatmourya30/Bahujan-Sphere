@@ -36,6 +36,7 @@ export default function ManageReadingRoomPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
+  const [activeTab, setActiveTab] = useState('manage');
 
   const [availablePdfs, setAvailablePdfs] = useState<ReadingRoomPdf[]>([]);
   const [isLoadingPdfs, setIsLoadingPdfs] = useState(true);
@@ -83,7 +84,7 @@ export default function ManageReadingRoomPage() {
     );
   }, [searchTerm, availablePdfs]);
 
-  const handleOpenDialog = (doc: ReadingRoomPdf | null = null) => {
+  const handleOpenEditDialog = (doc: ReadingRoomPdf) => {
     setEditingDocument(doc);
     setIsDialogOpen(true);
   };
@@ -153,7 +154,7 @@ export default function ManageReadingRoomPage() {
         <h1 className="font-headline text-3xl font-bold">Manage Reading Room</h1>
         <p className="text-muted-foreground">Add, edit, review, and manage all documents.</p>
       </header>
-       <Tabs defaultValue="manage" className="w-full">
+       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
            <TabsTrigger value="manage">Manage Documents</TabsTrigger>
            <TabsTrigger value="single-doc">Submit Single Document</TabsTrigger>
@@ -167,7 +168,7 @@ export default function ManageReadingRoomPage() {
                         <CardTitle>Available Documents</CardTitle>
                         <CardDescription>Manage existing documents in the reading room.</CardDescription>
                     </div>
-                     <Button onClick={() => handleOpenDialog()}>
+                     <Button onClick={() => setActiveTab('single-doc')}>
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Add Document
                     </Button>
@@ -208,7 +209,7 @@ export default function ManageReadingRoomPage() {
                                                 <BookOpen className="h-4 w-4" />
                                             </Link>
                                         </Button>
-                                         <Button size="sm" variant="outline" onClick={() => handleOpenDialog(pdf)}>
+                                         <Button size="sm" variant="outline" onClick={() => handleOpenEditDialog(pdf)}>
                                             <Edit className="h-4 w-4" />
                                         </Button>
                                         <AlertDialog>
