@@ -61,7 +61,6 @@ export function ReviewSubmissionsTab() {
         toast({
           title: 'Event Rejected',
           description: `"${event.title}" has been rejected and removed from the queue.`,
-          variant: 'destructive',
         });
       }
 
@@ -79,9 +78,9 @@ export function ReviewSubmissionsTab() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Review Community Submissions</CardTitle>
+          <CardTitle>Review Team Submissions</CardTitle>
           <CardDescription>
-            Approve or reject events submitted by contributors. Approved events will appear on the public calendar.
+            Approve or reject events submitted by team members. Approved events will appear on the public calendar.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex justify-center items-center py-16">
@@ -94,9 +93,9 @@ export function ReviewSubmissionsTab() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Review Community Submissions</CardTitle>
+        <CardTitle>Review Team Submissions</CardTitle>
         <CardDescription>
-          Approve or reject events submitted by contributors. Approved events will appear on the public calendar.
+          Approve or reject events submitted by team members. Approved events will appear on the public calendar.
         </CardDescription>
       </CardHeader>
       <CardContent>

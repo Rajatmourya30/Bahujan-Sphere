@@ -94,6 +94,9 @@ export function ReviewReadingRoomSubmissionsTab() {
       <Card>
         <CardHeader>
           <CardTitle>Review Submissions</CardTitle>
+          <CardDescription>
+            Approve or reject documents submitted by team members for the Reading Room.
+          </CardDescription>
         </CardHeader>
         <CardContent className="flex justify-center items-center py-16">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -107,7 +110,7 @@ export function ReviewReadingRoomSubmissionsTab() {
       <CardHeader>
         <CardTitle>Review Submissions</CardTitle>
         <CardDescription>
-            Approve or reject documents submitted for the Reading Room.
+            Approve or reject documents submitted by team members for the Reading Room.
         </CardDescription>
       </CardHeader>
       <CardContent>
