@@ -20,6 +20,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ReadingRoomSubmissionForm } from '@/components/admin/ReadingRoomSubmissionForm';
 import { ReadingRoomBulkUpload } from '@/components/admin/ReadingRoomBulkUpload';
+import { ReviewReadingRoomSubmissionsTab } from '@/components/admin/ReviewReadingRoomSubmissionsTab';
 
 export interface ReadingRoomPdf {
   id: string;
@@ -168,8 +169,9 @@ export default function ManageReadingRoomPage() {
         <p className="text-muted-foreground">Add, edit, and manage all documents.</p>
       </header>
        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-4">
            <TabsTrigger value="manage">Manage Documents</TabsTrigger>
+           <TabsTrigger value="review">Review Submissions</TabsTrigger>
            <TabsTrigger value="single-doc">Submit Single Document</TabsTrigger>
            <TabsTrigger value="bulk-upload">Submit Bulk Upload</TabsTrigger>
         </TabsList>
@@ -252,6 +254,9 @@ export default function ManageReadingRoomPage() {
                     )}
                 </CardContent>
             </Card>
+        </TabsContent>
+        <TabsContent value="review" className="mt-6">
+            <ReviewReadingRoomSubmissionsTab />
         </TabsContent>
          <TabsContent value="single-doc" className="mt-6">
           <ReadingRoomSubmissionForm />

@@ -12,6 +12,7 @@ import { EventSubmissionForm } from '@/components/submit/EventSubmissionForm';
 import { BulkUploadForm } from '@/components/submit/BulkUploadForm';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { ReviewSubmissionsTab } from '@/components/admin/ReviewSubmissionsTab';
 
 export default function ManageCalendarPage() {
   const router = useRouter();
@@ -72,8 +73,9 @@ export default function ManageCalendarPage() {
       </header>
 
       <Tabs defaultValue="manage" className="w-full">
-        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-4">
            <TabsTrigger value="manage">Manage Events</TabsTrigger>
+           <TabsTrigger value="review">Review Submissions</TabsTrigger>
            <TabsTrigger value="single-event">Submit Single Event</TabsTrigger>
            <TabsTrigger value="bulk-upload">Submit Bulk Upload</TabsTrigger>
         </TabsList>
@@ -85,6 +87,10 @@ export default function ManageCalendarPage() {
               onRemove={handleRemove}
               onAdd={() => handleOpenDialog()}
             />
+        </TabsContent>
+
+        <TabsContent value="review" className="mt-6">
+          <ReviewSubmissionsTab />
         </TabsContent>
         
         <TabsContent value="single-event" className="mt-6">

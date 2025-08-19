@@ -25,7 +25,6 @@ import {
   Store,
   UserCog,
   Users,
-  CheckSquare,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@/components/shared/Logo';
@@ -60,7 +59,6 @@ function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
 
   const navItems = [
     { href: '/admin', label: 'Dashboard', icon: Home, visible: true },
-    { href: '/admin/review-submissions', label: 'Review Submissions', icon: CheckSquare, visible: permissions.canManageContent },
     { href: '/admin/calendar', label: 'Calendar', icon: Calendar, visible: permissions.canAccessCalendar },
     { href: '/admin/knowledge-hub', label: 'Knowledge Hub', icon: Library, visible: permissions.canManageContent },
     { href: '/admin/store', label: 'Store Directory', icon: Store, visible: permissions.canManageContent },
