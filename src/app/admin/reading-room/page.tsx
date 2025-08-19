@@ -142,7 +142,7 @@ export default function ManageReadingRoomPage() {
            <TabsTrigger value="manage">Manage Documents</TabsTrigger>
            <TabsTrigger value="single-doc">Submit Single Document</TabsTrigger>
            <TabsTrigger value="bulk-upload">Submit Bulk Upload</TabsTrigger>
-           <TabsTrigger value="review" disabled>Review Submissions</TabsTrigger>
+           <TabsTrigger value="review">Review Submissions</TabsTrigger>
         </TabsList>
          <TabsContent value="manage" className="mt-6">
             <Card>
@@ -242,5 +242,3 @@ export default function ManageReadingRoomPage() {
     </>
   );
 }
-
-    
