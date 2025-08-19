@@ -4,10 +4,10 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { BookOpen, Search, Trash2, Edit, PlusCircle } from 'lucide-react';
+import { BookOpen, Search, Trash2, Edit } from 'lucide-react';
 import { auth, db, storage } from '@/lib/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { ref, deleteObject } from 'firebase/storage';
+import { ref, deleteObject, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { collection, query, orderBy, onSnapshot, type Timestamp, deleteDoc, doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { ManageDocumentDialog, type DocumentFormData } from '@/components/admin/ManageDocumentDialog';
@@ -71,7 +71,6 @@ export default function ManageReadingRoomPage() {
   useEffect(() => {
     if (!user) return;
 
-    // Query sorted by date, then filter by status on the client
     const q = query(
         collection(db, "readingRoomPdfs"), 
         orderBy("uploadedAt", "desc")
@@ -81,8 +80,8 @@ export default function ManageReadingRoomPage() {
         querySnapshot.forEach((doc) => {
             pdfs.push({ id: doc.id, ...doc.data() } as ReadingRoomPdf);
         });
-        // Filter for approved documents on the client-side
-        setAvailablePdfs(pdfs.filter(pdf => pdf.status === 'approved'));
+        const approvedPdfs = pdfs.filter(pdf => pdf.status === 'approved');
+        setAvailablePdfs(approvedPdfs);
         setIsLoadingPdfs(false);
     }, (error) => {
         console.error("Error fetching PDFs:", error);
@@ -123,13 +122,11 @@ export default function ManageReadingRoomPage() {
         };
 
         if (data.newCoverImage) {
-            // Delete old cover image if it exists
             if (editingDocument.coverImageStoragePath) {
                 const oldCoverRef = ref(storage, editingDocument.coverImageStoragePath);
                 await deleteObject(oldCoverRef).catch(err => console.error("Old cover delete failed, continuing:", err));
             }
 
-            // Upload new cover image
             const newCoverPath = `bookCovers/${Date.now()}-${data.newCoverImage.name}`;
             const newCoverRef = ref(storage, newCoverPath);
             const uploadTaskSnapshot = await uploadBytesResumable(newCoverRef, data.newCoverImage);
@@ -151,27 +148,23 @@ export default function ManageReadingRoomPage() {
   const handleDelete = async (pdf: ReadingRoomPdf) => {
     try {
         const batch = writeBatch(db);
-
-        // Delete the Firestore document
         batch.delete(doc(db, "readingRoomPdfs", pdf.id));
         await batch.commit();
 
-        // Then, delete the file from Storage
         if (pdf.storagePath) {
             const fileRef = ref(storage, pdf.storagePath);
-            await deleteObject(fileRef).catch((error) => console.warn("Could not delete PDF file, it may have been removed already:", error));
+            await deleteObject(fileRef).catch((error) => console.warn("Could not delete PDF file:", error));
         }
         
-        // And the cover image from Storage
         if (pdf.coverImageStoragePath) {
           const coverImageRef = ref(storage, pdf.coverImageStoragePath);
-          await deleteObject(coverImageRef).catch((error) => console.warn("Could not delete cover image, it may have been removed already:", error));
+          await deleteObject(coverImageRef).catch((error) => console.warn("Could not delete cover image:", error));
         }
 
-        toast({ title: "PDF Deleted", description: `"${pdf.title}" has been removed from Firestore and Storage.` });
+        toast({ title: "PDF Deleted", description: `"${pdf.title}" has been removed.` });
     } catch (error) {
         console.error("Error deleting PDF:", error);
-        toast({ title: "Deletion Failed", description: "Could not delete the PDF. Check console for details.", variant: "destructive" });
+        toast({ title: "Deletion Failed", description: "Could not delete the PDF.", variant: "destructive" });
     }
   };
 
@@ -191,15 +184,11 @@ export default function ManageReadingRoomPage() {
         </TabsList>
          <TabsContent value="manage" className="mt-6">
             <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
+                <CardHeader>
                     <div>
                         <CardTitle>Available Documents</CardTitle>
-                        <CardDescription>Manage existing documents in the reading room.</CardDescription>
+                        <CardDescription>Manage existing documents in the reading room. Use the submission tabs to add new documents.</CardDescription>
                     </div>
-                     <Button onClick={() => setActiveTab('single-doc')}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Add Document
-                    </Button>
                 </CardHeader>
                 <CardContent>
                     <div className="relative mb-4">
