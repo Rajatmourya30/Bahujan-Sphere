@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Download, FileUp, Loader2, Table, UploadCloud, X, FileCheck, AlertCircle } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
-import { addDoc, collection, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp, writeBatch, doc } from 'firebase/firestore';
 import { auth, db, storage } from '@/lib/firebase';
 import { getDownloadURL, ref, uploadBytesResumable, type UploadTask } from 'firebase/storage';
 import { Progress } from '../ui/progress';
@@ -108,24 +108,30 @@ export function ReadingRoomBulkUpload() {
     setIsUploading(true);
     setStagedFiles(prev => prev.map(f => ({ ...f, status: 'uploading' })));
 
-    const uploadPromises = stagedFiles.map(file => uploadFile(file).catch(e => e));
-    const results = await Promise.allSettled(uploadPromises);
+    // Create a map of file IDs to their upload promises
+    const uploadPromises = stagedFiles.map(file => 
+        uploadFile(file).then(result => ({id: file.id, result})).catch(error => ({id: file.id, error}))
+    );
+
+    const results = await Promise.all(uploadPromises);
     
-    const successfulUploads = stagedFiles.filter((_, i) => results[i].status === 'fulfilled');
-    
+    const successfulUploads = results.filter((r): r is {id: string; result: {downloadURL: string; storagePath: string}} => 'result' in r);
+
     if (successfulUploads.length > 0) {
         try {
             const batch = writeBatch(db);
-            successfulUploads.forEach((file, index) => {
-                const result = results.find(r => r.status === 'fulfilled' && (r.value as any).storagePath.includes(file.file.name))?.value as any;
-                if(result) {
-                    const docRef = collection(db, "readingRoomPdfs");
-                    const title = file.file.name.replace(/\.pdf$/i, '').replace(/_/g, ' ');
-                     batch.set(addDoc(docRef).withConverter(null), {
+            const readingRoomCollection = collection(db, "readingRoomPdfs");
+
+            successfulUploads.forEach(upload => {
+                const originalFile = stagedFiles.find(f => f.id === upload.id);
+                if (originalFile) {
+                    const docRef = doc(readingRoomCollection); // Create a new document reference with a unique ID
+                    const title = originalFile.file.name.replace(/\.pdf$/i, '').replace(/_/g, ' ');
+                    batch.set(docRef, {
                         title: title,
                         author: "", // Can be edited later
-                        url: result.downloadURL,
-                        storagePath: result.storagePath,
+                        url: upload.result.downloadURL,
+                        storagePath: upload.result.storagePath,
                         coverImageUrl: null,
                         coverImageStoragePath: null,
                         uploadedAt: serverTimestamp(),
@@ -141,6 +147,7 @@ export function ReadingRoomBulkUpload() {
             });
             setStagedFiles(prev => prev.filter(f => f.status !== 'success'));
         } catch (error) {
+            console.error("Firestore batch commit error:", error);
              toast({ title: 'Firestore Error', description: 'Files uploaded, but failed to save metadata.', variant: 'destructive' });
         }
     } else {
