@@ -6,13 +6,13 @@ import { useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { UserPlus } from 'lucide-react';
-import { TeamMember, TeamMemberTable } from '@/components/admin/TeamMemberTable';
+import { TeamMemberTable } from '@/components/admin/TeamMemberTable';
 import { AddMemberDialog } from '@/components/admin/AddMemberDialog';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import type { NewTeamMember, TeamMemberWithId } from '@/lib/team';
+import type { NewTeamMember, TeamMember, TeamMemberWithId } from '@/lib/team';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
 
@@ -63,9 +63,9 @@ export default function TeamManagementPage() {
     const memberDocRef = doc(db, 'teamMembers', member.id);
     try {
       await updateDoc(memberDocRef, { role: newRole });
-       // Set custom claim
-      await setAdminClaim({ email: member.email, admin: true });
-      toast({ title: 'Success', description: 'Team member role updated.' });
+      const isAdmin = newRole === 'Admin';
+      await setAdminClaim({ email: member.email, admin: isAdmin });
+      toast({ title: 'Success', description: `Team member role updated. Admin claim set to: ${isAdmin}` });
     } catch (error) {
       console.error("Error updating role:", error);
       toast({ title: 'Error', description: 'Failed to update role.', variant: 'destructive' });
@@ -76,24 +76,26 @@ export default function TeamManagementPage() {
     const memberDocRef = doc(db, 'teamMembers', member.id);
     try {
       await deleteDoc(memberDocRef);
-      // Revoke custom claim
       await setAdminClaim({ email: member.email, admin: false });
-      toast({ title: 'Success', description: 'Team member removed.' });
+      toast({ title: 'Success', description: 'Team member removed and admin claim revoked.' });
     } catch (error) {
       console.error("Error removing member:", error);
       toast({ title: 'Error', description: 'Failed to remove team member.', variant: 'destructive' });
     }
   };
 
-  const handleAddMember = async (newMember: NewTeamMember) => {
+ const handleAddMember = async (newMember: NewTeamMember, uid: string) => {
     try {
-      await addDoc(collection(db, 'teamMembers'), {
+      // Use the user's UID as the document ID
+      await setDoc(doc(db, 'teamMembers', uid), {
         ...newMember,
         joinedAt: serverTimestamp(),
       });
-      // Set custom claim for the new user
-      await setAdminClaim({ email: newMember.email, admin: true });
-      toast({ title: 'Success', description: 'New team member added and their login has been created.' });
+      
+      const isAdmin = newMember.role === 'Admin';
+      await setAdminClaim({ email: newMember.email, admin: isAdmin });
+
+      toast({ title: 'Success', description: `New team member added. Admin claim set to: ${isAdmin}` });
       setIsAddDialogOpen(false);
     } catch (error) {
       console.error("Error adding member to Firestore:", error);

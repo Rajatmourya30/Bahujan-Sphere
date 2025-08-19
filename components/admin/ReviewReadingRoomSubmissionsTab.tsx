@@ -5,6 +5,6 @@
 // centralized /app/admin/review-submissions/page.tsx file.
 // This file can be safely deleted.
 
-export function ReviewSubmissionsTab() {
+export function ReviewReadingRoomSubmissionsTab() {
   return null;
 }

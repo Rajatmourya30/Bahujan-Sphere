@@ -29,16 +29,12 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import type { TeamMemberRole } from './TeamMemberTable';
 import type { NewTeamMember } from '@/lib/team';
-import { auth } from '@/lib/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 
-
-const roles: TeamMemberRole[] = ['Admin', 'Editor', 'Reviewer', 'Contributor'];
+const roles = ['Admin', 'Editor', 'Reviewer', 'Contributor'] as const;
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
@@ -51,7 +47,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 interface AddMemberDialogProps {
   onOpenChange: (open: boolean) => void;
-  onSave: (newMember: NewTeamMember) => Promise<void>;
+  onSave: (newMember: NewTeamMember, uid: string) => Promise<void>;
 }
 
 export function AddMemberDialog({ onOpenChange, onSave }: AddMemberDialogProps) {
@@ -71,37 +67,39 @@ export function AddMemberDialog({ onOpenChange, onSave }: AddMemberDialogProps) 
   const onSubmit = async (values: FormValues) => {
     setIsLoading(true);
     try {
-      // This is a temporary auth instance to create the user without signing in the admin as the new user.
-      const tempAuth = auth;
-      await createUserWithEmailAndPassword(tempAuth, values.email, values.password);
+      // This is a simplified approach. A more robust solution would use a Cloud Function
+      // to create the user to avoid re-authentication flows.
+      // For this context, we will create a temporary user on the client, get the UID,
+      // then the admin must re-login. This is not ideal but works for this demo.
+      
+      const response = await fetch('/api/create-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: values.email, password: values.password }),
+      });
+      
+      const result = await response.json();
 
-      // Now save the user's role and name to Firestore
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create user');
+      }
+      
+      const { uid } = result;
+
+      // Now save the user's role and name to Firestore with their UID as doc ID
       await onSave({
         name: values.name,
         email: values.email,
         role: values.role,
-      });
+      }, uid);
 
     } catch (error: any) {
       console.error("Error creating user:", error);
-       if (error.code === 'auth/email-already-in-use') {
-        // If user already exists in Auth, just add them to the team collection in Firestore.
-        toast({
-          title: 'User already exists',
-          description: 'Promoting existing user to a team member.',
-        });
-        await onSave({
-          name: values.name,
-          email: values.email,
-          role: values.role,
-        });
-      } else {
-        toast({
-          title: 'User Creation Failed',
-          description: "An unexpected error occurred.",
-          variant: 'destructive',
-        });
-      }
+      toast({
+        title: 'User Creation Failed',
+        description: error.message || "An unexpected error occurred.",
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
     }

@@ -2,27 +2,36 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-  
-    // Allow public read access to final PDF and cover image folders
-    match /pdfs/{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null; // Allow any authenticated user to write
+    
+    function getRole(userId) {
+      return firestore.get(/databases/(default)/documents/teamMembers/$(userId)).data.role;
+    }
+    
+    function isTeamMember(userId) {
+        return exists(/databases/(default)/documents/teamMembers/$(userId));
     }
 
-    match /bookCovers/{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-
-    // Allow authenticated users to write to profile pictures
-    match /profilePictures/{userId}/{allPaths=**} {
+    // Profile pictures: users can only read/write their own.
+    match /profilePictures/{userId}/{fileName} {
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Deny all other routes
+    // PDF files for reading room
+    match /pdfs/{fileName} {
+      allow read: if true; // Publicly readable
+      allow write: if request.auth != null && isTeamMember(request.auth.uid);
+    }
+    
+    // Cover images for reading room books
+    match /bookCovers/{fileName} {
+      allow read: if true; // Publicly readable
+      allow write: if request.auth != null && isTeamMember(request.auth.uid);
+    }
+
+    // Any other file can only be accessed by an authenticated team member
     match /{allPaths=**} {
-      allow read, write: if false;
+      allow read, write: if request.auth != null && isTeamMember(request.auth.uid);
     }
   }
 }

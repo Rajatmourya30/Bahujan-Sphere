@@ -10,7 +10,6 @@ import { ManageEventDialog } from '@/components/admin/ManageEventDialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EventSubmissionForm } from '@/components/submit/EventSubmissionForm';
 import { BulkUploadForm } from '@/components/submit/BulkUploadForm';
-import { ReviewSubmissionsTab } from '@/components/admin/ReviewSubmissionsTab';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
@@ -69,15 +68,14 @@ export default function ManageCalendarPage() {
     <div className="space-y-8">
       <header>
         <h1 className="font-headline text-3xl font-bold">Manage Calendar</h1>
-        <p className="text-muted-foreground">Add, edit, review, and manage all calendar events.</p>
+        <p className="text-muted-foreground">Add, edit, and manage all calendar events.</p>
       </header>
 
       <Tabs defaultValue="manage" className="w-full">
-        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
            <TabsTrigger value="manage">Manage Events</TabsTrigger>
            <TabsTrigger value="single-event">Submit Single Event</TabsTrigger>
            <TabsTrigger value="bulk-upload">Submit Bulk Upload</TabsTrigger>
-           <TabsTrigger value="review">Review Submissions</TabsTrigger>
         </TabsList>
 
         <TabsContent value="manage" className="mt-6">
@@ -96,9 +94,6 @@ export default function ManageCalendarPage() {
           <BulkUploadForm />
         </TabsContent>
         
-        <TabsContent value="review" className="mt-6">
-            <ReviewSubmissionsTab />
-        </TabsContent>
       </Tabs>
 
 
