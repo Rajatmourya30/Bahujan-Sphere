@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -54,15 +55,23 @@ export function BulkUploadForm() {
         const json: any[] = XLSX.utils.sheet_to_json(worksheet);
 
         const parsedEvents = json.map(row => {
-            if (!row.title || !row.date || !row.summary || !row.tags) {
+            // Make keys lowercase for case-insensitive matching
+            const lowerCaseRow: { [key: string]: any } = {};
+            for (const key in row) {
+                lowerCaseRow[key.toLowerCase()] = row[key];
+            }
+
+            const { title, date, summary, tags, readmoreurl } = lowerCaseRow;
+
+            if (!title || !date || !summary || !tags) {
                 throw new Error('Each row must have title, date, summary, and tags.');
             }
             return {
-                title: String(row.title),
-                date: String(row.date),
-                summary: String(row.summary),
-                readMoreUrl: row.readMoreUrl ? String(row.readMoreUrl) : undefined,
-                tags: String(row.tags).split(',').map(tag => tag.trim()),
+                title: String(title),
+                date: String(date),
+                summary: String(summary),
+                readMoreUrl: readmoreurl ? String(readmoreurl) : undefined,
+                tags: String(tags).split(',').map(tag => tag.trim()),
             };
         });
 
