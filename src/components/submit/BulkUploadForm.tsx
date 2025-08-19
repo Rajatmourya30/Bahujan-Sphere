@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +11,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Download, FileUp, Loader2, Table } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
+import { onAuthStateChanged, type User } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase';
+import { addDoc, collection, doc, getDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 
 interface StagedEvent {
   title: string;
@@ -25,6 +28,29 @@ export function BulkUploadForm() {
   const [stagedEvents, setStagedEvents] = useState<StagedEvent[]>([]);
   const [fileName, setFileName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        const userDocRef = doc(db, 'teamMembers', currentUser.uid);
+        try {
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists()) {
+                setUserRole(userDoc.data().role);
+            }
+        } catch (error) {
+            console.error("Error fetching user role:", error);
+            setUserRole(null);
+        }
+      } else {
+        setUserRole(null);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -55,7 +81,6 @@ export function BulkUploadForm() {
         const json: any[] = XLSX.utils.sheet_to_json(worksheet);
 
         const parsedEvents = json.map(row => {
-            // Make keys lowercase for case-insensitive matching
             const lowerCaseRow: { [key: string]: any } = {};
             for (const key in row) {
                 lowerCaseRow[key.toLowerCase()] = row[key];
@@ -89,20 +114,59 @@ export function BulkUploadForm() {
     reader.readAsBinaryString(file);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (!user) {
+        toast({ title: "Not Authenticated", description: "You must be logged in to submit.", variant: "destructive" });
+        return;
+    }
+    if (stagedEvents.length === 0) {
+        toast({ title: "No Events to Submit", description: "Please upload a file with events first.", variant: "destructive" });
+        return;
+    }
+
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-        console.log('Submitting bulk events:', stagedEvents);
-        toast({
-        title: `${stagedEvents.length} Events Submitted`,
-        description: 'The events have been submitted for review.',
+    
+    const canPublishDirectly = userRole === 'Admin' || userRole === 'Manager';
+    const collectionName = canPublishDirectly ? 'calendarEvents' : 'eventSubmissions';
+    const status = canPublishDirectly ? 'approved' : 'pending';
+
+    try {
+        const batch = writeBatch(db);
+        const targetCollection = collection(db, collectionName);
+
+        stagedEvents.forEach(event => {
+            const docRef = doc(targetCollection);
+            const dataToSave: any = {
+                ...event,
+                status: status,
+            };
+
+            if (canPublishDirectly) {
+                dataToSave.approvedBy = user.uid;
+                dataToSave.approvedAt = serverTimestamp();
+            } else {
+                dataToSave.submittedBy = user.email || 'Admin';
+                dataToSave.submittedAt = serverTimestamp();
+            }
+            
+            batch.set(docRef, dataToSave);
         });
-        // Reset state after submission
+
+        await batch.commit();
+
+        toast({
+            title: canPublishDirectly ? "Events Published!" : "Events Submitted!",
+            description: `${stagedEvents.length} events have been successfully ${canPublishDirectly ? 'published' : 'submitted for review'}.`,
+        });
+
         setStagedEvents([]);
         setFileName('');
+    } catch (error) {
+        console.error("Error submitting bulk events:", error);
+        toast({ title: "Submission Failed", description: "An error occurred while saving the events.", variant: "destructive" });
+    } finally {
         setIsLoading(false);
-    }, 1500);
+    }
   };
   
   const downloadTemplate = () => {
