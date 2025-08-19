@@ -44,8 +44,19 @@ export default function ManageCalendarPage() {
     const unsubscribeFirestore = onSnapshot(q, (snapshot) => {
         const fetchedEvents = snapshot.docs.map(doc => {
             const data = doc.data();
-            // Firestore data might be a Timestamp object, so we ensure it's a JS Date
-            const eventDate = data.date && (data.date as Timestamp).toDate ? (data.date as Timestamp).toDate() : new Date(data.date);
+            let eventDate: Date;
+
+            if (data.date && typeof data.date.toDate === 'function') {
+                // Handle Firestore Timestamp
+                eventDate = (data.date as Timestamp).toDate();
+            } else if (data.date) {
+                // Handle string or other formats that new Date() can parse
+                eventDate = new Date(data.date);
+            } else {
+                // Fallback for invalid or missing date
+                eventDate = new Date();
+            }
+
             return { id: doc.id, ...data, date: eventDate } as CalendarEvent;
         });
         setEvents(fetchedEvents);
