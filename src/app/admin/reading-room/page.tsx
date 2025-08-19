@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button';
 import { BookOpen, Search, Trash2, Edit, PlusCircle } from 'lucide-react';
 import { auth, db, storage } from '@/lib/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { ref, deleteObject, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { collection, query, orderBy, onSnapshot, type Timestamp, deleteDoc, doc, updateDoc, where } from 'firebase/firestore';
+import { ref, deleteObject } from 'firebase/storage';
+import { collection, query, orderBy, onSnapshot, type Timestamp, deleteDoc, doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { ManageDocumentDialog, type DocumentFormData } from '@/components/admin/ManageDocumentDialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,6 +39,7 @@ export interface ReadingRoomPdf {
   tags?: string[];
   language?: string;
   publicationYear?: number;
+  status?: 'approved' | 'pending' | 'rejected';
 }
 
 
@@ -70,9 +71,9 @@ export default function ManageReadingRoomPage() {
   useEffect(() => {
     if (!user) return;
 
+    // Query sorted by date, then filter by status on the client
     const q = query(
         collection(db, "readingRoomPdfs"), 
-        where("status", "==", "approved"),
         orderBy("uploadedAt", "desc")
     );
     const unsubscribeFirestore = onSnapshot(q, (querySnapshot) => {
@@ -80,7 +81,8 @@ export default function ManageReadingRoomPage() {
         querySnapshot.forEach((doc) => {
             pdfs.push({ id: doc.id, ...doc.data() } as ReadingRoomPdf);
         });
-        setAvailablePdfs(pdfs);
+        // Filter for approved documents on the client-side
+        setAvailablePdfs(pdfs.filter(pdf => pdf.status === 'approved'));
         setIsLoadingPdfs(false);
     }, (error) => {
         console.error("Error fetching PDFs:", error);
@@ -148,8 +150,11 @@ export default function ManageReadingRoomPage() {
 
   const handleDelete = async (pdf: ReadingRoomPdf) => {
     try {
-        // First, delete the Firestore document
-        await deleteDoc(doc(db, "readingRoomPdfs", pdf.id));
+        const batch = writeBatch(db);
+
+        // Delete the Firestore document
+        batch.delete(doc(db, "readingRoomPdfs", pdf.id));
+        await batch.commit();
 
         // Then, delete the file from Storage
         if (pdf.storagePath) {
