@@ -4,98 +4,60 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
   
-    // Helper function to check if a user is authenticated
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    // Helper function to get a user's role from the teamMembers collection
-    function getRole() {
-      return get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.role;
-    }
-
-    // Rules for the teamMembers collection
-    match /teamMembers/{userId} {
-      // Allow a user to read their own role
-      allow read: if isAuthenticated() && request.auth.uid == userId;
-      // Only admins can create, update, or delete team members
-      allow write: if isAuthenticated() && getRole() == 'admin';
-    }
-
-    // --- SUBMISSION COLLECTIONS ---
-
-    // Rules for eventSubmissions
-    match /eventSubmissions/{submissionId} {
-      allow read, delete: if isAuthenticated() && getRole() == 'admin';
-      allow create: if isAuthenticated()
-                    && getRole() in ['member', 'admin']
-                    && request.resource.data.status == 'pending'
-                    && request.resource.data.submittedBy == request.auth.uid;
-    }
-
-    // Rules for readingRoomSubmissions
-    match /readingRoomSubmissions/{submissionId} {
-      allow read, delete: if isAuthenticated() && getRole() == 'admin';
-      allow create: if isAuthenticated()
-                    && getRole() in ['member', 'admin']
-                    && request.resource.data.status == 'pending'
-                    && request.resource.data.submittedBy == request.auth.uid;
+    // Helper function to check if a user is an authenticated team member
+    function isTeamMember() {
+      return request.auth != null && exists(/databases/$(database)/documents/teamMembers/$(request.auth.uid));
     }
     
-    // Rules for bookSubmissions
-    match /bookSubmissions/{submissionId} {
-      allow read, delete: if isAuthenticated() && getRole() == 'admin';
-      allow create: if isAuthenticated()
-                    && getRole() in ['member', 'admin']
-                    && request.resource.data.status == 'pending'
-                    && request.resource.data.submittedBy == request.auth.uid;
-    }
-
-    // Rules for storeSubmissions
-    match /storeSubmissions/{submissionId} {
-      allow read, delete: if isAuthenticated() && getRole() == 'admin';
-      allow create: if isAuthenticated()
-                    && getRole() in ['member', 'admin']
-                    && request.resource.data.status == 'pending'
-                    && request.resource.data.submittedBy == request.auth.uid;
-    }
-    
-    // Rules for knowledgeHubSubmissions
-    match /knowledgeHubSubmissions/{submissionId} {
-      allow read, delete: if isAuthenticated() && getRole() == 'admin';
-      allow create: if isAuthenticated()
-                    && getRole() in ['member', 'admin']
-                    && request.resource.data.status == 'pending'
-                    && request.resource.data.submittedBy == request.auth.uid;
-    }
-
-
-    // --- LIVE CONTENT COLLECTIONS ---
-
-    // Public read-only, admin write
-    match /readingRoomPdfs/{pdfId} {
+    // Publicly readable collections
+    match /calendarEvents/{docId} {
       allow read: if true;
-      allow write: if isAuthenticated() && getRole() == 'admin';
+      allow write: if isTeamMember();
+    }
+    match /knowledgeHub/{docId} {
+      allow read: if true;
+      allow write: if isTeamMember();
+    }
+    match /stores/{docId} {
+      allow read: if true;
+      allow write: if isTeamMember();
+    }
+    match /books/{docId} {
+      allow read: if true;
+      allow write: if isTeamMember();
+    }
+    match /readingRoomPdfs/{docId} {
+      allow read: if true;
+      allow write: if isTeamMember();
     }
     
-    match /books/{bookId} {
-      allow read: if resource.data.status == 'approved';
-      allow write: if isAuthenticated() && getRole() == 'admin';
+    // Submission queues are only accessible by team members
+    match /eventSubmissions/{docId} {
+      allow read, write: if isTeamMember();
     }
-
-    match /stores/{storeId} {
-      allow read: if resource.data.status == 'approved';
-      allow write: if isAuthenticated() && getRole() == 'admin';
+    match /knowledgeHubSubmissions/{docId} {
+      allow read, write: if isTeamMember();
     }
-
-    match /knowledgeHub/{orgId} {
-      allow read: if resource.data.status == 'approved';
-      allow write: if isAuthenticated() && getRole() == 'admin';
+    match /storeSubmissions/{docId} {
+      allow read, write: if isTeamMember();
+    }
+    match /bookSubmissions/{docId} {
+      allow read, write: if isTeamMember();
+    }
+     match /readingRoomSubmissions/{docId} {
+      allow read, write: if isTeamMember();
     }
     
-    // Default deny all other collections
-    match /{document=**} {
-      allow read, write: if false;
+    // Team members can be read by other team members, but only created/deleted by admins via cloud functions
+    match /teamMembers/{userId} {
+      allow read: if isTeamMember();
+      // Write access is handled by secure cloud functions
+      allow write: if false; 
+    }
+    
+    // Users can only access their own data
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
