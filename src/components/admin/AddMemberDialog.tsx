@@ -34,7 +34,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 
-const roles = ['Admin', 'Editor', 'Reviewer', 'Contributor'] as const;
+const roles = ['Admin', 'Manager', 'Editor', 'Reviewer', 'Contributor'] as const;
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
@@ -67,11 +67,6 @@ export function AddMemberDialog({ onOpenChange, onSave }: AddMemberDialogProps) 
   const onSubmit = async (values: FormValues) => {
     setIsLoading(true);
     try {
-      // This is a simplified approach. A more robust solution would use a Cloud Function
-      // to create the user to avoid re-authentication flows.
-      // For this context, we will create a temporary user on the client, get the UID,
-      // then the admin must re-login. This is not ideal but works for this demo.
-      
       const response = await fetch('/api/create-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -86,7 +81,6 @@ export function AddMemberDialog({ onOpenChange, onSave }: AddMemberDialogProps) 
       
       const { uid } = result;
 
-      // Now save the user's role and name to Firestore with their UID as doc ID
       await onSave({
         name: values.name,
         email: values.email,

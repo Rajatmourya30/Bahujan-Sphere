@@ -66,9 +66,9 @@ export function StoreSubmissionForm() {
       return;
     }
 
-    const isAdmin = userRole === 'Admin';
-    const collectionName = isAdmin ? 'stores' : 'storeSubmissions';
-    const status = isAdmin ? 'approved' : 'pending';
+    const canPublishDirectly = userRole === 'Admin' || userRole === 'Manager';
+    const collectionName = canPublishDirectly ? 'stores' : 'storeSubmissions';
+    const status = canPublishDirectly ? 'approved' : 'pending';
 
     try {
       const imageRef = ref(storage, `images/stores/${Date.now()}-${values.imageFile.name}`);
@@ -86,7 +86,7 @@ export function StoreSubmissionForm() {
         submittedAt: serverTimestamp(),
       };
 
-      if (isAdmin) {
+      if (canPublishDirectly) {
           dataToSave.approvedBy = user.uid;
           dataToSave.approvedAt = serverTimestamp();
       } else {
@@ -96,8 +96,8 @@ export function StoreSubmissionForm() {
       await addDoc(collection(db, collectionName), dataToSave);
       
       toast({ 
-        title: isAdmin ? "Store Published!" : "Store Submitted!",
-        description: isAdmin ? "The store is now live." : "The store is now pending review."
+        title: canPublishDirectly ? "Store Published!" : "Store Submitted!",
+        description: canPublishDirectly ? "The store is now live." : "The store is now pending review."
       });
       form.reset();
       setImagePreview(null);
@@ -167,7 +167,7 @@ export function StoreSubmissionForm() {
             )} />
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {userRole === 'Admin' ? 'Publish Directly' : 'Submit for Review'}
+              {userRole === 'Admin' || userRole === 'Manager' ? 'Publish Directly' : 'Submit for Review'}
             </Button>
           </form>
         </Form>

@@ -66,9 +66,9 @@ export function KnowledgeHubSubmissionForm() {
       return;
     }
 
-    const isAdmin = userRole === 'Admin';
-    const collectionName = isAdmin ? 'knowledgeHub' : 'knowledgeHubSubmissions';
-    const status = isAdmin ? 'approved' : 'pending';
+    const canPublishDirectly = userRole === 'Admin' || userRole === 'Manager';
+    const collectionName = canPublishDirectly ? 'knowledgeHub' : 'knowledgeHubSubmissions';
+    const status = canPublishDirectly ? 'approved' : 'pending';
 
     try {
       const imageRef = ref(storage, `images/logos/${Date.now()}-${values.logoFile.name}`);
@@ -86,7 +86,7 @@ export function KnowledgeHubSubmissionForm() {
         submittedAt: serverTimestamp(),
       };
 
-      if (isAdmin) {
+      if (canPublishDirectly) {
         dataToSave.approvedBy = user.uid;
         dataToSave.approvedAt = serverTimestamp();
       } else {
@@ -96,8 +96,8 @@ export function KnowledgeHubSubmissionForm() {
       await addDoc(collection(db, collectionName), dataToSave);
 
       toast({ 
-        title: isAdmin ? "Organization Published!" : "Organization Submitted!",
-        description: isAdmin ? "The organization is now live." : "The organization is now pending review."
+        title: canPublishDirectly ? "Organization Published!" : "Organization Submitted!",
+        description: canPublishDirectly ? "The organization is now live." : "The organization is now pending review."
       });
       form.reset();
       setImagePreview(null);
@@ -167,7 +167,7 @@ export function KnowledgeHubSubmissionForm() {
             )} />
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {userRole === 'Admin' ? 'Publish Directly' : 'Submit for Review'}
+              {userRole === 'Admin' || userRole === 'Manager' ? 'Publish Directly' : 'Submit for Review'}
             </Button>
           </form>
         </Form>

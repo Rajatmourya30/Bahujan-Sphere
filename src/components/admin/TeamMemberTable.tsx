@@ -20,7 +20,7 @@ import { RemoveMemberDialog } from './RemoveMemberDialog';
 import type { Timestamp } from 'firebase/firestore';
 
 
-export type TeamMemberRole = 'Admin' | 'Editor' | 'Reviewer' | 'Contributor';
+export type TeamMemberRole = 'Admin' | 'Manager' | 'Editor' | 'Reviewer' | 'Contributor';
 
 export interface TeamMember {
     name: string;
@@ -42,6 +42,7 @@ interface TeamMemberTableProps {
 
 const roleVariant: Record<TeamMemberRole, 'default' | 'secondary' | 'outline' | 'destructive'> = {
     'Admin': 'default',
+    'Manager': 'default',
     'Editor': 'secondary',
     'Reviewer': 'outline',
     'Contributor': 'destructive',
@@ -49,6 +50,7 @@ const roleVariant: Record<TeamMemberRole, 'default' | 'secondary' | 'outline' | 
 
 const rolePermissions: Record<TeamMemberRole, string[]> = {
     'Admin': ['Full Access'],
+    'Manager': ['Submit Content', 'Approve Submissions', 'Edit Content'],
     'Editor': ['Submit Events', 'Approve Submissions', 'Edit Events'],
     'Reviewer': ['Review Submissions', 'Suggest Edits'],
     'Contributor': ['Submit Events for Review'],

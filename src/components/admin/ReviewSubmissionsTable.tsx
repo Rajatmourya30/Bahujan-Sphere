@@ -16,50 +16,54 @@ import { formatDistanceToNow } from 'date-fns';
 import type { Timestamp } from "firebase/firestore";
 
 
-export interface PendingEvent {
+export interface PendingSubmission {
     id: string;
     title: string;
     submittedBy: string;
     submittedAt: Timestamp;
-    date: string;
-    summary: string;
+    // These fields might not exist on all submission types
+    date?: string;
+    summary?: string;
     readMoreUrl?: string;
     tags?: string[];
 }
 
 interface ReviewSubmissionsTableProps {
-    events: PendingEvent[];
-    onReview: (event: PendingEvent, action: 'approve' | 'reject') => void;
+    submissions: PendingSubmission[];
+    onReview: (submission: PendingSubmission, action: 'approve' | 'reject', reason?: string) => void;
+    openRejectionDialog: (submission: PendingSubmission) => void;
 }
 
-export function ReviewSubmissionsTable({ events, onReview }: ReviewSubmissionsTableProps) {
+export function ReviewSubmissionsTable({ submissions, onReview, openRejectionDialog }: ReviewSubmissionsTableProps) {
     return (
         <Table>
             <TableHeader>
                 <TableRow>
-                    <TableHead>Event Details</TableHead>
+                    <TableHead>Submission Details</TableHead>
                     <TableHead>Submitted By</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {events.map((event) => (
-                    <TableRow key={event.id}>
+                {submissions.map((submission) => (
+                    <TableRow key={submission.id}>
                         <TableCell className="font-medium max-w-xs">
-                            <div className="font-bold">{event.title}</div>
-                            <p className="text-sm text-muted-foreground truncate mt-1">
-                                {event.summary}
-                            </p>
+                            <div className="font-bold">{submission.title}</div>
+                            {submission.summary && (
+                                <p className="text-sm text-muted-foreground truncate mt-1">
+                                    {submission.summary}
+                                </p>
+                            )}
                         </TableCell>
                         <TableCell>
-                            <div>{event.submittedBy}</div>
+                            <div>{submission.submittedBy}</div>
                              <div className="text-sm text-muted-foreground">
-                                {event.submittedAt ? formatDistanceToNow(event.submittedAt.toDate(), { addSuffix: true }) : 'Just now'}
+                                {submission.submittedAt ? formatDistanceToNow(submission.submittedAt.toDate(), { addSuffix: true }) : 'Just now'}
                             </div>
                         </TableCell>
                         <TableCell>
-                            <Badge variant="outline">{event.date}</Badge>
+                           {submission.date && <Badge variant="outline">{submission.date}</Badge>}
                         </TableCell>
                         <TableCell className="text-right">
                             <div className="flex gap-2 justify-end">
@@ -67,7 +71,7 @@ export function ReviewSubmissionsTable({ events, onReview }: ReviewSubmissionsTa
                                     variant="outline"
                                     size="sm"
                                     className="text-green-600 border-green-600/40 hover:bg-green-50 hover:text-green-700"
-                                    onClick={() => onReview(event, 'approve')}
+                                    onClick={() => onReview(submission, 'approve')}
                                 >
                                     <Check className="mr-2 h-4 w-4" />
                                     Approve
@@ -76,7 +80,7 @@ export function ReviewSubmissionsTable({ events, onReview }: ReviewSubmissionsTa
                                     variant="outline"
                                     size="sm"
                                     className="text-red-600 border-red-600/40 hover:bg-red-50 hover:text-red-700"
-                                    onClick={() => onReview(event, 'reject')}
+                                    onClick={() => openRejectionDialog(submission)}
                                 >
                                     <X className="mr-2 h-4 w-4" />
                                     Reject
@@ -89,3 +93,4 @@ export function ReviewSubmissionsTable({ events, onReview }: ReviewSubmissionsTa
         </Table>
     );
 }
+

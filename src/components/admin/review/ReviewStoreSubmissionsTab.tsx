@@ -4,12 +4,13 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, doc, deleteDoc, writeBatch, serverTimestamp, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, doc, deleteDoc, writeBatch, serverTimestamp, query, where, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import type { User } from 'firebase/auth';
 import type { PendingSubmission } from '@/components/admin/ReviewSubmissionsTable';
 import { ReviewSubmissionsTable } from '@/components/admin/ReviewSubmissionsTable';
+import { RejectionNoteDialog } from '@/components/admin/RejectionNoteDialog';
 
 interface ReviewStoreSubmissionsTabProps {
     currentUser: User | null;
@@ -19,6 +20,7 @@ export function ReviewStoreSubmissionsTab({ currentUser }: ReviewStoreSubmission
   const [submissions, setSubmissions] = useState<PendingSubmission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const [rejectionDialogState, setRejectionDialogState] = useState<{isOpen: boolean, submission: PendingSubmission | null}>({isOpen: false, submission: null});
 
   useEffect(() => {
     const q = query(collection(db, "storeSubmissions"), where("status", "==", "pending"));
@@ -37,8 +39,12 @@ export function ReviewStoreSubmissionsTab({ currentUser }: ReviewStoreSubmission
 
     return () => unsubscribe();
   }, [toast]);
+  
+  const openRejectionDialog = (submission: PendingSubmission) => {
+      setRejectionDialogState({isOpen: true, submission: submission});
+  }
 
-  const handleReview = async (submission: PendingSubmission, action: 'approve' | 'reject') => {
+  const handleReview = async (submission: PendingSubmission, action: 'approve' | 'reject', reason?: string) => {
     if (!currentUser) {
         toast({ title: 'Not Authenticated', description: 'You must be logged in.', variant: 'destructive' });
         return;
@@ -64,12 +70,22 @@ export function ReviewStoreSubmissionsTab({ currentUser }: ReviewStoreSubmission
         await batch.commit();
         toast({ title: 'Store Approved', description: `"${submission.title}" is now live.` });
       } else { // Reject
-        await deleteDoc(submissionRef);
-        toast({ title: 'Store Rejected', description: `"${submission.title}" has been removed.` });
+        if (!reason) {
+            toast({ title: 'Reason Required', description: 'Please provide a reason for rejection.', variant: 'destructive' });
+            return;
+        }
+        await updateDoc(submissionRef, {
+          status: 'rejected',
+          rejectionReason: reason,
+          reviewedBy: currentUser.uid,
+        });
+        toast({ title: 'Store Rejected', description: `"${submission.title}" has been rejected and feedback has been saved.` });
       }
     } catch (error: any) {
       console.error(`Error ${action}ing store:`, error);
       toast({ title: 'Action Failed', description: error.message, variant: 'destructive' });
+    } finally {
+        setRejectionDialogState({isOpen: false, submission: null});
     }
   };
 
@@ -87,21 +103,30 @@ export function ReviewStoreSubmissionsTab({ currentUser }: ReviewStoreSubmission
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Review Store Submissions</CardTitle>
-        <CardDescription>Approve or reject stores submitted by your team.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {submissions.length > 0 ? (
-          <ReviewSubmissionsTable submissions={submissions} onReview={handleReview} />
-        ) : (
-          <div className="text-center py-16">
-            <h3 className="text-lg font-medium">All caught up!</h3>
-            <p className="text-muted-foreground mt-2">There are no pending store submissions.</p>
-          </div>
+    <>
+        <Card>
+        <CardHeader>
+            <CardTitle>Review Store Submissions</CardTitle>
+            <CardDescription>Approve or reject stores submitted by your team.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            {submissions.length > 0 ? (
+            <ReviewSubmissionsTable submissions={submissions} onReview={handleReview} openRejectionDialog={openRejectionDialog}/>
+            ) : (
+            <div className="text-center py-16">
+                <h3 className="text-lg font-medium">All caught up!</h3>
+                <p className="text-muted-foreground mt-2">There are no pending store submissions.</p>
+            </div>
+            )}
+        </CardContent>
+        </Card>
+         {rejectionDialogState.isOpen && rejectionDialogState.submission && (
+            <RejectionNoteDialog
+                submissionTitle={rejectionDialogState.submission.title}
+                onConfirm={(reason) => handleReview(rejectionDialogState.submission!, 'reject', reason)}
+                onOpenChange={(isOpen) => !isOpen && setRejectionDialogState({isOpen: false, submission: null})}
+            />
         )}
-      </CardContent>
-    </Card>
+    </>
   );
 }

@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { TeamMemberRole, TeamMemberWithId } from './TeamMemberTable';
+import type { TeamMemberRole, TeamMemberWithId } from '@/components/admin/TeamMemberTable';
 import { Label } from '../ui/label';
 
 interface EditRoleDialogProps {
@@ -27,7 +27,7 @@ interface EditRoleDialogProps {
   onSave: (newRole: TeamMemberRole) => void;
 }
 
-const roles: TeamMemberRole[] = ['Admin', 'Editor', 'Reviewer', 'Contributor'];
+const roles: TeamMemberRole[] = ['Admin', 'Manager', 'Editor', 'Reviewer', 'Contributor'];
 
 export function EditRoleDialog({ member, onOpenChange, onSave }: EditRoleDialogProps) {
   const [selectedRole, setSelectedRole] = useState<TeamMemberRole>(member.role);

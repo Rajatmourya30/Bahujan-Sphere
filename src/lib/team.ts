@@ -1,7 +1,7 @@
 import { collection, getDocs, type Timestamp } from 'firebase/firestore';
 import { db } from './firebase';
 
-export type TeamMemberRole = 'Admin' | 'Editor' | 'Reviewer' | 'Contributor';
+export type TeamMemberRole = 'Admin' | 'Manager' | 'Editor' | 'Reviewer' | 'Contributor';
 
 export interface TeamMember {
   name: string;

@@ -68,9 +68,9 @@ export function BookSubmissionForm() {
       return;
     }
 
-    const isAdmin = userRole === 'Admin';
-    const collectionName = isAdmin ? 'books' : 'bookSubmissions';
-    const status = isAdmin ? 'approved' : 'pending';
+    const canPublishDirectly = userRole === 'Admin' || userRole === 'Manager';
+    const collectionName = canPublishDirectly ? 'books' : 'bookSubmissions';
+    const status = canPublishDirectly ? 'approved' : 'pending';
 
     try {
       // 1. Upload image to Storage
@@ -90,7 +90,7 @@ export function BookSubmissionForm() {
         submittedAt: serverTimestamp(),
       };
 
-      if (isAdmin) {
+      if (canPublishDirectly) {
           dataToSave.approvedBy = user.uid;
           dataToSave.approvedAt = serverTimestamp();
       } else {
@@ -101,8 +101,8 @@ export function BookSubmissionForm() {
       await addDoc(collection(db, collectionName), dataToSave);
       
       toast({ 
-        title: isAdmin ? "Book Published!" : "Book Submitted!", 
-        description: isAdmin ? "The book is now live." : "The book is now pending review." 
+        title: canPublishDirectly ? "Book Published!" : "Book Submitted!", 
+        description: canPublishDirectly ? "The book is now live." : "The book is now pending review." 
       });
       form.reset();
       setImagePreview(null);
@@ -180,7 +180,7 @@ export function BookSubmissionForm() {
             )} />
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {userRole === 'Admin' ? 'Publish Directly' : 'Submit for Review'}
+              {userRole === 'Admin' || userRole === 'Manager' ? 'Publish Directly' : 'Submit for Review'}
             </Button>
           </form>
         </Form>
