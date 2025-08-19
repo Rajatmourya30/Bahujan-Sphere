@@ -12,24 +12,30 @@ export function LanguageGate({ children }: { children: React.ReactNode }) {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
+    // If we're loading the language preference, don't do anything yet.
+    if (isLanguageLoading) {
+      return;
+    }
+
+    // Always allow access to the admin section.
     if (pathname.startsWith('/admin')) {
       setIsReady(true);
       return;
     }
-    if (!isLanguageLoading) {
-      if (!language) {
-        if (pathname !== '/language-selection') {
-          router.replace('/language-selection');
-        } else {
-          setIsReady(true);
-        }
-      } else {
-        setIsReady(true);
-      }
+
+    const isLanguageSelectionPage = pathname === '/language-selection';
+
+    // If language is not set and we are not on the selection page, redirect there.
+    if (!language && !isLanguageSelectionPage) {
+      router.replace('/language-selection');
+    } else {
+      // If language is set or we are on the correct page, the component is ready.
+      setIsReady(true);
     }
   }, [router, pathname, language, isLanguageLoading]);
 
-  if (!isReady || isLanguageLoading) {
+  // Show a loading skeleton while we determine the language status.
+  if (!isReady) {
     return (
       <div className="relative mx-auto flex h-screen max-w-md flex-col overflow-hidden border-x bg-background p-4 pt-8 shadow-lg">
         <div className="space-y-4">
@@ -41,14 +47,7 @@ export function LanguageGate({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  
-  if (pathname === '/language-selection' && !language) {
-    return <>{children}</>;
-  }
-  
-  if (language) {
-    return <>{children}</>;
-  }
 
-  return null;
+  // Render the children (the rest of the app)
+  return <>{children}</>;
 }
