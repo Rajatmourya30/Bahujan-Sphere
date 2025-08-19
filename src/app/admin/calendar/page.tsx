@@ -15,7 +15,44 @@ import { auth, db } from '@/lib/firebase';
 import { ReviewSubmissionsTab } from '@/components/admin/ReviewSubmissionsTab';
 import { collection, onSnapshot, query, where, type Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { parse } from 'date-fns';
+import { isValid, parse } from 'date-fns';
+
+// Function to parse various date formats, including Excel serial numbers
+function parseDate(dateValue: any): Date {
+    if (!dateValue) return new Date(0); // Return an invalid date if no value
+
+    // Case 1: Firestore Timestamp
+    if (dateValue && typeof dateValue.toDate === 'function') {
+        return (dateValue as Timestamp).toDate();
+    }
+
+    // Case 2: Excel Serial Number (which comes as a string or number)
+    const numericDate = Number(dateValue);
+    if (!isNaN(numericDate) && numericDate > 0) {
+        // Excel serial date is the number of days since 1900-01-01.
+        // JS Date is milliseconds since 1970-01-01.
+        // 25569 is the number of days between 1900 and 1970, accounting for Excel's 1900 leap year bug.
+        const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+        return new Date(excelEpoch.getTime() + numericDate * 24 * 60 * 60 * 1000);
+    }
+    
+    // Case 3: Standard string date
+    if (typeof dateValue === 'string') {
+        const parsedDate = parse(dateValue, 'd MMMM yyyy', new Date(0));
+        if (isValid(parsedDate)) {
+            return parsedDate;
+        }
+    }
+    
+    // Fallback for any other format or invalid string
+    const directParsed = new Date(dateValue);
+    if(isValid(directParsed)) {
+        return directParsed;
+    }
+
+    return new Date(0); // Return an invalid date as a final fallback
+}
+
 
 export default function ManageCalendarPage() {
   const router = useRouter();
@@ -45,21 +82,10 @@ export default function ManageCalendarPage() {
     const unsubscribeFirestore = onSnapshot(q, (snapshot) => {
         const fetchedEvents = snapshot.docs.map(doc => {
             const data = doc.data();
-            let eventDate: Date;
+            const eventDate = parseDate(data.date);
 
-            if (data.date && typeof data.date.toDate === 'function') {
-                eventDate = (data.date as Timestamp).toDate();
-            } else if (data.date && typeof data.date === 'string') {
-                const parsedDate = parse(data.date, 'd MMMM yyyy', new Date(0));
-                 if (!isNaN(parsedDate.getTime())) {
-                    eventDate = parsedDate;
-                } else {
-                    console.warn(`Invalid date string encountered: "${data.date}" for doc ID ${doc.id}`);
-                    eventDate = new Date(0); 
-                }
-            } else {
-                 console.warn(`Missing or invalid date field for doc ID ${doc.id}:`, data.date);
-                eventDate = new Date(0);
+            if (!isValid(eventDate)) {
+                 console.warn(`Invalid date value encountered: "${data.date}" for doc ID ${doc.id}`);
             }
 
             return { id: doc.id, ...data, date: eventDate } as CalendarEvent;
