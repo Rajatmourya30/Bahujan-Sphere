@@ -12,14 +12,14 @@ export function LanguageGate({ children }: { children: React.ReactNode }) {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    // If we're loading the language preference, don't do anything yet.
-    if (isLanguageLoading) {
+    // Always allow access to the admin section immediately, regardless of language loading state.
+    if (pathname.startsWith('/admin')) {
+      setIsReady(true);
       return;
     }
 
-    // Always allow access to the admin section.
-    if (pathname.startsWith('/admin')) {
-      setIsReady(true);
+    // If we're loading the language preference, don't do anything yet.
+    if (isLanguageLoading) {
       return;
     }
 

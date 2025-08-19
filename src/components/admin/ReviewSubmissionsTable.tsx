@@ -12,7 +12,7 @@ import {
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Check, X } from "lucide-react";
-import { formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import type { Timestamp } from "firebase/firestore";
 
 
@@ -22,7 +22,7 @@ export interface PendingSubmission {
     submittedBy: string;
     submittedAt: Timestamp;
     // These fields might not exist on all submission types
-    date?: string;
+    date?: string | Timestamp;
     summary?: string;
     readMoreUrl?: string;
     tags?: string[];
@@ -35,6 +35,19 @@ interface ReviewSubmissionsTableProps {
 }
 
 export function ReviewSubmissionsTable({ submissions, onReview, openRejectionDialog }: ReviewSubmissionsTableProps) {
+    
+    const formatDate = (dateValue?: string | Timestamp) => {
+        if (!dateValue) return null;
+        if (typeof dateValue === 'string') {
+            return dateValue;
+        }
+        // Check if it's a Firestore Timestamp and has the toDate method
+        if (dateValue && typeof (dateValue as Timestamp).toDate === 'function') {
+            return format((dateValue as Timestamp).toDate(), 'PPP');
+        }
+        return 'Invalid Date';
+    }
+    
     return (
         <Table>
             <TableHeader>
@@ -63,7 +76,7 @@ export function ReviewSubmissionsTable({ submissions, onReview, openRejectionDia
                             </div>
                         </TableCell>
                         <TableCell>
-                           {submission.date && <Badge variant="outline">{submission.date}</Badge>}
+                           {submission.date && <Badge variant="outline">{formatDate(submission.date)}</Badge>}
                         </TableCell>
                         <TableCell className="text-right">
                             <div className="flex gap-2 justify-end">
