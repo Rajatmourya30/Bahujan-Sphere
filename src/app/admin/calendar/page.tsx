@@ -4,36 +4,60 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
-import { allEvents, CalendarEvent } from '@/lib/events';
+import { type CalendarEvent } from '@/lib/events';
 import { EventManagementTable } from '@/components/admin/EventManagementTable';
 import { ManageEventDialog } from '@/components/admin/ManageEventDialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EventSubmissionForm } from '@/components/submit/EventSubmissionForm';
 import { BulkUploadForm } from '@/components/submit/BulkUploadForm';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { ReviewSubmissionsTab } from '@/components/admin/ReviewSubmissionsTab';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ManageCalendarPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
-  const [events, setEvents] = useState(allEvents);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setFirebaseUser(user);
       } else {
         router.replace('/admin/login');
       }
-      setIsLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
   }, [router]);
+
+  useEffect(() => {
+    if (!firebaseUser) return;
+
+    const q = query(collection(db, 'calendarEvents'), where('status', '==', 'approved'));
+    const unsubscribeFirestore = onSnapshot(q, (snapshot) => {
+        const fetchedEvents = snapshot.docs.map(doc => {
+            const data = doc.data();
+            // Firestore data might not be a Date object, so we ensure it is
+            const eventDate = new Date(data.date); 
+            return { id: doc.id, ...data, date: eventDate } as CalendarEvent;
+        });
+        setEvents(fetchedEvents);
+        setIsLoading(false);
+    }, (error) => {
+        console.error("Failed to fetch events:", error);
+        toast({ title: 'Error', description: 'Could not fetch events from the database.', variant: 'destructive' });
+        setIsLoading(false);
+    });
+
+    return () => unsubscribeFirestore();
+  }, [firebaseUser, toast]);
 
 
   const handleOpenDialog = (event: CalendarEvent | null = null) => {
@@ -42,17 +66,15 @@ export default function ManageCalendarPage() {
   };
 
   const handleSave = (eventData: Omit<CalendarEvent, 'id'>) => {
-    if (editingEvent) {
-      setEvents(currentEvents =>
-        currentEvents.map(e => (e.id === editingEvent.id ? { ...e, ...eventData } : e))
-      );
-    } else {
-      setEvents(currentEvents => [...currentEvents, { ...eventData, id: `event-${Date.now()}` }]);
-    }
+    // This logic would need to be updated to save to Firestore
+    console.log("Saving event:", eventData);
+    toast({ title: "Note", description: "Editing functionality is not yet fully implemented in this view." });
   };
 
   const handleRemove = (eventId: string) => {
-    setEvents(currentEvents => currentEvents.filter(e => e.id !== eventId));
+    // This logic would need to be updated to remove from Firestore
+     console.log("Removing event:", eventId);
+     toast({ title: "Note", description: "Removal functionality is not yet fully implemented in this view." });
   };
   
   if (isLoading) {

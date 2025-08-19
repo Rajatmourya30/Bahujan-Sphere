@@ -14,7 +14,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Calendar as CalendarIcon, MoreHorizontal, PlusCircle, Search } from "lucide-react";
 import { Button } from "../ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "../ui/dropdown-menu";
-import { useLanguage } from "@/hooks/use-language";
 import type { CalendarEvent } from "@/lib/events";
 import { Badge } from "../ui/badge";
 import { Input } from "../ui/input";
@@ -33,7 +32,6 @@ interface EventManagementTableProps {
 
 
 export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventManagementTableProps) {
-    const { t } = useLanguage();
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedMonth, setSelectedMonth] = useState<string>('all');
     const [selectedYear, setSelectedYear] = useState<string>('all');
@@ -51,7 +49,7 @@ export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventM
 
     const filteredEvents = useMemo(() => {
         return events.filter(event => {
-            const title = t(event.titleKey).toLowerCase();
+            const title = event.title?.toLowerCase() || '';
             const matchesSearch = title.includes(searchTerm.toLowerCase());
             
             const eventMonth = event.date.getMonth().toString();
@@ -64,7 +62,7 @@ export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventM
 
             return matchesSearch && matchesMonth && matchesYear && matchesDate;
         });
-    }, [events, searchTerm, selectedMonth, selectedYear, selectedDate, t]);
+    }, [events, searchTerm, selectedMonth, selectedYear, selectedDate]);
     
     const clearFilters = () => {
         setSearchTerm('');
@@ -170,19 +168,19 @@ export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventM
                             {filteredEvents.length > 0 ? filteredEvents.map((event) => (
                                 <TableRow key={event.id}>
                                     <TableCell className="font-medium">
-                                        <span className="font-bold">{t(event.titleKey)}</span>
+                                        <span className="font-bold">{event.title}</span>
                                     </TableCell>
                                     <TableCell>{format(event.date, 'PPP')}</TableCell>
                                     <TableCell>
                                         <div className="flex flex-wrap gap-1">
-                                            {event.tagKeys.map(tagKey => (
-                                                <Badge key={tagKey} variant="secondary">{t(tagKey)}</Badge>
+                                            {event.tags?.map(tag => (
+                                                <Badge key={tag} variant="secondary">{tag}</Badge>
                                             ))}
                                         </div>
                                     </TableCell>
                                     <TableCell className="max-w-[200px] sm:max-w-md">
                                         <p className="text-sm text-muted-foreground truncate">
-                                            {t(event.descriptionKey)}
+                                            {event.summary}
                                         </p>
                                     </TableCell>
                                     <TableCell className="text-right">
