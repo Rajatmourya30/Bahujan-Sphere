@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { db, storage } from '@/lib/firebase';
-import { collection, onSnapshot, doc, deleteDoc, setDoc, serverTimestamp, query, orderBy, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, doc, deleteDoc, setDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, DatabaseZap } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
@@ -13,7 +13,7 @@ import Image from 'next/image';
 import { Button } from '../ui/button';
 import { Check, X } from 'lucide-react';
 import type { ReadingRoomPdf } from '@/app/admin/reading-room/page';
-import { ref, copyObject, deleteObject } from 'firebase/storage';
+import { ref, deleteObject } from 'firebase/storage';
 import { sampleSubmissions, seedSampleSubmissions } from '@/lib/sample-data';
 
 export interface PendingReadingRoomItem extends Omit<ReadingRoomPdf, 'id' | 'uploadedAt'> {
@@ -60,23 +60,11 @@ export function ReviewReadingRoomSubmissionsTab() {
         if (action === 'approve') {
             const newDocRef = doc(collection(db, "readingRoomPdfs"));
             
-            // Move files from pending folders to final folders
-            const newPdfPath = `pdfs/${submission.fileName}`;
-            const newCoverPath = `bookCovers/${submission.coverImageStoragePath.split('/').pop()}`;
-
-            await copyObject(ref(storage, submission.storagePath), ref(storage, newPdfPath));
-            await copyObject(ref(storage, submission.coverImageStoragePath), ref(storage, newCoverPath));
-
-            const approvedData = { ...submission };
-            delete (approvedData as any).id;
-            delete (approvedData as any).submittedAt;
-            delete (approvedData as any).submittedBy;
-            delete (approvedData as any).status;
+            // Prepare data for the final collection, excluding submission-specific fields
+            const { id, submittedAt, submittedBy, status, ...approvedData } = submission;
 
             await setDoc(newDocRef, {
                 ...approvedData,
-                storagePath: newPdfPath,
-                coverImageStoragePath: newCoverPath,
                 uploadedAt: serverTimestamp(),
                 uploaderUid: submission.submittedBy,
             });
@@ -85,17 +73,24 @@ export function ReviewReadingRoomSubmissionsTab() {
                 title: 'Document Approved',
                 description: `"${submission.title}" is now live.`,
             });
-        }
-        
-        // Delete original storage files and firestore doc
-        await deleteObject(ref(storage, submission.storagePath));
-        await deleteObject(ref(storage, submission.coverImageStoragePath));
-        await deleteDoc(doc(db, "readingRoomSubmissions", submission.id));
+             // After approval, delete the submission document.
+            await deleteDoc(doc(db, "readingRoomSubmissions", submission.id));
 
-        if (action === 'reject') {
-            toast({
+        } else if (action === 'reject') {
+            // For 'reject', we delete the stored files AND the submission document.
+            const pdfFileRef = ref(storage, submission.storagePath);
+            await deleteObject(pdfFileRef);
+            
+            if (submission.coverImageStoragePath) {
+                const coverImageRef = ref(storage, submission.coverImageStoragePath);
+                await deleteObject(coverImageRef);
+            }
+
+            await deleteDoc(doc(db, "readingRoomSubmissions", submission.id));
+
+             toast({
                 title: 'Document Rejected',
-                description: `"${submission.title}" has been removed from the queue.`,
+                description: `"${submission.title}" has been removed from the queue and its files deleted.`,
             });
         }
     } catch (error: any) {

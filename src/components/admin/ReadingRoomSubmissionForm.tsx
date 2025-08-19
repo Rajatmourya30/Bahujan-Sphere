@@ -139,10 +139,10 @@ export function ReadingRoomSubmissionForm() {
         setUploadProgress(0);
 
         try {
-            const coverPath = `pendingCovers/${Date.now()}-${coverImageFile!.name}`;
+            const coverPath = `bookCovers/${Date.now()}-${coverImageFile!.name}`;
             const coverImageInfo = await uploadFile(coverImageFile!, coverPath);
 
-            const pdfPath = `pendingPdfs/${Date.now()}-${pdfFile!.name}`;
+            const pdfPath = `pdfs/${Date.now()}-${pdfFile!.name}`;
             const pdfInfo = await uploadFile(pdfFile!, pdfPath, setUploadProgress);
 
             await addDoc(collection(db, "readingRoomSubmissions"), {

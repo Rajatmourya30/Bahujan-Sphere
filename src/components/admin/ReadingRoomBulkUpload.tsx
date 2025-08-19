@@ -230,10 +230,10 @@ export function ReadingRoomBulkUpload() {
         try {
             if (!pdf.coverImageFile) throw new Error("Cover image is missing.");
             
-            const coverPath = `pendingCovers/${Date.now()}-${pdf.coverImageFile.name}`;
+            const coverPath = `bookCovers/${Date.now()}-${pdf.coverImageFile.name}`;
             const coverInfo = await uploadSingleFile(pdf.coverImageFile, coverPath, () => {});
 
-            const pdfPath = `pendingPdfs/${Date.now()}-${pdf.file.name}`;
+            const pdfPath = `pdfs/${Date.now()}-${pdf.file.name}`;
             const pdfInfo = await uploadSingleFile(pdf.file, pdfPath, (p) => setStagedPdfs(prev => prev.map(f => f.id === pdf.id ? { ...f, progress: p } : f)));
             
             setStagedPdfs(prev => prev.map(f => f.id === pdf.id ? { ...f, status: 'success' } : f));
