@@ -15,10 +15,11 @@ import { cn } from '@/lib/utils';
 import * as pdfjs from 'pdfjs-dist';
 import * as XLSX from 'xlsx';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { Input } from '../ui/input';
 
 // Helper function to generate cover image from PDF
 async function generateCoverFromPdf(pdfFile: File): Promise<File | null> {
-  pdfjs.GlobalWorkerOptions.workerSrc = `/static/js/pdf.worker.min.js`;
+  pdfjs.GlobalWorkerOptions.workerSrc = `/static/js/pdf.worker.min.mjs`;
 
   const fileReader = new FileReader();
   return new Promise((resolve, reject) => {
@@ -147,15 +148,11 @@ export function ReadingRoomBulkUpload() {
         author: "Author Name"
       }
     ];
-    const worksheet = XLSX.utils.json_to_sheet(data, { header: headers });
-    const csv = XLSX.utils.sheet_to_csv(worksheet);
-    const dataStr = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "metadata_template.csv");
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    XLSX.utils.sheet_add_aoa(worksheet, [headers], { origin: "A1" });
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Metadata");
+    XLSX.writeFile(workbook, "metadata_template.xlsx");
   }
 
 
