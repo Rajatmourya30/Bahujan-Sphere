@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { BookOpen, Search, Trash2, Edit, PlusCircle } from 'lucide-react';
 import { auth, db, storage } from '@/lib/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { ref, deleteObject, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { ref, deleteObject } from 'firebase/storage';
 import { collection, query, orderBy, onSnapshot, type Timestamp, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { ManageDocumentDialog, type DocumentFormData } from '@/components/admin/ManageDocumentDialog';
@@ -20,6 +20,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ReadingRoomSubmissionForm } from '@/components/admin/ReadingRoomSubmissionForm';
 import { ReadingRoomBulkUpload } from '@/components/admin/ReadingRoomBulkUpload';
+import { ReviewReadingRoomSubmissionsTab } from '@/components/admin/ReviewReadingRoomSubmissionsTab';
 
 export interface ReadingRoomPdf {
   id: string;
@@ -125,8 +126,8 @@ export default function ManageReadingRoomPage() {
             // Upload new cover image
             const newCoverPath = `bookCovers/${Date.now()}-${data.newCoverImage.name}`;
             const newCoverRef = ref(storage, newCoverPath);
-            await uploadBytesResumable(newCoverRef, data.newCoverImage);
-            const newCoverUrl = await getDownloadURL(newCoverRef);
+            const uploadTaskSnapshot = await uploadBytesResumable(newCoverRef, data.newCoverImage);
+            const newCoverUrl = await getDownloadURL(uploadTaskSnapshot.ref);
             
             updateData.coverImageUrl = newCoverUrl;
             updateData.coverImageStoragePath = newCoverPath;
@@ -172,7 +173,7 @@ export default function ManageReadingRoomPage() {
            <TabsTrigger value="manage">Manage Documents</TabsTrigger>
            <TabsTrigger value="single-doc">Submit Single Document</TabsTrigger>
            <TabsTrigger value="bulk-upload">Submit Bulk Upload</TabsTrigger>
-           <TabsTrigger value="review" disabled>Review Submissions (Coming Soon)</TabsTrigger>
+           <TabsTrigger value="review">Review Submissions</TabsTrigger>
         </TabsList>
          <TabsContent value="manage" className="mt-6">
             <Card>
@@ -261,9 +262,7 @@ export default function ManageReadingRoomPage() {
           <ReadingRoomBulkUpload />
         </TabsContent>
         <TabsContent value="review" className="mt-6">
-            <div className="text-center py-16 text-muted-foreground">
-                <p>Review submissions for the reading room (coming soon).</p>
-            </div>
+            <ReviewReadingRoomSubmissionsTab />
         </TabsContent>
       </Tabs>
     </div>

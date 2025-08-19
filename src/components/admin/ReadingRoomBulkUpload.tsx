@@ -5,7 +5,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { FileUp, Loader2, UploadCloud, X, FileCheck, AlertCircle, Settings, CheckCircle, ImageUp } from 'lucide-react';
+import { FileUp, Loader2, UploadCloud, X, FileCheck, AlertCircle, Settings, CheckCircle, ImageUp, Download } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 import { writeBatch, collection, doc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, storage } from '@/lib/firebase';
@@ -17,6 +17,7 @@ import { Label } from '../ui/label';
 import Image from 'next/image';
 import * as pdfjs from 'pdfjs-dist';
 import { Textarea } from '../ui/textarea';
+import * as XLSX from 'xlsx';
 
 type FileStatus = 'pending' | 'configured' | 'uploading' | 'success' | 'error';
 
@@ -26,7 +27,6 @@ export interface StagedPdf {
   status: FileStatus;
   progress: number;
   errorMessage?: string;
-  // Metadata
   title: string;
   author: string;
   description: string;
@@ -35,7 +35,6 @@ export interface StagedPdf {
   tags: string[];
   language: string;
   publicationYear: number | undefined;
-  // Auto-extracted
   fileName: string;
   fileSize: number;
   pageCount: number;
@@ -149,12 +148,12 @@ export function ReadingRoomBulkUpload() {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [selectedPdfId, setSelectedPdfId] = useState<string | null>(null);
-
+  
   useEffect(() => {
     pdfjs.GlobalWorkerOptions.workerSrc = `/static/js/pdf.worker.min.mjs`;
   }, []);
 
-  const handleFilesSelected = async (files: FileList | null) => {
+  const handlePdfFilesSelected = async (files: FileList | null) => {
     if (!files) return;
     
     const newFilesPromises: Promise<StagedPdf>[] = Array.from(files)
@@ -172,20 +171,12 @@ export function ReadingRoomBulkUpload() {
 
         return {
             id: `${file.name}-${file.lastModified}`,
-            file,
-            status: 'pending',
-            progress: 0,
+            file, status: 'pending', progress: 0,
             title: file.name.replace(/\.pdf$/i, '').replace(/_/g, ' '),
-            author: '',
-            description: '',
-            coverImageFile: null,
-            coverImagePreviewUrl: null,
-            tags: [],
-            language: '',
-            publicationYear: undefined,
-            fileName: file.name,
-            fileSize: file.size,
-            pageCount,
+            author: '', description: '',
+            coverImageFile: null, coverImagePreviewUrl: null,
+            tags: [], language: '', publicationYear: undefined,
+            fileName: file.name, fileSize: file.size, pageCount,
         };
       });
       
@@ -200,7 +191,7 @@ export function ReadingRoomBulkUpload() {
 
   const onDragOver = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragOver(true); };
   const onDragLeave = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragOver(false); };
-  const onDrop = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragOver(false); handleFilesSelected(e.dataTransfer.files); };
+  const onDrop = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragOver(false); handlePdfFilesSelected(e.dataTransfer.files); };
 
   const removeFile = (id: string) => {
     setStagedPdfs(prev => prev.filter(f => f.id !== id));
@@ -212,7 +203,7 @@ export function ReadingRoomBulkUpload() {
     setStagedPdfs(prev => prev.map(p => p.id === selectedPdfId ? {...p, ...data } : p));
     toast({ title: "Metadata Saved", description: "The details for the selected PDF have been updated locally." });
   };
-
+  
   const handleCoverImageChange = (id: string, file: File | null) => {
       setStagedPdfs(prev => prev.map(p => {
           if (p.id === id) {
@@ -239,10 +230,10 @@ export function ReadingRoomBulkUpload() {
         try {
             if (!pdf.coverImageFile) throw new Error("Cover image is missing.");
             
-            const coverPath = `bookCovers/${Date.now()}-${pdf.coverImageFile.name}`;
+            const coverPath = `pendingCovers/${Date.now()}-${pdf.coverImageFile.name}`;
             const coverInfo = await uploadSingleFile(pdf.coverImageFile, coverPath, () => {});
 
-            const pdfPath = `pdfs/${Date.now()}-${pdf.file.name}`;
+            const pdfPath = `pendingPdfs/${Date.now()}-${pdf.file.name}`;
             const pdfInfo = await uploadSingleFile(pdf.file, pdfPath, (p) => setStagedPdfs(prev => prev.map(f => f.id === pdf.id ? { ...f, progress: p } : f)));
             
             setStagedPdfs(prev => prev.map(f => f.id === pdf.id ? { ...f, status: 'success' } : f));
@@ -272,22 +263,22 @@ export function ReadingRoomBulkUpload() {
         try {
             const batch = writeBatch(db);
             successfulUploads.forEach(upload => {
-                const docRef = doc(collection(db, "readingRoomPdfs"));
+                const docRef = doc(collection(db, "readingRoomSubmissions"));
                 batch.set(docRef, {
                     title: upload.title, author: upload.author, description: upload.description,
                     tags: upload.tags, language: upload.language || null, publicationYear: upload.publicationYear || null,
                     url: upload.pdfInfo.downloadURL, storagePath: upload.pdfInfo.storagePath,
                     coverImageUrl: upload.coverInfo.downloadURL, coverImageStoragePath: upload.coverInfo.storagePath,
                     fileName: upload.fileName, fileSize: upload.fileSize, pageCount: upload.pageCount,
-                    uploadedAt: serverTimestamp(), uploaderUid: user.uid,
+                    submittedAt: serverTimestamp(), submittedBy: user.email || "Admin", status: 'pending',
                 });
             });
             await batch.commit();
-            toast({ title: 'Bulk Upload Complete', description: `${successfulUploads.length}/${filesToUpload.length} documents uploaded.` });
+            toast({ title: 'Bulk Submission Complete', description: `${successfulUploads.length}/${filesToUpload.length} documents sent for review.` });
             setStagedPdfs(prev => prev.filter(f => f.status !== 'success'));
             setSelectedPdfId(null);
         } catch (error) {
-             toast({ title: 'Firestore Error', description: 'Files uploaded, but failed to save metadata.', variant: 'destructive' });
+             toast({ title: 'Firestore Error', description: 'Files uploaded, but failed to save submissions.', variant: 'destructive' });
         }
     }
     if (results.some(r => r.status === 'rejected')) {
@@ -304,14 +295,14 @@ export function ReadingRoomBulkUpload() {
   
   const filesToUploadCount = stagedPdfs.filter(f => f.status === 'configured').length;
   const currentlySelectedPdf = useMemo(() => stagedPdfs.find(p => p.id === selectedPdfId) || null, [selectedPdfId, stagedPdfs]);
-
+  
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
         <Card>
             <CardHeader>
                 <CardTitle>1. Select & Stage Files</CardTitle>
                 <CardDescription>
-                Select multiple PDFs to begin the bulk upload process.
+                Select multiple PDFs to begin the bulk submission process.
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -333,7 +324,7 @@ export function ReadingRoomBulkUpload() {
                             accept=".pdf" 
                             multiple 
                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                            onChange={(e) => handleFilesSelected(e.target.files)}
+                            onChange={(e) => handlePdfFilesSelected(e.target.files)}
                             disabled={isUploading}
                         />
                     </div>
@@ -342,7 +333,7 @@ export function ReadingRoomBulkUpload() {
 
                 {stagedPdfs.length > 0 && (
                 <div className="space-y-4">
-                    <h3 className="font-medium">Staged for Upload ({stagedPdfs.length} files)</h3>
+                    <h3 className="font-medium">Staged for Submission ({stagedPdfs.length} files)</h3>
                     {isUploading && <Progress value={overallProgress} className="w-full" />}
                     <ScrollArea className="h-64 w-full rounded-md border">
                     <div className="p-2 space-y-2">
@@ -379,7 +370,7 @@ export function ReadingRoomBulkUpload() {
             <CardFooter>
                 <Button onClick={handleSubmit} disabled={isUploading || filesToUploadCount === 0} className="w-full">
                     {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileUp className="mr-2 h-4 w-4" />}
-                    {isUploading ? `Uploading... (${Math.round(overallProgress)}%)` : `Upload ${filesToUploadCount} Configured File(s)`}
+                    {isUploading ? `Submitting... (${Math.round(overallProgress)}%)` : `Submit ${filesToUploadCount} Configured File(s)`}
                 </Button>
             </CardFooter>
         </Card>

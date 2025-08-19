@@ -122,7 +122,7 @@ export function ReadingRoomSubmissionForm() {
         });
     };
 
-    const handleUpload = async () => {
+    const handleSubmit = async () => {
         const requiredFields = { title, author, description, pdfFile, coverImageFile };
         for (const [key, value] of Object.entries(requiredFields)) {
             if (!value) {
@@ -139,13 +139,13 @@ export function ReadingRoomSubmissionForm() {
         setUploadProgress(0);
 
         try {
-            const coverPath = `bookCovers/${Date.now()}-${coverImageFile!.name}`;
+            const coverPath = `pendingCovers/${Date.now()}-${coverImageFile!.name}`;
             const coverImageInfo = await uploadFile(coverImageFile!, coverPath);
 
-            const pdfPath = `pdfs/${Date.now()}-${pdfFile!.name}`;
+            const pdfPath = `pendingPdfs/${Date.now()}-${pdfFile!.name}`;
             const pdfInfo = await uploadFile(pdfFile!, pdfPath, setUploadProgress);
 
-            await addDoc(collection(db, "readingRoomPdfs"), {
+            await addDoc(collection(db, "readingRoomSubmissions"), {
                 title,
                 author,
                 description,
@@ -159,16 +159,17 @@ export function ReadingRoomSubmissionForm() {
                 fileName,
                 fileSize,
                 pageCount,
-                uploadedAt: serverTimestamp(),
-                uploaderUid: user.uid
+                submittedAt: serverTimestamp(),
+                submittedBy: user.email || 'Admin',
+                status: 'pending',
             });
 
-            toast({ title: "Upload successful!", description: `"${title}" is now available.` });
+            toast({ title: "Submission successful!", description: `"${title}" has been sent for review.` });
             resetForm();
             
         } catch (error) {
-            console.error("Error during upload:", error);
-            toast({ title: "Upload Failed", description: "Something went wrong during the upload.", variant: "destructive" });
+            console.error("Error during submission:", error);
+            toast({ title: "Submission Failed", description: "Something went wrong during the submission.", variant: "destructive" });
         } finally {
             setIsUploading(false);
         }
@@ -229,9 +230,9 @@ export function ReadingRoomSubmissionForm() {
                 {isUploading && <Progress value={uploadProgress} />}
             </CardContent>
             <CardFooter>
-                <Button onClick={handleUpload} disabled={isUploading || !pdfFile || !title || !author || !description || !coverImageFile} className="w-full">
+                <Button onClick={handleSubmit} disabled={isUploading || !pdfFile || !title || !author || !description || !coverImageFile} className="w-full">
                     {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
-                    {isUploading ? 'Uploading...' : 'Upload Document'}
+                    {isUploading ? 'Submitting...' : 'Submit for Review'}
                 </Button>
             </CardFooter>
         </Card>
