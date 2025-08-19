@@ -6,13 +6,61 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
-import { Download, FileUp, Loader2, Table, UploadCloud, X, FileCheck, AlertCircle } from 'lucide-react';
+import { Download, FileUp, Loader2, UploadCloud, X, FileCheck, AlertCircle } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
-import { addDoc, collection, serverTimestamp, writeBatch, doc } from 'firebase/firestore';
+import { writeBatch, collection, doc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, storage } from '@/lib/firebase';
-import { getDownloadURL, ref, uploadBytesResumable, type UploadTask } from 'firebase/storage';
+import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import { Progress } from '../ui/progress';
 import { cn } from '@/lib/utils';
+import * as pdfjs from 'pdfjs-dist';
+
+
+// Helper function to generate cover image from PDF
+async function generateCoverFromPdf(pdfFile: File): Promise<File | null> {
+  pdfjs.GlobalWorkerOptions.workerSrc = `/static/js/pdf.worker.min.mjs`;
+
+  const fileReader = new FileReader();
+  return new Promise((resolve, reject) => {
+    fileReader.onload = async (event) => {
+      if (!event.target?.result) {
+        return reject(new Error("Failed to read file."));
+      }
+      try {
+        const loadingTask = pdfjs.getDocument({ data: event.target.result as ArrayBuffer });
+        const pdf = await loadingTask.promise;
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({ scale: 1.5 });
+
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        if (!context) {
+            return reject(new Error('Could not get canvas context'));
+        }
+        
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        await page.render({ canvasContext: context, viewport: viewport }).promise;
+
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const coverFile = new File([blob], `${pdfFile.name}.jpg`, { type: 'image/jpeg' });
+            resolve(coverFile);
+          } else {
+            reject(new Error("Canvas to Blob conversion failed."));
+          }
+        }, 'image/jpeg', 0.8);
+      } catch (error) {
+        console.error("Error generating cover:", error);
+        reject(error);
+      }
+    };
+    fileReader.onerror = () => reject(new Error("FileReader error."));
+    fileReader.readAsArrayBuffer(pdfFile);
+  });
+}
+
 
 type FileStatus = 'pending' | 'uploading' | 'success' | 'error';
 
@@ -67,36 +115,61 @@ export function ReadingRoomBulkUpload() {
     setStagedFiles(prev => prev.filter(f => f.id !== id));
   };
   
-  const uploadFile = (file: StagedFile): Promise<{ downloadURL: string, storagePath: string }> => {
+  const uploadSingleFile = (file: File, path: string, onProgress: (p: number) => void): Promise<{ downloadURL: string, storagePath: string }> => {
     return new Promise((resolve, reject) => {
-        const uniqueFileName = `${Date.now()}-${file.file.name}`;
-        const storagePath = `pdfs/${uniqueFileName}`;
-        const storageRef = ref(storage, storagePath);
-        const uploadTask = uploadBytesResumable(storageRef, file.file);
+        const storageRef = ref(storage, path);
+        const uploadTask = uploadBytesResumable(storageRef, file);
 
         uploadTask.on('state_changed',
             (snapshot) => {
                 const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                setStagedFiles(prev => prev.map(f => f.id === file.id ? { ...f, progress } : f));
+                onProgress(progress);
             },
             (error) => {
                 console.error('Upload Error:', error);
-                setStagedFiles(prev => prev.map(f => f.id === file.id ? { ...f, status: 'error', errorMessage: error.message } : f));
                 reject(error);
             },
             async () => {
                 try {
                     const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                    setStagedFiles(prev => prev.map(f => f.id === file.id ? { ...f, status: 'success', progress: 100 } : f));
-                    resolve({ downloadURL, storagePath });
+                    resolve({ downloadURL, storagePath: path });
                 } catch (error) {
-                    setStagedFiles(prev => prev.map(f => f.id === file.id ? { ...f, status: 'error', errorMessage: 'Failed to get URL.' } : f));
                     reject(error);
                 }
             }
         );
     });
   };
+
+  const processAndUploadFile = (stagedFile: StagedFile): Promise<any> => {
+     return new Promise(async (resolve, reject) => {
+        try {
+            const coverFile = await generateCoverFromPdf(stagedFile.file);
+            let coverInfo: { downloadURL: string; storagePath: string } | null = null;
+            if (coverFile) {
+                const coverPath = `bookCovers/${Date.now()}-${coverFile.name}`;
+                coverInfo = await uploadSingleFile(coverPath, coverPath, () => {});
+            }
+
+            const pdfPath = `pdfs/${Date.now()}-${stagedFile.file.name}`;
+            const pdfInfo = await uploadSingleFile(stagedFile.file, pdfPath, (progress) => {
+                setStagedFiles(prev => prev.map(f => f.id === stagedFile.id ? { ...f, progress } : f));
+            });
+            
+            setStagedFiles(prev => prev.map(f => f.id === stagedFile.id ? { ...f, status: 'success' } : f));
+            resolve({
+                id: stagedFile.id,
+                title: stagedFile.file.name.replace(/\.pdf$/i, '').replace(/_/g, ' '),
+                pdfInfo,
+                coverInfo
+            });
+        } catch (error: any) {
+            setStagedFiles(prev => prev.map(f => f.id === stagedFile.id ? { ...f, status: 'error', errorMessage: error.message } : f));
+            reject({id: stagedFile.id, error});
+        }
+    });
+  }
+
 
   const handleSubmit = async () => {
     const user = auth.currentUser;
@@ -108,14 +181,13 @@ export function ReadingRoomBulkUpload() {
     setIsUploading(true);
     setStagedFiles(prev => prev.map(f => ({ ...f, status: 'uploading' })));
 
-    // Create a map of file IDs to their upload promises
-    const uploadPromises = stagedFiles.map(file => 
-        uploadFile(file).then(result => ({id: file.id, result})).catch(error => ({id: file.id, error}))
-    );
+    const uploadPromises = stagedFiles.filter(f => f.status === 'uploading').map(processAndUploadFile);
 
-    const results = await Promise.all(uploadPromises);
+    const results = await Promise.allSettled(uploadPromises);
     
-    const successfulUploads = results.filter((r): r is {id: string; result: {downloadURL: string; storagePath: string}} => 'result' in r);
+    const successfulUploads = results
+        .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+        .map(r => r.value);
 
     if (successfulUploads.length > 0) {
         try {
@@ -123,21 +195,17 @@ export function ReadingRoomBulkUpload() {
             const readingRoomCollection = collection(db, "readingRoomPdfs");
 
             successfulUploads.forEach(upload => {
-                const originalFile = stagedFiles.find(f => f.id === upload.id);
-                if (originalFile) {
-                    const docRef = doc(readingRoomCollection); // Create a new document reference with a unique ID
-                    const title = originalFile.file.name.replace(/\.pdf$/i, '').replace(/_/g, ' ');
-                    batch.set(docRef, {
-                        title: title,
-                        author: "", // Can be edited later
-                        url: upload.result.downloadURL,
-                        storagePath: upload.result.storagePath,
-                        coverImageUrl: null,
-                        coverImageStoragePath: null,
-                        uploadedAt: serverTimestamp(),
-                        uploaderUid: user.uid,
-                    });
-                }
+                const docRef = doc(readingRoomCollection);
+                batch.set(docRef, {
+                    title: upload.title,
+                    author: "",
+                    url: upload.pdfInfo.downloadURL,
+                    storagePath: upload.pdfInfo.storagePath,
+                    coverImageUrl: upload.coverInfo?.downloadURL || null,
+                    coverImageStoragePath: upload.coverInfo?.storagePath || null,
+                    uploadedAt: serverTimestamp(),
+                    uploaderUid: user.uid,
+                });
             });
             await batch.commit();
             
@@ -170,7 +238,7 @@ export function ReadingRoomBulkUpload() {
       <CardHeader>
         <CardTitle>Bulk Document Upload</CardTitle>
         <CardDescription>
-          Drag and drop multiple PDF files or use the button to select them.
+          Drag and drop multiple PDF files or use the button to select them. A cover image will be generated for each.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
