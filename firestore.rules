@@ -1,25 +1,35 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Default deny all reads and writes
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // Allow authenticated users to manage the team members list
+    // Allow authenticated users to read and write their own user document
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Allow authenticated users (admins) to manage team members
     match /teamMembers/{memberId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Allow authenticated users to manage the reading room PDFs
+    match /readingRoomPdfs/{pdfId} {
       allow read, create, update, delete: if request.auth != null;
     }
 
-    // Allow authenticated users to manage reading room documents
-    match /readingRoomPdfs/{docId} {
-      allow read, create, update, delete: if request.auth != null;
+    // Allow authenticated users to submit and manage event submissions
+    match /eventSubmissions/{submissionId} {
+      allow read, create, delete: if request.auth != null;
     }
 
-    // Allow any user to read public documents
-    match /readingRoomPdfs/{docId} {
-        allow read: if true;
+    // Allow authenticated users to add approved events
+    match /events/{eventId} {
+        allow create: if request.auth != null;
     }
   }
 }
