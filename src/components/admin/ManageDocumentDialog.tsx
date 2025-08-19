@@ -23,8 +23,9 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { type ReadingRoomPdf } from '@/app/admin/reading-room/page';
-import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Loader2, UploadCloud } from 'lucide-react';
+import Image from 'next/image';
 
 // Zod schema for validation
 const formSchema = z.object({
@@ -36,7 +37,9 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 // Type for the data passed to the onSave function
-export interface DocumentFormData extends FormValues {}
+export interface DocumentFormData extends FormValues {
+    newCoverImage?: File | null;
+}
 
 interface ManageDocumentDialogProps {
   document: ReadingRoomPdf | null;
@@ -46,6 +49,9 @@ interface ManageDocumentDialogProps {
 
 export function ManageDocumentDialog({ document, onOpenChange, onSave }: ManageDocumentDialogProps) {
   const [isSaving, setIsSaving] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
+  const [coverImagePreview, setCoverImagePreview] = useState<string | null>(document?.coverImageUrl || null);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -55,9 +61,22 @@ export function ManageDocumentDialog({ document, onOpenChange, onSave }: ManageD
     },
   });
 
+  const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setCoverImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCoverImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+
   const onSubmit = async (values: FormValues) => {
     setIsSaving(true);
-    await onSave(values);
+    await onSave({ ...values, newCoverImage: coverImageFile });
     setIsSaving(false);
     onOpenChange(false);
   };
@@ -100,6 +119,42 @@ export function ManageDocumentDialog({ document, onOpenChange, onSave }: ManageD
                   </FormItem>
                 )}
               />
+
+              <FormItem>
+                <FormLabel>Cover Image</FormLabel>
+                <div className="flex items-center gap-4">
+                    <div className="relative h-24 w-20 flex-shrink-0">
+                        <Image
+                            src={coverImagePreview || 'https://placehold.co/400x600.png'}
+                            alt="Cover image preview"
+                            fill
+                            className="object-cover rounded-md"
+                        />
+                    </div>
+                    <div className="flex-grow">
+                        <input
+                            type="file"
+                            accept="image/*"
+                            ref={fileInputRef}
+                            onChange={handleCoverImageChange}
+                            className="hidden"
+                        />
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={isSaving}
+                        >
+                            <UploadCloud className="mr-2 h-4 w-4" />
+                            Upload New Cover
+                        </Button>
+                        <p className="text-xs text-muted-foreground mt-2">
+                            Upload a new image to replace the existing cover.
+                        </p>
+                    </div>
+                </div>
+              </FormItem>
+
               <DialogFooter className="pt-4">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
                   Cancel

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { BookOpen, Search, Trash2, Edit, PlusCircle } from 'lucide-react';
 import { auth, db, storage } from '@/lib/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { ref, deleteObject } from 'firebase/storage';
+import { ref, deleteObject, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { collection, query, orderBy, onSnapshot, type Timestamp, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { ManageDocumentDialog, type DocumentFormData } from '@/components/admin/ManageDocumentDialog';
@@ -18,8 +18,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { EventSubmissionForm } from '@/components/submit/EventSubmissionForm';
-import { BulkUploadForm } from '@/components/submit/BulkUploadForm';
 import { ReadingRoomSubmissionForm } from '@/components/admin/ReadingRoomSubmissionForm';
 import { ReadingRoomBulkUpload } from '@/components/admin/ReadingRoomBulkUpload';
 
@@ -102,6 +100,24 @@ export default function ManageReadingRoomPage() {
             title: data.title,
             author: data.author,
         };
+
+        if (data.newCoverImage) {
+            // Delete old cover image if it exists
+            if (editingDocument.coverImageStoragePath) {
+                const oldCoverRef = ref(storage, editingDocument.coverImageStoragePath);
+                await deleteObject(oldCoverRef).catch(err => console.error("Old cover delete failed, continuing:", err));
+            }
+
+            // Upload new cover image
+            const newCoverPath = `bookCovers/${Date.now()}-${data.newCoverImage.name}`;
+            const newCoverRef = ref(storage, newCoverPath);
+            await uploadBytes(newCoverRef, data.newCoverImage);
+            const newCoverUrl = await getDownloadURL(newCoverRef);
+            
+            updateData.coverImageUrl = newCoverUrl;
+            updateData.coverImageStoragePath = newCoverPath;
+        }
+
         await updateDoc(docRef, updateData);
         toast({ title: "Success", description: `"${data.title}" has been updated.` });
 
@@ -229,6 +245,11 @@ export default function ManageReadingRoomPage() {
         </TabsContent>
          <TabsContent value="bulk-upload" className="mt-6">
           <ReadingRoomBulkUpload />
+        </TabsContent>
+        <TabsContent value="review" className="mt-6">
+            <div className="text-center py-16 text-muted-foreground">
+                <p>Review submissions for the reading room (coming soon).</p>
+            </div>
         </TabsContent>
       </Tabs>
     </div>
