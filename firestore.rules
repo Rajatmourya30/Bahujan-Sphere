@@ -1,28 +1,27 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Check if the user is an admin by seeing if their email exists in the teamMembers collection.
+    // Function to check if a user's email exists in the teamMembers collection
     function isAdmin() {
-      return exists(/databases/$(database)/documents/teamMembers/$(request.auth.uid)) ||
-             exists(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role);
-    }
-    
-    // Allow admins full access
-    match /{document=**} {
-      allow read, write: if request.auth != null && isAdmin();
+      return exists(/databases/$(database)/documents/teamMembers) &&
+             get(/databases/$(database)/documents/teamMembers).data.values().hasAny(['email'], request.auth.token.email);
     }
 
-    // Allow logged-in users to read their own profile
+    // Logged-in users can read their own user document
     match /users/{userId} {
-      allow get: if request.auth != null && request.auth.uid == userId;
-      allow create, update: if request.auth != null && request.auth.uid == userId;
+      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null;
     }
 
-    // Public read access for specific collections
+    // Public read for events, books, etc.
     match /readingRoomPdfs/{docId} {
-      allow get: if true;
+      allow read: if true;
+    }
+
+    // Admins can read and write to any other document
+    match /{document=**} {
+      allow read, write: if isAdmin();
     }
   }
 }
