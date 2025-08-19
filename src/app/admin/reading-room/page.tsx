@@ -52,7 +52,7 @@ export default function ManageReadingRoomPage() {
   const [isLoadingPdfs, setIsLoadingPdfs] = useState(true);
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingDocument, setEditingDocument] = useState<ReadingRoomPdf | null>(null);
+  const [editingDocument, setEditingDocument] = useState<ReadingRoomPdf | null>([]);
   
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -256,7 +256,7 @@ export default function ManageReadingRoomPage() {
             </Card>
         </TabsContent>
         <TabsContent value="review" className="mt-6">
-            <ReviewReadingRoomSubmissionsTab />
+            <ReviewReadingRoomSubmissionsTab currentUser={user}/>
         </TabsContent>
          <TabsContent value="single-doc" className="mt-6">
           <ReadingRoomSubmissionForm />
