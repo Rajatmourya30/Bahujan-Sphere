@@ -133,14 +133,15 @@ export function EventSubmissionForm() {
     try {
       const dataToSave: any = {
         ...values,
-        date: Timestamp.fromDate(values.date),
         status: status,
       };
 
       if (canPublishDirectly) {
+        dataToSave.date = Timestamp.fromDate(values.date);
         dataToSave.approvedBy = user.uid;
         dataToSave.approvedAt = serverTimestamp();
       } else {
+        dataToSave.date = format(values.date, 'yyyy-MM-dd');
         dataToSave.submittedBy = user.email || 'Admin';
         dataToSave.submittedAt = serverTimestamp();
       }
