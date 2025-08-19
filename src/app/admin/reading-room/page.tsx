@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button';
 import { BookOpen, Search, Trash2, Edit } from 'lucide-react';
 import { auth, db, storage } from '@/lib/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { ref, deleteObject, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { collection, query, orderBy, onSnapshot, type Timestamp, deleteDoc, doc, updateDoc, writeBatch } from 'firebase/firestore';
+import { ref, deleteObject } from 'firebase/storage';
+import { collection, query, orderBy, onSnapshot, type Timestamp, deleteDoc, doc, updateDoc, writeBatch, where } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { ManageDocumentDialog, type DocumentFormData } from '@/components/admin/ManageDocumentDialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -80,8 +80,7 @@ export default function ManageReadingRoomPage() {
         querySnapshot.forEach((doc) => {
             pdfs.push({ id: doc.id, ...doc.data() } as ReadingRoomPdf);
         });
-        const approvedPdfs = pdfs.filter(pdf => pdf.status === 'approved');
-        setAvailablePdfs(approvedPdfs);
+        setAvailablePdfs(pdfs);
         setIsLoadingPdfs(false);
     }, (error) => {
         console.error("Error fetching PDFs:", error);
@@ -147,9 +146,8 @@ export default function ManageReadingRoomPage() {
 
   const handleDelete = async (pdf: ReadingRoomPdf) => {
     try {
-        const batch = writeBatch(db);
-        batch.delete(doc(db, "readingRoomPdfs", pdf.id));
-        await batch.commit();
+        const docRef = doc(db, "readingRoomPdfs", pdf.id);
+        await deleteDoc(docRef);
 
         if (pdf.storagePath) {
             const fileRef = ref(storage, pdf.storagePath);
