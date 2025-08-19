@@ -38,9 +38,14 @@ export function StoreSubmissionForm() {
       setUser(currentUser);
       if (currentUser) {
         const userDocRef = doc(db, 'teamMembers', currentUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          setUserRole(userDoc.data().role);
+        try {
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists()) {
+              setUserRole(userDoc.data().role);
+            }
+        } catch(error) {
+            console.error("Error fetching user role:", error);
+            setUserRole(null);
         }
       } else {
         setUserRole(null);
@@ -82,14 +87,14 @@ export function StoreSubmissionForm() {
         imageUrl: imageUrl,
         imageStoragePath: imageRef.fullPath,
         status: status,
-        submittedBy: user.uid,
-        submittedAt: serverTimestamp(),
       };
 
       if (canPublishDirectly) {
           dataToSave.approvedBy = user.uid;
           dataToSave.approvedAt = serverTimestamp();
       } else {
+          dataToSave.submittedBy = user.uid;
+          dataToSave.submittedAt = serverTimestamp();
           dataToSave.title = values.nameKey; // for display in review table
       }
 
@@ -104,7 +109,7 @@ export function StoreSubmissionForm() {
       if(fileInputRef.current) fileInputRef.current.value = "";
     } catch (error) {
       console.error("Error submitting store:", error);
-      toast({ title: "Submission Failed", variant: "destructive" });
+      toast({ title: "Submission Failed", description: "An error occurred during submission.", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }

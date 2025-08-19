@@ -25,7 +25,7 @@ import { Badge } from '../ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/use-language';
 import { auth, db } from '@/lib/firebase';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 
 const formSchema = z.object({
@@ -43,10 +43,25 @@ export function EventSubmissionForm() {
   const { toast } = useToast();
   const { t } = useLanguage();
   const [user, setUser] = useState<User | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      if (currentUser) {
+        const userDocRef = doc(db, 'teamMembers', currentUser.uid);
+        try {
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists()) {
+                setUserRole(userDoc.data().role);
+            }
+        } catch (error) {
+            console.error("Error fetching user role:", error);
+            setUserRole(null);
+        }
+      } else {
+        setUserRole(null);
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -104,16 +119,28 @@ export function EventSubmissionForm() {
       return;
     }
 
+    const canPublishDirectly = userRole === 'Admin' || userRole === 'Manager';
+    const collectionName = canPublishDirectly ? 'calendarEvents' : 'eventSubmissions';
+    const status = canPublishDirectly ? 'approved' : 'pending';
+
     try {
-      await addDoc(collection(db, "eventSubmissions"), {
+      const dataToSave: any = {
         ...values,
-        submittedBy: user.email,
-        submittedAt: serverTimestamp(),
-        status: 'pending', // Add pending status
-      });
+        status: status,
+      };
+
+      if (canPublishDirectly) {
+        dataToSave.approvedBy = user.uid;
+        dataToSave.approvedAt = serverTimestamp();
+      } else {
+        dataToSave.submittedBy = user.uid;
+        dataToSave.submittedAt = serverTimestamp();
+      }
+
+      await addDoc(collection(db, collectionName), dataToSave);
       toast({
-        title: t('event_submission.toast_success_title'),
-        description: t('event_submission.toast_success_description'),
+        title: canPublishDirectly ? "Event Published!" : "Event Submitted!",
+        description: canPublishDirectly ? "The event is now live on the calendar." : "Your event is now pending review.",
       });
       form.reset();
       setSuggestedTags([]);
@@ -247,7 +274,7 @@ export function EventSubmissionForm() {
 
             <Button type="submit" size="lg" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isSubmitting ? 'Submitting...' : t('event_submission.submit_button')}
+              {isSubmitting ? 'Submitting...' : (userRole === 'Admin' || userRole === 'Manager' ? 'Publish Directly' : t('event_submission.submit_button'))}
             </Button>
           </form>
         </Form>

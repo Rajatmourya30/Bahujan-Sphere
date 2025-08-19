@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import { FileUp, Loader2, UploadCloud, X, FileCheck, AlertCircle, Settings, CheckCircle, ImageUp, Download } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
-import { writeBatch, collection, doc, serverTimestamp } from 'firebase/firestore';
+import { writeBatch, collection, doc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { auth, db, storage } from '@/lib/firebase';
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import { Progress } from '../ui/progress';
@@ -18,6 +18,7 @@ import Image from 'next/image';
 import * as pdfjs from 'pdfjs-dist';
 import { Textarea } from '../ui/textarea';
 import * as XLSX from 'xlsx';
+import { onAuthStateChanged, type User } from 'firebase/auth';
 
 type FileStatus = 'pending' | 'configured' | 'uploading' | 'success' | 'error';
 
@@ -145,11 +146,34 @@ function MetadataEditor({ pdf, onSave, onCoverImageChange }: { pdf: StagedPdf, o
 
 export function ReadingRoomBulkUpload() {
   const { toast } = useToast();
+  const [user, setUser] = useState<User | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [stagedPdfs, setStagedPdfs] = useState<StagedPdf[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [selectedPdfId, setSelectedPdfId] = useState<string | null>(null);
   
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        const userDocRef = doc(db, 'teamMembers', currentUser.uid);
+        try {
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists()) {
+              setUserRole(userDoc.data().role);
+            }
+        } catch(error) {
+            console.error("Error fetching user role:", error);
+            setUserRole(null);
+        }
+      } else {
+        setUserRole(null);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   const handlePdfFilesSelected = async (files: FileList | null) => {
     if (!files) return;
     
@@ -243,7 +267,6 @@ export function ReadingRoomBulkUpload() {
   }
 
   const handleSubmit = async () => {
-    const user = auth.currentUser;
     if (!user) { toast({ title: 'Not Authenticated', variant: 'destructive' }); return; }
 
     const filesToUpload = stagedPdfs.filter(pdf => pdf.status === 'configured');
@@ -251,6 +274,10 @@ export function ReadingRoomBulkUpload() {
     
     setIsUploading(true);
     setStagedPdfs(prev => prev.map(f => f.status === 'configured' ? { ...f, status: 'uploading', progress: 0 } : f));
+    
+    const canPublishDirectly = userRole === 'Admin' || userRole === 'Manager';
+    const collectionName = canPublishDirectly ? 'readingRoomPdfs' : 'readingRoomSubmissions';
+    const status = canPublishDirectly ? 'approved' : 'pending';
 
     const results = await Promise.allSettled(filesToUpload.map(processAndUploadFile));
     
@@ -260,18 +287,33 @@ export function ReadingRoomBulkUpload() {
         try {
             const batch = writeBatch(db);
             successfulUploads.forEach(upload => {
-                const docRef = doc(collection(db, "readingRoomSubmissions"));
-                batch.set(docRef, {
+                const docRef = doc(collection(db, collectionName));
+                const dataToSave: any = {
                     title: upload.title, author: upload.author, description: upload.description,
                     tags: upload.tags, language: upload.language || null, publicationYear: upload.publicationYear || null,
                     url: upload.pdfInfo.downloadURL, storagePath: upload.pdfInfo.storagePath,
                     coverImageUrl: upload.coverInfo.downloadURL, coverImageStoragePath: upload.coverInfo.storagePath,
                     fileName: upload.fileName, fileSize: upload.fileSize, pageCount: upload.pageCount,
-                    submittedAt: serverTimestamp(), submittedBy: user.email || "Admin", status: 'pending',
-                });
+                    status: status,
+                };
+                 if (canPublishDirectly) {
+                    dataToSave.approvedBy = user.uid;
+                    dataToSave.approvedAt = serverTimestamp();
+                    dataToSave.uploaderUid = user.uid;
+                    dataToSave.uploadedAt = serverTimestamp();
+                } else {
+                    dataToSave.submittedBy = user.email || 'Admin';
+                    dataToSave.submittedAt = serverTimestamp();
+                }
+
+                batch.set(docRef, dataToSave);
             });
             await batch.commit();
-            toast({ title: 'Bulk Submission Complete', description: `${successfulUploads.length}/${filesToUpload.length} documents sent for review.` });
+
+            toast({ 
+                title: canPublishDirectly ? "Bulk Upload Complete" : "Bulk Submission Complete",
+                description: `${successfulUploads.length}/${filesToUpload.length} documents ${canPublishDirectly ? 'published' : 'sent for review'}.`
+            });
             setStagedPdfs(prev => prev.filter(f => f.status !== 'success'));
             setSelectedPdfId(null);
         } catch (error) {
@@ -293,6 +335,14 @@ export function ReadingRoomBulkUpload() {
   const filesToUploadCount = stagedPdfs.filter(f => f.status === 'configured').length;
   const currentlySelectedPdf = useMemo(() => stagedPdfs.find(p => p.id === selectedPdfId) || null, [selectedPdfId, stagedPdfs]);
   
+  const buttonText = () => {
+      const action = userRole === 'Admin' || userRole === 'Manager' ? 'Publish' : 'Submit';
+      if (isUploading) {
+          return `Uploading... (${Math.round(overallProgress)}%)`
+      }
+      return `${action} ${filesToUploadCount} Configured File(s)`;
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
         <Card>
@@ -367,7 +417,7 @@ export function ReadingRoomBulkUpload() {
             <CardFooter>
                 <Button onClick={handleSubmit} disabled={isUploading || filesToUploadCount === 0} className="w-full">
                     {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileUp className="mr-2 h-4 w-4" />}
-                    {isUploading ? `Submitting... (${Math.round(overallProgress)}%)` : `Submit ${filesToUploadCount} Configured File(s)`}
+                    {buttonText()}
                 </Button>
             </CardFooter>
         </Card>

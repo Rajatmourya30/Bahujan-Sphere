@@ -38,10 +38,16 @@ export function BookSubmissionForm() {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
+        // Fetch user role from teamMembers collection
         const userDocRef = doc(db, 'teamMembers', currentUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          setUserRole(userDoc.data().role);
+        try {
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists()) {
+                setUserRole(userDoc.data().role);
+            }
+        } catch (error) {
+            console.error("Error fetching user role:", error);
+            setUserRole(null); // Fallback to a non-privileged role
         }
       } else {
         setUserRole(null);
@@ -86,14 +92,14 @@ export function BookSubmissionForm() {
         imageUrl: imageUrl,
         imageStoragePath: imageRef.fullPath,
         status: status,
-        submittedBy: user.uid,
-        submittedAt: serverTimestamp(),
       };
 
       if (canPublishDirectly) {
           dataToSave.approvedBy = user.uid;
           dataToSave.approvedAt = serverTimestamp();
       } else {
+          dataToSave.submittedBy = user.uid;
+          dataToSave.submittedAt = serverTimestamp();
           dataToSave.title = values.titleKey; // for display in review table
       }
 
@@ -110,7 +116,7 @@ export function BookSubmissionForm() {
 
     } catch (error) {
       console.error("Error submitting book:", error);
-      toast({ title: "Submission Failed", variant: "destructive" });
+      toast({ title: "Submission Failed", description: "An error occurred during submission.", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }

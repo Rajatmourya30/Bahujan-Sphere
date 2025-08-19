@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth, db, storage } from '@/lib/firebase';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { Textarea } from '../ui/textarea';
 import Image from 'next/image';
 import * as pdfjs from 'pdfjs-dist';
@@ -22,6 +22,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/b
 export function ReadingRoomSubmissionForm() {
     const { toast } = useToast();
     const [user, setUser] = useState<User | null>(null);
+    const [userRole, setUserRole] = useState<string | null>(null);
 
     const [title, setTitle] = useState('');
     const [author, setAuthor] = useState('');
@@ -44,8 +45,22 @@ export function ReadingRoomSubmissionForm() {
     const [pageCount, setPageCount] = useState(0);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             setUser(currentUser);
+            if(currentUser) {
+                const userDocRef = doc(db, 'teamMembers', currentUser.uid);
+                try {
+                    const userDoc = await getDoc(userDocRef);
+                    if (userDoc.exists()) {
+                        setUserRole(userDoc.data().role);
+                    }
+                } catch(error) {
+                    console.error("Error fetching user role:", error);
+                    setUserRole(null);
+                }
+            } else {
+                setUserRole(null);
+            }
         });
         return () => unsubscribe();
     }, []);
@@ -139,6 +154,10 @@ export function ReadingRoomSubmissionForm() {
         setIsUploading(true);
         setUploadProgress(0);
 
+        const canPublishDirectly = userRole === 'Admin' || userRole === 'Manager';
+        const collectionName = canPublishDirectly ? 'readingRoomPdfs' : 'readingRoomSubmissions';
+        const status = canPublishDirectly ? 'approved' : 'pending';
+
         try {
             const coverPath = `bookCovers/${Date.now()}-${coverImageFile!.name}`;
             const coverImageInfo = await uploadFile(coverImageFile!, coverPath);
@@ -146,10 +165,8 @@ export function ReadingRoomSubmissionForm() {
             const pdfPath = `pdfs/${Date.now()}-${pdfFile!.name}`;
             const pdfInfo = await uploadFile(pdfFile!, pdfPath, setUploadProgress);
 
-            await addDoc(collection(db, "readingRoomSubmissions"), {
-                title,
-                author,
-                description,
+            const dataToSave: any = {
+                title, author, description,
                 tags: tags.split(',').map(s => s.trim()).filter(Boolean),
                 language: language || null,
                 publicationYear: publicationYear ? Number(publicationYear) : null,
@@ -157,15 +174,27 @@ export function ReadingRoomSubmissionForm() {
                 storagePath: pdfInfo.storagePath,
                 coverImageUrl: coverImageInfo.downloadURL,
                 coverImageStoragePath: coverImageInfo.storagePath,
-                fileName,
-                fileSize,
-                pageCount,
-                submittedAt: serverTimestamp(),
-                submittedBy: user.email || 'Admin',
-                status: 'pending',
+                fileName, fileSize, pageCount,
+                status,
+            };
+
+            if (canPublishDirectly) {
+                dataToSave.approvedBy = user.uid;
+                dataToSave.approvedAt = serverTimestamp();
+                dataToSave.uploaderUid = user.uid;
+                dataToSave.uploadedAt = serverTimestamp();
+            } else {
+                dataToSave.submittedBy = user.email || 'Admin';
+                dataToSave.submittedAt = serverTimestamp();
+            }
+            
+            await addDoc(collection(db, collectionName), dataToSave);
+
+            toast({ 
+                title: canPublishDirectly ? "Document Published!" : "Submission successful!", 
+                description: canPublishDirectly ? `"${title}" is now live in the Reading Room.` : `"${title}" has been sent for review.`
             });
 
-            toast({ title: "Submission successful!", description: `"${title}" has been sent for review.` });
             resetForm();
             
         } catch (error) {
@@ -233,7 +262,7 @@ export function ReadingRoomSubmissionForm() {
             <CardFooter>
                 <Button onClick={handleSubmit} disabled={isUploading || !pdfFile || !title || !author || !description || !coverImageFile} className="w-full">
                     {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
-                    {isUploading ? 'Submitting...' : 'Submit for Review'}
+                    {isUploading ? 'Submitting...' : (userRole === 'Admin' || userRole === 'Manager' ? 'Publish Directly' : 'Submit for Review')}
                 </Button>
             </CardFooter>
         </Card>
