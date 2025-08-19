@@ -13,20 +13,23 @@ import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Check, X } from "lucide-react";
 import { formatDistanceToNow } from 'date-fns';
+import type { Timestamp } from "firebase/firestore";
 
 
 export interface PendingEvent {
     id: string;
     title: string;
     submittedBy: string;
-    submittedAt: string;
+    submittedAt: Timestamp;
     date: string;
     summary: string;
+    readMoreUrl?: string;
+    tags?: string[];
 }
 
 interface ReviewSubmissionsTableProps {
     events: PendingEvent[];
-    onReview: (eventId: string, action: 'approve' | 'reject') => void;
+    onReview: (event: PendingEvent, action: 'approve' | 'reject') => void;
 }
 
 export function ReviewSubmissionsTable({ events, onReview }: ReviewSubmissionsTableProps) {
@@ -52,7 +55,7 @@ export function ReviewSubmissionsTable({ events, onReview }: ReviewSubmissionsTa
                         <TableCell>
                             <div>{event.submittedBy}</div>
                              <div className="text-sm text-muted-foreground">
-                                {formatDistanceToNow(new Date(event.submittedAt), { addSuffix: true })}
+                                {event.submittedAt ? formatDistanceToNow(event.submittedAt.toDate(), { addSuffix: true }) : 'Just now'}
                             </div>
                         </TableCell>
                         <TableCell>
@@ -64,7 +67,7 @@ export function ReviewSubmissionsTable({ events, onReview }: ReviewSubmissionsTa
                                     variant="outline"
                                     size="sm"
                                     className="text-green-600 border-green-600/40 hover:bg-green-50 hover:text-green-700"
-                                    onClick={() => onReview(event.id, 'approve')}
+                                    onClick={() => onReview(event, 'approve')}
                                 >
                                     <Check className="mr-2 h-4 w-4" />
                                     Approve
@@ -73,7 +76,7 @@ export function ReviewSubmissionsTable({ events, onReview }: ReviewSubmissionsTa
                                     variant="outline"
                                     size="sm"
                                     className="text-red-600 border-red-600/40 hover:bg-red-50 hover:text-red-700"
-                                    onClick={() => onReview(event.id, 'reject')}
+                                    onClick={() => onReview(event, 'reject')}
                                 >
                                     <X className="mr-2 h-4 w-4" />
                                     Reject
