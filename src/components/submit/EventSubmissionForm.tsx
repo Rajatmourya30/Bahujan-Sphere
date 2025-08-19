@@ -109,6 +109,7 @@ export function EventSubmissionForm() {
         ...values,
         submittedBy: user.email,
         submittedAt: serverTimestamp(),
+        status: 'pending', // Add pending status
       });
       toast({
         title: t('event_submission.toast_success_title'),

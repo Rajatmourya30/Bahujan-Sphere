@@ -20,7 +20,7 @@ export default function Home() {
         const fetchedEvents = snapshot.docs.map(doc => {
             const data = doc.data();
             // Convert Firestore timestamp to JS Date
-            const eventDate = data.date ? new Date(data.date) : new Date();
+            const eventDate = data.date.toDate ? data.date.toDate() : new Date();
             return { id: doc.id, ...data, date: eventDate } as CalendarEvent;
         });
         setEvents(fetchedEvents);
