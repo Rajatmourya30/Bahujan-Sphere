@@ -49,18 +49,24 @@ export function ReviewSubmissionsTab() {
         
         const liveDocRef = doc(collection(db, 'calendarEvents'));
         
-        // Ensure submission.date is a string before parsing
-        const dateString = submission.date as string;
-        if (!dateString || typeof dateString !== 'string') {
-          throw new Error('Invalid or missing date in submission.');
+        let parsedDate: Date;
+        if (submission.date && typeof (submission.date as Timestamp).toDate === 'function') {
+            // It's a Firestore Timestamp, convert it
+            parsedDate = (submission.date as Timestamp).toDate();
+        } else if (typeof submission.date === 'string') {
+            // It's a string, parse it
+            parsedDate = parse(submission.date, 'yyyy-MM-dd', new Date());
+        } else {
+            throw new Error('Invalid or missing date in submission.');
         }
 
-        // Convert the date string back to a Date object, then to a Timestamp
-        const parsedDate = parse(dateString, 'yyyy-MM-dd', new Date());
-        
+        if (isNaN(parsedDate.getTime())) {
+            throw new Error('Could not parse the date from the submission.');
+        }
+
         batch.set(liveDocRef, {
             ...liveData,
-            date: Timestamp.fromDate(parsedDate), // Use the converted Timestamp
+            date: Timestamp.fromDate(parsedDate),
             status: 'approved',
             approvedAt: serverTimestamp(),
         });
