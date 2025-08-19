@@ -13,7 +13,7 @@ import { BulkUploadForm } from '@/components/submit/BulkUploadForm';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { ReviewSubmissionsTab } from '@/components/admin/ReviewSubmissionsTab';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, type Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 export default function ManageCalendarPage() {
@@ -44,8 +44,8 @@ export default function ManageCalendarPage() {
     const unsubscribeFirestore = onSnapshot(q, (snapshot) => {
         const fetchedEvents = snapshot.docs.map(doc => {
             const data = doc.data();
-            // Firestore data might not be a Date object, so we ensure it is
-            const eventDate = new Date(data.date); 
+            // Firestore data might be a Timestamp object, so we ensure it's a JS Date
+            const eventDate = data.date && (data.date as Timestamp).toDate ? (data.date as Timestamp).toDate() : new Date(data.date);
             return { id: doc.id, ...data, date: eventDate } as CalendarEvent;
         });
         setEvents(fetchedEvents);
