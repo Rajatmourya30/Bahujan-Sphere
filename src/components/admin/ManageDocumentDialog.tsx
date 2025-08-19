@@ -30,10 +30,6 @@ import { Loader2 } from 'lucide-react';
 const formSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   author: z.string().optional(),
-  // Files are not directly handled by zod, so we make them optional here
-  // and perform manual checks in the submit handler.
-  coverImageFile: z.any().optional(),
-  pdfFile: z.any().optional(),
 });
 
 // Type for form values based on the schema
@@ -61,25 +57,7 @@ export function ManageDocumentDialog({ document, onOpenChange, onSave }: ManageD
 
   const onSubmit = async (values: FormValues) => {
     setIsSaving(true);
-    // Add file objects from the form refs to the values object
-    const fileInputs = (form.control._formRef.current as unknown as HTMLFormElement).elements;
-    const coverInput = fileInputs.namedItem('coverImageFile') as HTMLInputElement;
-    const pdfInput = fileInputs.namedItem('pdfFile') as HTMLInputElement;
-
-    const data: DocumentFormData = {
-      ...values,
-      coverImageFile: coverInput?.files?.[0],
-      pdfFile: pdfInput?.files?.[0],
-    };
-
-    // If we're creating a new document, the PDF file is required.
-    if (!document && !data.pdfFile) {
-      form.setError("pdfFile", { type: "manual", message: "A PDF file is required for new documents." });
-      setIsSaving(false);
-      return;
-    }
-
-    await onSave(data);
+    await onSave(values);
     setIsSaving(false);
     onOpenChange(false);
   };
@@ -90,79 +68,62 @@ export function ManageDocumentDialog({ document, onOpenChange, onSave }: ManageD
         <DialogHeader>
           <DialogTitle>{document ? 'Edit Document' : 'Add New Document'}</DialogTitle>
           <DialogDescription>
-            Fill in the details for the document.
+            {document ? "Edit the metadata for this document." : "Use the 'Submit Single Document' tab to add new files."}
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Title</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Title of the book or document" {...field} disabled={isSaving} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="author"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Author (optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Name of the author" {...field} value={field.value ?? ''} disabled={isSaving} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
+        {document ? (
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+              <FormField
                 control={form.control}
-                name="coverImageFile"
+                name="title"
                 render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Cover Image (optional)</FormLabel>
-                        <FormControl>
-                            <Input type="file" accept="image/*" {...field} disabled={isSaving} name="coverImageFile" />
-                        </FormControl>
-                         {document && <p className="text-xs text-muted-foreground">Uploading a new image will replace the old one.</p>}
-                        <FormMessage />
-                    </FormItem>
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Title of the book or document" {...field} disabled={isSaving} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
-            />
-             {!document && (
-                <FormField
-                    control={form.control}
-                    name="pdfFile"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>PDF File</FormLabel>
-                            <FormControl>
-                                <Input type="file" accept=".pdf" {...field} disabled={isSaving} name="pdfFile" />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-            )}
-            
-            <DialogFooter className="pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSaving}>
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Changes
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+              />
+              <FormField
+                control={form.control}
+                name="author"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Author (optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Name of the author" {...field} value={field.value ?? ''} disabled={isSaving} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter className="pt-4">
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Save Changes
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        ) : (
+            <div className="py-4">
+                <p>Please use the dedicated tabs for submitting single or bulk documents.</p>
+                 <DialogFooter className="pt-4">
+                    <Button type="button" onClick={() => onOpenChange(false)}>
+                        Close
+                    </Button>
+                </DialogFooter>
+            </div>
+        )}
       </DialogContent>
     </Dialog>
   );
 }
+
+    

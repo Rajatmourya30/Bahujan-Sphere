@@ -4,20 +4,23 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { BookOpen, MoreHorizontal, PlusCircle, Loader2, UploadCloud, FileText, Search, Trash2, Edit } from 'lucide-react';
+import { BookOpen, Search, Trash2, Edit, PlusCircle } from 'lucide-react';
 import { auth, db, storage } from '@/lib/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
-import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, type Timestamp, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { ref, deleteObject } from 'firebase/storage';
+import { collection, query, orderBy, onSnapshot, type Timestamp, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { ManageDocumentDialog, type DocumentFormData } from '@/components/admin/ManageDocumentDialog';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
-import Link from 'next/link';
+import { Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { EventSubmissionForm } from '@/components/submit/EventSubmissionForm';
+import { BulkUploadForm } from '@/components/submit/BulkUploadForm';
+import { ReadingRoomSubmissionForm } from '@/components/admin/ReadingRoomSubmissionForm';
+import { ReadingRoomBulkUpload } from '@/components/admin/ReadingRoomBulkUpload';
 
 export interface ReadingRoomPdf {
   id: string;
@@ -40,14 +43,6 @@ export default function ManageReadingRoomPage() {
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDocument, setEditingDocument] = useState<ReadingRoomPdf | null>(null);
-
-  const [fileToUpload, setFileToUpload] = useState<File | null>(null);
-  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
-  const [title, setTitle] = useState('');
-  const [author, setAuthor] = useState('');
-  
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -94,108 +89,26 @@ export default function ManageReadingRoomPage() {
     setIsDialogOpen(true);
   };
 
-  const uploadFile = (file: File, path: string): Promise<{ downloadURL: string, storagePath: string }> => {
-    return new Promise((resolve, reject) => {
-      const storageRef = ref(storage, path);
-      const uploadTask = uploadBytesResumable(storageRef, file);
-      uploadTask.on('state_changed',
-        (snapshot) => {
-           if (path.startsWith('pdfs/')) {
-             const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-             setUploadProgress(progress);
-           }
-        },
-        (error) => reject(error),
-        async () => {
-            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            resolve({ downloadURL, storagePath: path });
-        }
-      );
-    });
-  };
-
   const handleSave = async (data: DocumentFormData) => {
-    if (!user) {
-        toast({ title: "Not Authenticated", description: "You must be signed in.", variant: "destructive" });
+    if (!user || !editingDocument) {
+        toast({ title: "Not Authenticated or No Document to Edit", description: "You must be signed in and editing a document.", variant: "destructive" });
         return;
     }
     
     try {
-        let coverImageInfo: { downloadURL: string; storagePath: string } | null = null;
-        if (data.coverImageFile) {
-            const coverPath = `bookCovers/${Date.now()}-${data.coverImageFile.name}`;
-            coverImageInfo = await uploadFile(data.coverImageFile, coverPath);
-        }
+        const docRef = doc(db, "readingRoomPdfs", editingDocument.id);
+        const updateData: Partial<ReadingRoomPdf> = {
+            title: data.title,
+            author: data.author,
+        };
+        await updateDoc(docRef, updateData);
+        toast({ title: "Success", description: `"${data.title}" has been updated.` });
 
-        if (editingDocument) { // Editing existing document
-            const docRef = doc(db, "readingRoomPdfs", editingDocument.id);
-            const updateData: Partial<ReadingRoomPdf> = {
-                title: data.title,
-                author: data.author,
-            };
-            if (coverImageInfo) {
-                updateData.coverImageUrl = coverImageInfo.downloadURL;
-                updateData.coverImageStoragePath = coverImageInfo.storagePath;
-                if (editingDocument.coverImageStoragePath) {
-                    await deleteObject(ref(storage, editingDocument.coverImageStoragePath));
-                }
-            }
-            await updateDoc(docRef, updateData);
-            toast({ title: "Success", description: `"${data.title}" has been updated.` });
-
-        } else { // This part is now handled by handleUpload
-            return;
-        }
     } catch (error: any) {
         console.error("Error saving document:", error);
         toast({ title: "Save Failed", description: "Could not save the document details.", variant: "destructive" });
     }
   };
-
-  const handleUpload = async () => {
-    if (!user || !fileToUpload || !title) {
-        toast({ title: "Missing Information", description: "A title and PDF file are required.", variant: "destructive" });
-        return;
-    }
-
-    setIsUploading(true);
-    setUploadProgress(0);
-
-    try {
-        let coverImageInfo: { downloadURL: string; storagePath: string } | null = null;
-        if (coverImageFile) {
-            const coverPath = `bookCovers/${Date.now()}-${coverImageFile.name}`;
-            coverImageInfo = await uploadFile(coverImageFile, coverPath);
-        }
-        
-        const pdfPath = `pdfs/${Date.now()}-${fileToUpload.name}`;
-        const pdfInfo = await uploadFile(fileToUpload, pdfPath);
-
-        await addDoc(collection(db, "readingRoomPdfs"), {
-            title: title,
-            author: author,
-            url: pdfInfo.downloadURL,
-            storagePath: pdfInfo.storagePath,
-            coverImageUrl: coverImageInfo?.downloadURL || null,
-            coverImageStoragePath: coverImageInfo?.storagePath || null,
-            uploadedAt: serverTimestamp(),
-            uploaderUid: user.uid
-        });
-
-        toast({ title: "Upload successful!", description: `"${title}" is now available.` });
-        setTitle('');
-        setAuthor('');
-        setFileToUpload(null);
-        setCoverImageFile(null);
-        
-    } catch (error) {
-        console.error("Error during upload:", error);
-        toast({ title: "Upload Failed", description: "Something went wrong during the upload.", variant: "destructive" });
-    } finally {
-        setIsUploading(false);
-    }
-  };
-
 
   const handleDelete = async (pdf: ReadingRoomPdf) => {
     try {
@@ -216,56 +129,31 @@ export default function ManageReadingRoomPage() {
     }
   };
 
-
   return (
     <>
     <div className="space-y-8">
       <header>
         <h1 className="font-headline text-3xl font-bold">Manage Reading Room</h1>
-        <p className="text-muted-foreground">Add, edit, or remove documents from the public reading room.</p>
+        <p className="text-muted-foreground">Add, edit, review, and manage all documents.</p>
       </header>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="md:col-span-1">
+       <Tabs defaultValue="manage" className="w-full">
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
+           <TabsTrigger value="manage">Manage Documents</TabsTrigger>
+           <TabsTrigger value="single-doc">Submit Single Document</TabsTrigger>
+           <TabsTrigger value="bulk-upload">Submit Bulk Upload</TabsTrigger>
+           <TabsTrigger value="review" disabled>Review Submissions</TabsTrigger>
+        </TabsList>
+         <TabsContent value="manage" className="mt-6">
             <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <UploadCloud />
-                        Upload New Document
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="title">Title</Label>
-                        <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} disabled={isUploading} />
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle>Available Documents</CardTitle>
+                        <CardDescription>Manage existing documents in the reading room.</CardDescription>
                     </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="author">Author (Optional)</Label>
-                        <Input id="author" value={author} onChange={(e) => setAuthor(e.target.value)} disabled={isUploading} />
-                    </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="cover">Cover Image (Optional)</Label>
-                        <Input id="cover" type="file" accept="image/*" onChange={(e) => setCoverImageFile(e.target.files?.[0] || null)} disabled={isUploading} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="pdf">PDF File</Label>
-                        <Input id="pdf" type="file" accept=".pdf" onChange={(e) => setFileToUpload(e.target.files?.[0] || null)} disabled={isUploading} />
-                    </div>
-                    {isUploading && <Progress value={uploadProgress} />}
-                </CardContent>
-                <CardFooter>
-                    <Button onClick={handleUpload} disabled={isUploading || !fileToUpload || !title} className="w-full">
-                        {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
-                        {isUploading ? 'Uploading...' : 'Upload Document'}
+                     <Button onClick={() => handleOpenDialog()}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add Document
                     </Button>
-                </CardFooter>
-            </Card>
-          </div>
-          <div className="md:col-span-2">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Available Documents</CardTitle>
-                    <CardDescription>Manage existing documents in the reading room.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="relative mb-4">
@@ -334,8 +222,14 @@ export default function ManageReadingRoomPage() {
                     )}
                 </CardContent>
             </Card>
-          </div>
-      </div>
+        </TabsContent>
+         <TabsContent value="single-doc" className="mt-6">
+          <ReadingRoomSubmissionForm />
+        </TabsContent>
+         <TabsContent value="bulk-upload" className="mt-6">
+          <ReadingRoomBulkUpload />
+        </TabsContent>
+      </Tabs>
     </div>
      {isDialogOpen && (
         <ManageDocumentDialog
@@ -347,3 +241,5 @@ export default function ManageReadingRoomPage() {
     </>
   );
 }
+
+    
