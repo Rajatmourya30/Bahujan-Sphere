@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { db, storage } from '@/lib/firebase';
 import { collection, onSnapshot, doc, deleteDoc, setDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, DatabaseZap } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { formatDistanceToNow } from 'date-fns';
 import Image from 'next/image';
@@ -14,7 +14,6 @@ import { Button } from '../ui/button';
 import { Check, X } from 'lucide-react';
 import type { ReadingRoomPdf } from '@/app/admin/reading-room/page';
 import { ref, deleteObject } from 'firebase/storage';
-import { sampleSubmissions, seedSampleSubmissions } from '@/lib/sample-data';
 
 export interface PendingReadingRoomItem extends Omit<ReadingRoomPdf, 'id' | 'uploadedAt'> {
     id: string;
@@ -45,15 +44,6 @@ export function ReviewReadingRoomSubmissionsTab() {
 
     return () => unsubscribe();
   }, [toast]);
-
-  const handleSeedData = async () => {
-    try {
-        await seedSampleSubmissions();
-        toast({ title: 'Success', description: 'Sample submissions have been added to Firestore.' });
-    } catch (error: any) {
-        toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    }
-  }
 
   const handleReview = async (submission: PendingReadingRoomItem, action: 'approve' | 'reject') => {
     try {
@@ -114,17 +104,11 @@ export function ReviewReadingRoomSubmissionsTab() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-            <CardTitle>Review Submissions</CardTitle>
-            <CardDescription>
-                Approve or reject documents submitted for the Reading Room.
-            </CardDescription>
-        </div>
-        <Button variant="outline" onClick={handleSeedData}>
-            <DatabaseZap className="mr-2 h-4 w-4" />
-            Seed Sample Data
-        </Button>
+      <CardHeader>
+        <CardTitle>Review Submissions</CardTitle>
+        <CardDescription>
+            Approve or reject documents submitted for the Reading Room.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {submissions.length > 0 ? (
