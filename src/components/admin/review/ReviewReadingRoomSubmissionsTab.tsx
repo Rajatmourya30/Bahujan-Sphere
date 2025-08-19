@@ -82,6 +82,7 @@ export function ReviewReadingRoomSubmissionsTab({ currentUser }: ReviewReadingRo
         if (action === 'approve') {
             const batch = writeBatch(db);
             const { id, status, ...liveData } = submissionData;
+            // Create a new document in the live collection
             const liveDocRef = doc(collection(db, 'readingRoomPdfs'));
             
             batch.set(liveDocRef, {
