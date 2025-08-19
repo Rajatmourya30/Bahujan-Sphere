@@ -8,7 +8,7 @@ export interface Book {
   authorKey: TranslationKey;
   descriptionKey: TranslationKey;
   imageUrl: string;
-  imageAiHint: string;
+  imageStoragePath?: string;
   affiliateUrl: string;
   pdfUrl?: string;
   status?: 'pending' | 'approved' | 'rejected';
@@ -26,7 +26,6 @@ export const allBooks: Book[] = [
     authorKey: 'book_annihilation_of_caste_author',
     descriptionKey: 'book_annihilation_of_caste_desc',
     imageUrl: 'https://placehold.co/400x600.png',
-    imageAiHint: 'book cover',
     affiliateUrl: 'https://example.com/affiliate-link-1',
     pdfUrl: 'https://archive.org/download/annihilation-of-caste-with-a-reply-to-mahatma-gandhi-ambedkar/Annihilation-of-Caste-with-a-Reply-to-Mahatma-Gandhi-Ambedkar.pdf',
   },
@@ -36,7 +35,6 @@ export const allBooks: Book[] = [
     authorKey: 'book_gulamgiri_author',
     descriptionKey: 'book_gulamgiri_desc',
     imageUrl: 'https://placehold.co/400x600.png',
-    imageAiHint: 'book cover',
     affiliateUrl: 'https://example.com/affiliate-link-2',
   },
     {
@@ -45,7 +43,6 @@ export const allBooks: Book[] = [
     authorKey: 'book_riddles_in_hinduism_author',
     descriptionKey: 'book_riddles_in_hinduism_desc',
     imageUrl: 'https://placehold.co/400x600.png',
-    imageAiHint: 'book cover',
     affiliateUrl: 'https://example.com/affiliate-link-3',
   },
   {
@@ -54,7 +51,6 @@ export const allBooks: Book[] = [
     authorKey: 'book_who_were_the_shudras_author',
     descriptionKey: 'book_who_were_the_shudras_desc',
     imageUrl: 'https://placehold.co/400x600.png',
-    imageAiHint: 'book cover',
     affiliateUrl: 'https://example.com/affiliate-link-4',
   },
 ];

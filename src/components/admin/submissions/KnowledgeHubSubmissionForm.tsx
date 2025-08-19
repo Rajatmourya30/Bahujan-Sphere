@@ -12,22 +12,24 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { auth, db } from '@/lib/firebase';
+import { auth, db, storage } from '@/lib/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { onAuthStateChanged, type User } from 'firebase/auth';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import Image from 'next/image';
 
 const formSchema = z.object({
   nameKey: z.string().min(1, 'Key is required'),
   descriptionKey: z.string().min(1, 'Key is required'),
-  logoUrl: z.string().url('Must be a valid URL'),
+  logoFile: z.instanceof(File, { message: 'A logo image is required.' }).refine(file => file.size > 0, 'A logo image is required.'),
   websiteUrl: z.string().url('Must be a valid URL'),
-  imageAiHint: z.string().min(1, 'AI Hint is required'),
 });
 
 export function KnowledgeHubSubmissionForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -41,9 +43,7 @@ export function KnowledgeHubSubmissionForm() {
     defaultValues: {
       nameKey: '',
       descriptionKey: '',
-      logoUrl: '',
       websiteUrl: '',
-      imageAiHint: 'organization logo',
     },
   });
 
@@ -56,8 +56,16 @@ export function KnowledgeHubSubmissionForm() {
     }
 
     try {
+      const imageRef = ref(storage, `images/logos/${Date.now()}-${values.logoFile.name}`);
+      const uploadResult = await uploadBytes(imageRef, values.logoFile);
+      const logoUrl = await getDownloadURL(uploadResult.ref);
+
       await addDoc(collection(db, "knowledgeHubSubmissions"), {
-        ...values,
+        nameKey: values.nameKey,
+        descriptionKey: values.descriptionKey,
+        websiteUrl: values.websiteUrl,
+        logoUrl: logoUrl,
+        logoStoragePath: imageRef.fullPath,
         title: values.nameKey,
         submittedBy: user.uid,
         submittedAt: serverTimestamp(),
@@ -65,6 +73,7 @@ export function KnowledgeHubSubmissionForm() {
       });
       toast({ title: "Organization Submitted!", description: "The organization is now pending review." });
       form.reset();
+      setImagePreview(null);
     } catch (error) {
       console.error("Error submitting organization:", error);
       toast({ title: "Submission Failed", variant: "destructive" });
@@ -96,24 +105,34 @@ export function KnowledgeHubSubmissionForm() {
                   <FormMessage />
                 </FormItem>
             )} />
-            <FormField control={form.control} name="logoUrl" render={({ field }) => (
+            <FormField
+              control={form.control}
+              name="logoFile"
+              render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Logo URL</FormLabel>
-                  <FormControl><Input type="url" placeholder="https://placehold.co/400x400.png" {...field} /></FormControl>
+                  <FormLabel>Logo Image</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          field.onChange(file);
+                          setImagePreview(URL.createObjectURL(file));
+                        }
+                      }}
+                    />
+                  </FormControl>
+                  {imagePreview && <Image src={imagePreview} alt="Image preview" width={80} height={80} className="mt-2 rounded-md border object-contain p-1" />}
                   <FormMessage />
                 </FormItem>
-            )} />
+              )}
+            />
             <FormField control={form.control} name="websiteUrl" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Website URL</FormLabel>
                   <FormControl><Input type="url" placeholder="https://example.com" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-            )} />
-             <FormField control={form.control} name="imageAiHint" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Image AI Hint</FormLabel>
-                  <FormControl><Input placeholder="e.g., organization logo" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
             )} />

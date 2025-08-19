@@ -4,33 +4,33 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { useState, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Loader2, UploadCloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { useLanguage } from '@/hooks/use-language';
-import { auth, db } from '@/lib/firebase';
+import { auth, db, storage } from '@/lib/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { onAuthStateChanged, type User } from 'firebase/auth';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import Image from 'next/image';
 
 const formSchema = z.object({
   titleKey: z.string().min(1, 'Key is required'),
   authorKey: z.string().min(1, 'Key is required'),
   descriptionKey: z.string().min(1, 'Key is required'),
-  imageUrl: z.string().url('Must be a valid URL'),
+  imageFile: z.instanceof(File, { message: 'An image is required.' }).refine(file => file.size > 0, 'An image is required.'),
   affiliateUrl: z.string().url('Must be a valid URL'),
-  imageAiHint: z.string().min(1, 'AI Hint is required'),
 });
 
 export function BookSubmissionForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-  const { t } = useLanguage();
   const [user, setUser] = useState<User | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -45,9 +45,7 @@ export function BookSubmissionForm() {
       titleKey: '',
       authorKey: '',
       descriptionKey: '',
-      imageUrl: '',
       affiliateUrl: '',
-      imageAiHint: 'book cover',
     },
   });
 
@@ -60,8 +58,19 @@ export function BookSubmissionForm() {
     }
 
     try {
+      // 1. Upload image to Storage
+      const imageRef = ref(storage, `images/books/${Date.now()}-${values.imageFile.name}`);
+      const uploadResult = await uploadBytes(imageRef, values.imageFile);
+      const imageUrl = await getDownloadURL(uploadResult.ref);
+
+      // 2. Add document to Firestore
       await addDoc(collection(db, "bookSubmissions"), {
-        ...values,
+        titleKey: values.titleKey,
+        authorKey: values.authorKey,
+        descriptionKey: values.descriptionKey,
+        affiliateUrl: values.affiliateUrl,
+        imageUrl: imageUrl,
+        imageStoragePath: imageRef.fullPath,
         title: values.titleKey, // for display in review table
         submittedBy: user.uid,
         submittedAt: serverTimestamp(),
@@ -69,6 +78,7 @@ export function BookSubmissionForm() {
       });
       toast({ title: "Book Submitted!", description: "The book is now pending review." });
       form.reset();
+      setImagePreview(null);
     } catch (error) {
       console.error("Error submitting book:", error);
       toast({ title: "Submission Failed", variant: "destructive" });
@@ -107,24 +117,34 @@ export function BookSubmissionForm() {
                   <FormMessage />
                 </FormItem>
             )} />
-            <FormField control={form.control} name="imageUrl" render={({ field }) => (
+             <FormField
+              control={form.control}
+              name="imageFile"
+              render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Image URL</FormLabel>
-                  <FormControl><Input type="url" placeholder="https://placehold.co/400x600.png" {...field} /></FormControl>
+                  <FormLabel>Cover Image</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          field.onChange(file);
+                          setImagePreview(URL.createObjectURL(file));
+                        }
+                      }}
+                    />
+                  </FormControl>
+                  {imagePreview && <Image src={imagePreview} alt="Image preview" width={80} height={120} className="mt-2 rounded-md border" />}
                   <FormMessage />
                 </FormItem>
-            )} />
+              )}
+            />
             <FormField control={form.control} name="affiliateUrl" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Affiliate URL</FormLabel>
                   <FormControl><Input type="url" placeholder="https://example.com/product-link" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-            )} />
-            <FormField control={form.control} name="imageAiHint" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Image AI Hint</FormLabel>
-                  <FormControl><Input placeholder="e.g., book cover" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
             )} />

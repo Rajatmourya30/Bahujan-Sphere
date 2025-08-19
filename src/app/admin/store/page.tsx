@@ -4,8 +4,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
-import { collection, onSnapshot, query, where, doc, deleteDoc } from 'firebase/firestore';
+import { auth, db, storage } from '@/lib/firebase';
+import { collection, onSnapshot, query, where, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -14,6 +14,7 @@ import { StoreDirectoryTable } from '@/components/admin/StoreDirectoryTable';
 import { StoreSubmissionForm } from '@/components/admin/submissions/StoreSubmissionForm';
 import { ReviewStoreSubmissionsTab } from '@/components/admin/review/ReviewStoreSubmissionsTab';
 import { ManageStoreDialog } from '@/components/admin/ManageStoreDialog';
+import { getDownloadURL, ref, uploadBytes, deleteObject } from 'firebase/storage';
 
 export default function ManageStorePage() {
   const router = useRouter();
@@ -55,8 +56,35 @@ export default function ManageStorePage() {
     setIsDialogOpen(true);
   };
   
-  const handleSave = (storeData: Omit<BahujanStore, 'id'>) => {
-    console.log("Saving store (not implemented):", storeData);
+  const handleSave = async (storeData: Omit<BahujanStore, 'id' | 'imageUrl'>, newImageFile?: File) => {
+    if (!editingStore) return;
+
+    try {
+        let newImageUrl = editingStore.imageUrl;
+        
+        if (newImageFile) {
+            if (editingStore.imageStoragePath) {
+                const oldImageRef = ref(storage, editingStore.imageStoragePath);
+                await deleteObject(oldImageRef).catch(err => console.error("Old image delete failed, continuing:", err));
+            }
+
+            const newImageRef = ref(storage, `images/stores/${Date.now()}-${newImageFile.name}`);
+            const uploadResult = await uploadBytes(newImageRef, newImageFile);
+            newImageUrl = await getDownloadURL(uploadResult.ref);
+            
+            (storeData as BahujanStore).imageStoragePath = newImageRef.fullPath;
+        }
+
+        await updateDoc(doc(db, 'stores', editingStore.id), {
+            ...storeData,
+            imageUrl: newImageUrl
+        });
+
+        toast({ title: 'Store Updated', description: 'The store has been successfully updated.' });
+    } catch (error) {
+        console.error('Error updating store:', error);
+        toast({ title: 'Error', description: 'Could not update the store.', variant: 'destructive' });
+    }
   };
 
   const handleRemove = async (storeId: string) => {

@@ -7,7 +7,7 @@ export interface BahujanStore {
   nameKey: TranslationKey;
   descriptionKey: TranslationKey;
   imageUrl: string;
-  imageAiHint: string;
+  imageStoragePath?: string;
   storeUrl: string;
   status?: 'pending' | 'approved' | 'rejected';
   submittedBy?: string;
@@ -23,7 +23,6 @@ export const allBahujanStores: BahujanStore[] = [
     nameKey: 'store_name_1',
     descriptionKey: 'store_desc_1',
     imageUrl: 'https://placehold.co/400x400.png',
-    imageAiHint: 'store logo',
     storeUrl: 'https://www.thedalitstore.com/',
   },
   {
@@ -31,7 +30,6 @@ export const allBahujanStores: BahujanStore[] = [
     nameKey: 'store_name_2',
     descriptionKey: 'store_desc_2',
     imageUrl: 'https://placehold.co/400x400.png',
-    imageAiHint: 'bookstore logo',
     storeUrl: 'https://www.navayana.org/',
   },
   {
@@ -39,7 +37,6 @@ export const allBahujanStores: BahujanStore[] = [
     nameKey: 'store_name_3',
     descriptionKey: 'store_desc_3',
     imageUrl: 'https://placehold.co/400x400.png',
-    imageAiHint: 'art logo',
     storeUrl: 'https://www.instagram.com/bahujanartproject/',
   },
   {
@@ -47,7 +44,6 @@ export const allBahujanStores: BahujanStore[] = [
     nameKey: 'store_name_4',
     descriptionKey: 'store_desc_4',
     imageUrl: 'https://placehold.co/400x400.png',
-    imageAiHint: 'tech logo',
     storeUrl: 'https://www.equalitylabs.org/store',
   },
 ];

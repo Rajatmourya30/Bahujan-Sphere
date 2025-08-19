@@ -4,8 +4,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
-import { collection, onSnapshot, query, where, doc, deleteDoc } from 'firebase/firestore';
+import { auth, db, storage } from '@/lib/firebase';
+import { collection, onSnapshot, query, where, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -14,6 +14,7 @@ import { KnowledgeHubTable } from '@/components/admin/KnowledgeHubTable';
 import { KnowledgeHubSubmissionForm } from '@/components/admin/submissions/KnowledgeHubSubmissionForm';
 import { ReviewKnowledgeHubSubmissionsTab } from '@/components/admin/review/ReviewKnowledgeHubSubmissionsTab';
 import { ManageOrganizationDialog } from '@/components/admin/ManageOrganizationDialog';
+import { getDownloadURL, ref, uploadBytes, deleteObject } from 'firebase/storage';
 
 export default function ManageKnowledgeHubPage() {
   const router = useRouter();
@@ -55,8 +56,35 @@ export default function ManageKnowledgeHubPage() {
     setIsDialogOpen(true);
   };
   
-  const handleSave = (orgData: Omit<KnowledgeOrganization, 'id'>) => {
-    console.log("Saving organization (not implemented):", orgData);
+  const handleSave = async (orgData: Omit<KnowledgeOrganization, 'id' | 'logoUrl'>, newImageFile?: File) => {
+    if (!editingOrg) return;
+
+    try {
+        let newLogoUrl = editingOrg.logoUrl;
+        
+        if (newImageFile) {
+            if (editingOrg.logoStoragePath) {
+                const oldImageRef = ref(storage, editingOrg.logoStoragePath);
+                await deleteObject(oldImageRef).catch(err => console.error("Old image delete failed, continuing:", err));
+            }
+
+            const newImageRef = ref(storage, `images/logos/${Date.now()}-${newImageFile.name}`);
+            const uploadResult = await uploadBytes(newImageRef, newImageFile);
+            newLogoUrl = await getDownloadURL(uploadResult.ref);
+            
+            (orgData as KnowledgeOrganization).logoStoragePath = newImageRef.fullPath;
+        }
+
+        await updateDoc(doc(db, 'knowledgeHub', editingOrg.id), {
+            ...orgData,
+            logoUrl: newLogoUrl
+        });
+
+        toast({ title: 'Organization Updated', description: 'The organization has been successfully updated.' });
+    } catch (error) {
+        console.error('Error updating organization:', error);
+        toast({ title: 'Error', description: 'Could not update the organization.', variant: 'destructive' });
+    }
   };
 
   const handleRemove = async (orgId: string) => {

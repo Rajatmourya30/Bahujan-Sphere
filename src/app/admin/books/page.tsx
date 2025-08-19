@@ -4,8 +4,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
-import { collection, onSnapshot, query, where, doc, deleteDoc, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { auth, db, storage } from '@/lib/firebase';
+import { collection, onSnapshot, query, where, doc, deleteDoc, writeBatch, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { BookSubmissionForm } from '@/components/admin/submissions/BookSubmissionForm';
 import { ReviewBookSubmissionsTab } from '@/components/admin/review/ReviewBookSubmissionsTab';
 import { ManageBookDialog } from '@/components/admin/ManageBookDialog';
+import { getDownloadURL, ref, uploadBytes, deleteObject } from 'firebase/storage';
 
 export default function ManageBooksPage() {
   const router = useRouter();
@@ -57,10 +58,40 @@ export default function ManageBooksPage() {
     setIsDialogOpen(true);
   };
   
-  const handleSave = (bookData: Omit<Book, 'id'>) => {
-    // This function can be expanded to handle updates in Firestore
-    console.log("Saving book (not implemented):", bookData);
+  const handleSave = async (bookData: Omit<Book, 'id' | 'imageUrl'>, newImageFile?: File) => {
+    if (!editingBook) return;
+
+    try {
+      let newImageUrl = editingBook.imageUrl;
+      
+      if (newImageFile) {
+        // Delete old image if it exists and has a path
+        if (editingBook.imageStoragePath) {
+          const oldImageRef = ref(storage, editingBook.imageStoragePath);
+          await deleteObject(oldImageRef).catch(err => console.error("Old image delete failed, continuing:", err));
+        }
+
+        // Upload new image
+        const newImageRef = ref(storage, `images/books/${Date.now()}-${newImageFile.name}`);
+        const uploadResult = await uploadBytes(newImageRef, newImageFile);
+        newImageUrl = await getDownloadURL(uploadResult.ref);
+        
+        // Add storage path for future deletions
+        (bookData as Book).imageStoragePath = newImageRef.fullPath;
+      }
+
+      await updateDoc(doc(db, 'books', editingBook.id), {
+        ...bookData,
+        imageUrl: newImageUrl
+      });
+
+      toast({ title: 'Book Updated', description: 'The book has been successfully updated.' });
+    } catch (error) {
+      console.error('Error updating book:', error);
+      toast({ title: 'Error', description: 'Could not update the book.', variant: 'destructive' });
+    }
   };
+
 
   const handleRemove = async (bookId: string) => {
     try {
