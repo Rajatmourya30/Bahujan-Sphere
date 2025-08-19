@@ -4,11 +4,12 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, doc, deleteDoc, setDoc, serverTimestamp, query, where, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, doc, deleteDoc, setDoc, serverTimestamp, query, where, writeBatch, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { ReviewSubmissionsTable, type PendingSubmission } from './ReviewSubmissionsTable';
 import { RejectionNoteDialog } from './RejectionNoteDialog';
+import { parse } from 'date-fns';
 
 export function ReviewSubmissionsTab() {
   const [submissions, setSubmissions] = useState<PendingSubmission[]>([]);
@@ -48,8 +49,12 @@ export function ReviewSubmissionsTab() {
         
         const liveDocRef = doc(collection(db, 'calendarEvents'));
         
+        // Convert the date string back to a Date object, then to a Timestamp
+        const parsedDate = parse(submission.date as string, 'yyyy-MM-dd', new Date());
+        
         batch.set(liveDocRef, {
             ...liveData,
+            date: Timestamp.fromDate(parsedDate), // Use the converted Timestamp
             status: 'approved',
             approvedAt: serverTimestamp(),
         });
