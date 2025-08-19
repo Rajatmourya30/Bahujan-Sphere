@@ -18,6 +18,7 @@ import {
   Book,
   BookOpenCheck,
   Calendar,
+  FolderKanban,
   HeartHandshake,
   Home,
   Library,
@@ -64,6 +65,7 @@ function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
     { href: '/admin/store', label: 'Store Directory', icon: Store, visible: permissions.canManageContent },
     { href: '/admin/books', label: 'Books', icon: Book, visible: permissions.canManageContent },
     { href: '/admin/reading-room', label: 'Reading Room', icon: BookOpenCheck, visible: permissions.canManageContent },
+    { href: '/admin/storage', label: 'Storage Explorer', icon: FolderKanban, visible: permissions.canManageContent },
     { href: '/admin/donations', label: 'Donations', icon: HeartHandshake, visible: permissions.canManageDonations },
     { href: '/admin/users', label: 'Users', icon: Users, visible: permissions.canManageUsers },
     { href: '/admin/team', label: 'Team', icon: UserCog, visible: permissions.canManageTeam },
@@ -97,7 +99,7 @@ function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
         <SidebarHeader className="pt-4">
           <div className="flex items-center gap-2">
             <Logo />
-            <span className="text-lg font-semibold">Admin Panel</span>
+            <span className="font-semibold">Admin Panel</span>
           </div>
         </SidebarHeader>
         <SidebarContent>
