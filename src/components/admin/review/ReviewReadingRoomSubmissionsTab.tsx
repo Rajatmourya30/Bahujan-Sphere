@@ -79,8 +79,9 @@ export function ReviewReadingRoomSubmissionsTab({ currentUser }: ReviewReadingRo
     const submissionRef = doc(db, "readingRoomSubmissions", submission.id);
 
     try {
+        const batch = writeBatch(db);
+
         if (action === 'approve') {
-            const batch = writeBatch(db);
             const { id, status, ...liveData } = submissionData;
             // Create a new document in the live collection
             const liveDocRef = doc(collection(db, 'readingRoomPdfs'));
@@ -113,12 +114,15 @@ export function ReviewReadingRoomSubmissionsTab({ currentUser }: ReviewReadingRo
                 await deleteObject(ref(storage, submissionData.coverImageStoragePath));
             }
 
-            await updateDoc(submissionRef, {
+            // Instead of deleting, we update the status to rejected
+            batch.update(submissionRef, {
                 status: 'rejected',
                 rejectionReason: reason,
                 reviewedBy: currentUser.uid,
                 reviewedAt: serverTimestamp(),
             });
+            
+            await batch.commit();
             
             toast({
                 title: 'Document Rejected',
