@@ -2,11 +2,10 @@
 'use client';
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { FileUp, Loader2, UploadCloud, X, FileCheck, AlertCircle, Settings, CheckCircle, ImageUp, Download } from 'lucide-react';
+import { FileUp, Loader2, UploadCloud, X, FileCheck, AlertCircle, Settings, CheckCircle, ImageUp } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 import { writeBatch, collection, doc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, storage } from '@/lib/firebase';
@@ -150,7 +149,6 @@ export function ReadingRoomBulkUpload() {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [selectedPdfId, setSelectedPdfId] = useState<string | null>(null);
-  const [metadataFile, setMetadataFile] = useState<File | null>(null);
 
   useEffect(() => {
     pdfjs.GlobalWorkerOptions.workerSrc = `/static/js/pdf.worker.min.mjs`;
@@ -198,45 +196,6 @@ export function ReadingRoomBulkUpload() {
         const trulyNewFiles = newFiles.filter(f => !existingIds.has(f.id));
         return [...prev, ...trulyNewFiles];
     });
-  };
-
-  const handleMetadataFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (!file) return;
-      setMetadataFile(file);
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-            const data = e.target?.result;
-            const workbook = XLSX.read(data, { type: 'binary' });
-            const sheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[sheetName];
-            const json: any[] = XLSX.utils.sheet_to_json(worksheet);
-
-            setStagedPdfs(prev => {
-                return prev.map(pdf => {
-                    const meta = json.find(row => row.filename === pdf.fileName);
-                    if (meta) {
-                        return {
-                            ...pdf,
-                            title: meta.title || pdf.title,
-                            author: meta.author || pdf.author,
-                            description: meta.description || pdf.description,
-                            tags: meta.tags ? String(meta.tags).split(',').map(s => s.trim()) : pdf.tags,
-                            language: meta.language || pdf.language,
-                            publicationYear: meta.publicationYear || pdf.publicationYear,
-                        };
-                    }
-                    return pdf;
-                });
-            });
-            toast({ title: "Metadata applied", description: "Matched metadata from your file to staged PDFs." });
-        } catch (error) {
-            toast({ title: "Error reading metadata file", variant: "destructive" });
-        }
-      };
-      reader.readAsBinaryString(file);
   };
 
   const onDragOver = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragOver(true); };
@@ -337,15 +296,6 @@ export function ReadingRoomBulkUpload() {
     setIsUploading(false);
   };
   
-  const downloadTemplate = () => {
-    const headers = ["filename", "title", "author", "description", "tags", "language", "publicationYear"];
-    const data = [{ "filename": "MyBook.pdf", "title": "My Book Title", "author": "Author Name", "description": "A short summary.", "tags": "history, politics", "language": "en", "publicationYear": 2024 }];
-    const ws = XLSX.utils.json_to_sheet(data, { header: headers });
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Metadata");
-    XLSX.writeFile(wb, "metadata_template.xlsx");
-  };
-  
   const overallProgress = useMemo(() => {
     const uploading = stagedPdfs.filter(f => f.status === 'uploading');
     if (uploading.length === 0) return 0;
@@ -359,27 +309,36 @@ export function ReadingRoomBulkUpload() {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
         <Card>
             <CardHeader>
-                <CardTitle>1. Select Files & Metadata</CardTitle>
-                <CardDescription>Upload PDFs and an optional metadata file.</CardDescription>
+                <CardTitle>1. Select & Stage Files</CardTitle>
+                <CardDescription>
+                Select multiple PDFs to begin the bulk upload process.
+                </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
                 <div>
-                    <Label>PDF Files</Label>
                     <div 
-                        className={cn("relative flex flex-col items-center justify-center w-full p-4 border-2 border-dashed rounded-lg cursor-pointer", isDragOver ? "border-primary bg-primary/10" : "border-border hover:border-primary/50")}
-                        onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
-                        <UploadCloud className="w-8 h-8 text-muted-foreground" />
-                        <p className="mt-2 text-sm text-muted-foreground">Drag & drop PDF files here, or click</p>
-                        <input id="bulk-pdf-upload" type="file" accept=".pdf" multiple className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleFilesSelected(e.target.files)} disabled={isUploading}/>
+                        className={cn(
+                            "relative flex flex-col items-center justify-center w-full p-8 border-2 border-dashed rounded-lg cursor-pointer transition-colors",
+                            isDragOver ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
+                        )}
+                        onDragOver={onDragOver}
+                        onDragLeave={onDragLeave}
+                        onDrop={onDrop}
+                        >
+                        <UploadCloud className="w-12 h-12 text-muted-foreground" />
+                        <p className="mt-2 text-sm text-muted-foreground">Drag & drop PDF files here, or click to browse</p>
+                        <input 
+                            id="bulk-pdf-upload"
+                            type="file" 
+                            accept=".pdf" 
+                            multiple 
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            onChange={(e) => handleFilesSelected(e.target.files)}
+                            disabled={isUploading}
+                        />
                     </div>
                 </div>
-                 <div>
-                    <Label>Metadata File (Optional)</Label>
-                    <div className="flex items-center gap-2">
-                        <Input id="metadata-file" type="file" accept=".xlsx, .xls, .csv" onChange={handleMetadataFileChange} className="flex-grow"/>
-                        <Button variant="outline" size="sm" onClick={downloadTemplate}><Download className="mr-2 h-4 w-4" /> Template</Button>
-                    </div>
-                 </div>
+
 
                 {stagedPdfs.length > 0 && (
                 <div className="space-y-4">
@@ -388,7 +347,12 @@ export function ReadingRoomBulkUpload() {
                     <ScrollArea className="h-64 w-full rounded-md border">
                     <div className="p-2 space-y-2">
                         {stagedPdfs.map((item) => (
-                        <div key={item.id} className={cn("flex items-center gap-3 p-2 rounded-md transition-colors cursor-pointer", selectedPdfId === item.id ? "bg-muted" : "hover:bg-muted/50")} onClick={() => setSelectedPdfId(item.id)}>
+                        <div key={item.id} 
+                            className={cn("flex items-center gap-3 p-2 rounded-md transition-colors cursor-pointer",
+                                selectedPdfId === item.id ? "bg-muted" : "bg-muted/50 hover:bg-muted"
+                            )}
+                             onClick={() => setSelectedPdfId(item.id)}
+                        >
                             <div className="flex-shrink-0">
                                 {item.status === 'success' && <FileCheck className="text-green-500" />}
                                 {item.status === 'error' && <AlertCircle className="text-destructive" />}
@@ -402,11 +366,15 @@ export function ReadingRoomBulkUpload() {
                                 {item.status === 'uploading' && <Progress value={item.progress} className="h-1 mt-1" />}
                                 {item.status === 'error' && <p className="text-xs text-destructive truncate">{item.errorMessage}</p>}
                             </div>
-                            <Button variant="ghost" size="icon" className="flex-shrink-0 w-6 h-6" onClick={(e) => { e.stopPropagation(); removeFile(item.id); }} disabled={isUploading}><X className="w-4 h-4" /></Button>
-                        </div>))}
+                            <Button variant="ghost" size="icon" className="flex-shrink-0 w-6 h-6" onClick={(e) => { e.stopPropagation(); removeFile(item.id); }} disabled={isUploading}>
+                                <X className="w-4 h-4" />
+                            </Button>
+                        </div>
+                        ))}
                     </div>
                     </ScrollArea>
-                </div>)}
+                </div>
+                )}
             </CardContent>
             <CardFooter>
                 <Button onClick={handleSubmit} disabled={isUploading || filesToUploadCount === 0} className="w-full">
@@ -418,7 +386,11 @@ export function ReadingRoomBulkUpload() {
 
         <div>
             {currentlySelectedPdf ? (
-                <MetadataEditor pdf={currentlySelectedPdf} onSave={handleSaveMetadata} onCoverImageChange={(file) => handleCoverImageChange(currentlySelectedPdf.id, file)} />
+                <MetadataEditor 
+                    pdf={currentlySelectedPdf} 
+                    onSave={handleSaveMetadata}
+                    onCoverImageChange={(file) => handleCoverImageChange(currentlySelectedPdf.id, file)}
+                />
             ) : (
                  <Card className="h-full flex items-center justify-center">
                     <CardContent className="text-center text-muted-foreground p-6">
