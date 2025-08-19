@@ -49,8 +49,14 @@ export function ReviewSubmissionsTab() {
         
         const liveDocRef = doc(collection(db, 'calendarEvents'));
         
+        // Ensure submission.date is a string before parsing
+        const dateString = submission.date as string;
+        if (!dateString || typeof dateString !== 'string') {
+          throw new Error('Invalid or missing date in submission.');
+        }
+
         // Convert the date string back to a Date object, then to a Timestamp
-        const parsedDate = parse(submission.date as string, 'yyyy-MM-dd', new Date());
+        const parsedDate = parse(dateString, 'yyyy-MM-dd', new Date());
         
         batch.set(liveDocRef, {
             ...liveData,
