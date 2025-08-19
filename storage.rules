@@ -1,29 +1,27 @@
 rules_version = '2';
-
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow public read access to PDF files and their cover images
+    // Helper function to check if the user is an admin
+    function isAdmin() {
+      return exists(
+        /databases/$(database)/documents/teamMembers/$(request.auth.uid)
+      );
+    }
+
+    // PDFs and their covers should be publicly readable, but only writable by admins.
     match /pdfs/{allPaths=**} {
       allow read: if true;
+      allow write: if isAdmin();
     }
     match /bookCovers/{allPaths=**} {
       allow read: if true;
+      allow write: if isAdmin();
     }
 
-    // Allow authenticated users to upload their own profile picture
-    match /profilePictures/{userId}/{fileName} {
+    // Profile pictures can be read by anyone, but only the owner can write to their own picture.
+    match /profilePictures/{userId}/{allPaths=**} {
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Allow admin users (checked via a custom claim, which would be set by a function)
-    // For simplicity here, we will allow any authenticated user to write to pdfs and bookCovers
-    // In a production environment, you would lock this down with custom claims or Cloud Functions.
-    match /pdfs/{fileName} {
-      allow write: if request.auth != null;
-    }
-     match /bookCovers/{fileName} {
-      allow write: if request.auth != null;
     }
   }
 }
