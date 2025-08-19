@@ -49,12 +49,20 @@ export default function ManageCalendarPage() {
             if (data.date && typeof data.date.toDate === 'function') {
                 // Handle Firestore Timestamp
                 eventDate = (data.date as Timestamp).toDate();
-            } else if (data.date) {
-                // Handle string or other formats that new Date() can parse
-                eventDate = new Date(data.date);
+            } else if (data.date && typeof data.date === 'string') {
+                // Handle string date from CSV upload or other sources
+                const parsedDate = new Date(data.date);
+                 if (!isNaN(parsedDate.getTime())) {
+                    eventDate = parsedDate;
+                } else {
+                    console.warn(`Invalid date string encountered: "${data.date}" for doc ID ${doc.id}`);
+                    // Assign a fallback date to prevent crashing, but this indicates a data quality issue.
+                    eventDate = new Date(0); 
+                }
             } else {
-                // Fallback for invalid or missing date
-                eventDate = new Date();
+                // Fallback for invalid, missing, or null date field
+                 console.warn(`Missing or invalid date field for doc ID ${doc.id}:`, data.date);
+                eventDate = new Date(0);
             }
 
             return { id: doc.id, ...data, date: eventDate } as CalendarEvent;
