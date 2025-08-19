@@ -80,7 +80,8 @@ export default function SignupPage() {
 
             let photoUrl = '';
             if (photoFile) {
-                const storageRef = ref(storage, `profilePictures/${user.uid}`);
+                const fileName = `${user.uid}_${Date.now()}_${photoFile.name}`;
+                const storageRef = ref(storage, `profilePictures/${user.uid}/${fileName}`);
                 await uploadBytes(storageRef, photoFile);
                 photoUrl = await getDownloadURL(storageRef);
             }

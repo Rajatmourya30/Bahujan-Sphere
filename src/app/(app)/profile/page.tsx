@@ -120,7 +120,8 @@ export default function ProfilePage() {
 
       setIsUploading(true);
       try {
-          const storageRef = ref(storage, `profilePictures/${firebaseUser.uid}/profile.jpg`);
+          const fileName = `${firebaseUser.uid}_${Date.now()}_${photoFile.name}`;
+          const storageRef = ref(storage, `profilePictures/${firebaseUser.uid}/${fileName}`);
           await uploadBytes(storageRef, photoFile);
           const newPhotoUrl = await getDownloadURL(storageRef);
 
