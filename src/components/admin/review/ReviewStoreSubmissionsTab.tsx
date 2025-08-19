@@ -8,8 +8,8 @@ import { collection, onSnapshot, doc, deleteDoc, writeBatch, serverTimestamp, qu
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import type { User } from 'firebase/auth';
-import type { PendingSubmission } from '@/components/admin/review/ReviewSubmissionsTable';
-import { ReviewSubmissionsTable } from '@/components/admin/review/ReviewSubmissionsTable';
+import type { PendingSubmission } from '@/components/admin/ReviewSubmissionsTable';
+import { ReviewSubmissionsTable } from '@/components/admin/ReviewSubmissionsTable';
 
 interface ReviewStoreSubmissionsTabProps {
     currentUser: User | null;
