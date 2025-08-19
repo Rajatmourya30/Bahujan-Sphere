@@ -17,6 +17,8 @@ import { Textarea } from '../ui/textarea';
 import Image from 'next/image';
 import * as pdfjs from 'pdfjs-dist';
 
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+
 export function ReadingRoomSubmissionForm() {
     const { toast } = useToast();
     const [user, setUser] = useState<User | null>(null);
@@ -42,7 +44,6 @@ export function ReadingRoomSubmissionForm() {
     const [pageCount, setPageCount] = useState(0);
 
     useEffect(() => {
-        pdfjs.GlobalWorkerOptions.workerSrc = `/static/js/pdf.worker.min.mjs`;
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             setUser(currentUser);
         });

@@ -40,6 +40,7 @@ export interface StagedPdf {
   pageCount: number;
 }
 
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 function MetadataEditor({ pdf, onSave, onCoverImageChange }: { pdf: StagedPdf, onSave: (data: Partial<StagedPdf>) => void, onCoverImageChange: (file: File | null) => void }) {
     const [title, setTitle] = useState(pdf.title);
@@ -149,10 +150,6 @@ export function ReadingRoomBulkUpload() {
   const [isDragOver, setIsDragOver] = useState(false);
   const [selectedPdfId, setSelectedPdfId] = useState<string | null>(null);
   
-  useEffect(() => {
-    pdfjs.GlobalWorkerOptions.workerSrc = `/static/js/pdf.worker.min.mjs`;
-  }, []);
-
   const handlePdfFilesSelected = async (files: FileList | null) => {
     if (!files) return;
     

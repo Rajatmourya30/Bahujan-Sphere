@@ -13,15 +13,16 @@ interface PdfViewerProps {
   file: string;
 }
 
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+
 export function PdfViewer({ file }: PdfViewerProps) {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [scale, setScale] = useState(1.0);
   const [isClient, setIsClient] = useState(false);
 
-  // This ensures the component only renders on the client, and sets up the worker.
+  // This ensures the component only renders on the client.
   useEffect(() => {
-    pdfjs.GlobalWorkerOptions.workerSrc = `/static/js/pdf.worker.min.mjs`;
     setIsClient(true);
   }, []);
 
