@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -9,10 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/use-language';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, onAuthStateChanged, type User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -21,6 +22,27 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // If user is logged in, check if they are a team member
+        const teamQuery = query(collection(db, "teamMembers"), where("email", "==", user.email));
+        getDocs(teamQuery).then((querySnapshot) => {
+          if (!querySnapshot.empty) {
+            router.replace('/admin');
+          } else {
+            setIsCheckingAuth(false);
+          }
+        });
+      } else {
+        setIsCheckingAuth(false);
+      }
+    });
+    return () => unsubscribe();
+  }, [router]);
+
 
   const handleLogin = async () => {
     setIsLoading(true);
@@ -76,6 +98,14 @@ export default function AdminLoginPage() {
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     handleLogin();
+  }
+  
+  if (isCheckingAuth) {
+    return (
+        <div className="flex justify-center items-center min-h-screen bg-muted">
+            <Skeleton className="h-96 w-full max-w-sm" />
+        </div>
+    )
   }
 
   return (

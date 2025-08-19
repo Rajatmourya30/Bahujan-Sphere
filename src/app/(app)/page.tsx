@@ -51,8 +51,10 @@ export default function Home() {
   const { t } = useLanguage();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     const q = query(collection(db, 'calendarEvents'), where('status', '==', 'approved'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
         const fetchedEvents = snapshot.docs.map(doc => {
@@ -75,6 +77,26 @@ export default function Home() {
     return () => unsubscribe();
   }, []);
 
+  if (!isClient || isLoading) {
+    return (
+       <div className="space-y-8">
+            <header className="text-center pb-8 border-b">
+                <div className="flex justify-center items-center gap-2">
+                    <Logo className="h-8 w-8" />
+                    <h1 className="font-headline text-5xl font-bold text-primary">BahujanSphere</h1>
+                </div>
+                <p className="mt-4 text-xl text-muted-foreground max-w-3xl mx-auto">
+                {t('home.tagline')}
+                </p>
+            </header>
+            <div className="space-y-4">
+                <Skeleton className="h-80 w-full" />
+                <Skeleton className="h-40 w-full" />
+            </div>
+        </div>
+    );
+  }
+
 
   return (
     <div className="space-y-8">
@@ -87,14 +109,7 @@ export default function Home() {
           {t('home.tagline')}
         </p>
       </header>
-      {isLoading ? (
-        <div className="space-y-4">
-            <Skeleton className="h-80 w-full" />
-            <Skeleton className="h-40 w-full" />
-        </div>
-      ) : (
-        <EventCalendar events={events} />
-      )}
+      <EventCalendar events={events} />
     </div>
   );
 }
