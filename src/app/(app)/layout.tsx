@@ -8,7 +8,7 @@ export default function AppLayout({
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      <main className="container mx-auto flex-grow max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="container mx-auto flex flex-1 flex-col max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {children}
       </main>
     </div>
