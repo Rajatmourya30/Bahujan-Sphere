@@ -38,6 +38,11 @@ export default function UserLoginPage() {
     }
   };
 
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    handleLogin();
+  }
+
   return (
     <div className="flex flex-grow items-center justify-center min-h-[calc(100vh-10rem)]">
       <Card className="w-full max-w-sm">
@@ -46,7 +51,7 @@ export default function UserLoginPage() {
           <CardDescription>{t('login_page.description')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">{t('login_page.email_label')}</Label>
               <Input
@@ -56,6 +61,7 @@ export default function UserLoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -66,13 +72,14 @@ export default function UserLoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={isLoading}
               />
             </div>
-            <Button onClick={handleLogin} className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {t('login_page.login_button')}
             </Button>
-          </div>
+          </form>
         </CardContent>
         <CardFooter className="text-center text-sm">
             {t('login_page.signup_prompt')}&nbsp;
