@@ -4,7 +4,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { auth, db, storage } from '@/lib/firebase';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import Image from 'next/image';
@@ -29,11 +29,22 @@ export function KnowledgeHubSubmissionForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      if (currentUser) {
+        const userDocRef = doc(db, 'teamMembers', currentUser.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          setUserRole(userDoc.data().role);
+        }
+      } else {
+        setUserRole(null);
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -55,25 +66,42 @@ export function KnowledgeHubSubmissionForm() {
       return;
     }
 
+    const isAdmin = userRole === 'Admin';
+    const collectionName = isAdmin ? 'knowledgeHub' : 'knowledgeHubSubmissions';
+    const status = isAdmin ? 'approved' : 'pending';
+
     try {
       const imageRef = ref(storage, `images/logos/${Date.now()}-${values.logoFile.name}`);
       const uploadResult = await uploadBytes(imageRef, values.logoFile);
       const logoUrl = await getDownloadURL(uploadResult.ref);
 
-      await addDoc(collection(db, "knowledgeHubSubmissions"), {
+      const dataToSave: any = {
         nameKey: values.nameKey,
         descriptionKey: values.descriptionKey,
         websiteUrl: values.websiteUrl,
         logoUrl: logoUrl,
         logoStoragePath: imageRef.fullPath,
-        title: values.nameKey,
+        status: status,
         submittedBy: user.uid,
         submittedAt: serverTimestamp(),
-        status: 'pending',
+      };
+
+      if (isAdmin) {
+        dataToSave.approvedBy = user.uid;
+        dataToSave.approvedAt = serverTimestamp();
+      } else {
+        dataToSave.title = values.nameKey; // for display in review table
+      }
+
+      await addDoc(collection(db, collectionName), dataToSave);
+
+      toast({ 
+        title: isAdmin ? "Organization Published!" : "Organization Submitted!",
+        description: isAdmin ? "The organization is now live." : "The organization is now pending review."
       });
-      toast({ title: "Organization Submitted!", description: "The organization is now pending review." });
       form.reset();
       setImagePreview(null);
+      if(fileInputRef.current) fileInputRef.current.value = "";
     } catch (error) {
       console.error("Error submitting organization:", error);
       toast({ title: "Submission Failed", variant: "destructive" });
@@ -115,6 +143,7 @@ export function KnowledgeHubSubmissionForm() {
                     <Input 
                       type="file" 
                       accept="image/*"
+                      ref={fileInputRef}
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
@@ -138,7 +167,7 @@ export function KnowledgeHubSubmissionForm() {
             )} />
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Submit for Review
+              {userRole === 'Admin' ? 'Publish Directly' : 'Submit for Review'}
             </Button>
           </form>
         </Form>

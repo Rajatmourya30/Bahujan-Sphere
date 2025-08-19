@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { useState, useEffect, useRef } from 'react';
-import { Loader2, UploadCloud } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { auth, db, storage } from '@/lib/firebase';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import Image from 'next/image';
@@ -30,11 +30,22 @@ export function BookSubmissionForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      if (currentUser) {
+        const userDocRef = doc(db, 'teamMembers', currentUser.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          setUserRole(userDoc.data().role);
+        }
+      } else {
+        setUserRole(null);
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -57,28 +68,46 @@ export function BookSubmissionForm() {
       return;
     }
 
+    const isAdmin = userRole === 'Admin';
+    const collectionName = isAdmin ? 'books' : 'bookSubmissions';
+    const status = isAdmin ? 'approved' : 'pending';
+
     try {
       // 1. Upload image to Storage
       const imageRef = ref(storage, `images/books/${Date.now()}-${values.imageFile.name}`);
       const uploadResult = await uploadBytes(imageRef, values.imageFile);
       const imageUrl = await getDownloadURL(uploadResult.ref);
 
-      // 2. Add document to Firestore
-      await addDoc(collection(db, "bookSubmissions"), {
+      const dataToSave: any = {
         titleKey: values.titleKey,
         authorKey: values.authorKey,
         descriptionKey: values.descriptionKey,
         affiliateUrl: values.affiliateUrl,
         imageUrl: imageUrl,
         imageStoragePath: imageRef.fullPath,
-        title: values.titleKey, // for display in review table
+        status: status,
         submittedBy: user.uid,
         submittedAt: serverTimestamp(),
-        status: 'pending',
+      };
+
+      if (isAdmin) {
+          dataToSave.approvedBy = user.uid;
+          dataToSave.approvedAt = serverTimestamp();
+      } else {
+          dataToSave.title = values.titleKey; // for display in review table
+      }
+
+      // 2. Add document to Firestore
+      await addDoc(collection(db, collectionName), dataToSave);
+      
+      toast({ 
+        title: isAdmin ? "Book Published!" : "Book Submitted!", 
+        description: isAdmin ? "The book is now live." : "The book is now pending review." 
       });
-      toast({ title: "Book Submitted!", description: "The book is now pending review." });
       form.reset();
       setImagePreview(null);
+      if(fileInputRef.current) fileInputRef.current.value = "";
+
     } catch (error) {
       console.error("Error submitting book:", error);
       toast({ title: "Submission Failed", variant: "destructive" });
@@ -127,6 +156,7 @@ export function BookSubmissionForm() {
                     <Input 
                       type="file" 
                       accept="image/*"
+                      ref={fileInputRef}
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
@@ -150,7 +180,7 @@ export function BookSubmissionForm() {
             )} />
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Submit for Review
+              {userRole === 'Admin' ? 'Publish Directly' : 'Submit for Review'}
             </Button>
           </form>
         </Form>
