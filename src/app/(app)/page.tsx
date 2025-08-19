@@ -3,10 +3,11 @@
 import { EventCalendar } from "@/components/calendar/EventCalendar";
 import { Logo } from "@/components/shared/Logo";
 import { useLanguage } from "@/hooks/use-language";
-import { allEvents } from "@/lib/events";
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { CalendarEvent } from "@/lib/events";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export default function Home() {
   const { t } = useLanguage();
@@ -14,18 +15,22 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        // In a real app, you'd fetch from an API
-        // For now, we simulate a fetch
-        setEvents(allEvents);
-      } catch (error) {
-        console.error("Failed to fetch events:", error);
-      } finally {
+    const q = query(collection(db, 'calendarEvents'), where('status', '==', 'approved'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const fetchedEvents = snapshot.docs.map(doc => {
+            const data = doc.data();
+            // Convert Firestore timestamp to JS Date
+            const eventDate = data.date ? new Date(data.date) : new Date();
+            return { id: doc.id, ...data, date: eventDate } as CalendarEvent;
+        });
+        setEvents(fetchedEvents);
         setIsLoading(false);
-      }
-    };
-    fetchEvents();
+    }, (error) => {
+        console.error("Failed to fetch events:", error);
+        setIsLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
 
