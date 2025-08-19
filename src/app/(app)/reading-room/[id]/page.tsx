@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 import { PdfViewer } from '@/components/reading-room/PdfViewer';
 import { ReadingRoomPdf } from '@/app/admin/reading-room/page';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +16,24 @@ export default function PdfViewPage() {
   const [pdf, setPdf] = useState<ReadingRoomPdf | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const userDoc = await getDoc(doc(db, 'teamMembers', user.uid));
+          setUserRole(userDoc.exists() ? userDoc.data().role : null);
+        } catch (error) {
+          console.error("Error fetching user role:", error);
+          setUserRole(null);
+        }
+      } else {
+        setUserRole(null);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (typeof id !== 'string') {
@@ -29,7 +48,17 @@ export default function PdfViewPage() {
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-          setPdf({ id: docSnap.id, ...docSnap.data() } as ReadingRoomPdf);
+          const pdfData = { id: docSnap.id, ...docSnap.data() } as ReadingRoomPdf;
+          
+          // CRITICAL FIX: Verify document status
+          const isTeamMember = userRole && ['Admin', 'Manager', 'Editor', 'Reviewer', 'Contributor'].includes(userRole);
+          
+          if (pdfData.status !== 'approved' && !isTeamMember) {
+            setError('This document is not available for public viewing.');
+            return;
+          }
+          
+          setPdf(pdfData);
         } else {
           setError('Document not found.');
         }
@@ -42,7 +71,7 @@ export default function PdfViewPage() {
     };
 
     fetchPdf();
-  }, [id]);
+  }, [id, userRole]);
 
   if (isLoading) {
     return <LoadingSkeleton />;

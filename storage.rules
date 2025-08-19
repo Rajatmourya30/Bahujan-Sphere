@@ -9,10 +9,11 @@ service firebase.storage {
       return get(/databases/(default)/documents/teamMembers/$(request.auth.uid)).data.role;
     }
 
-    // --- READ ACCESS (Universal) ---
-    // All authenticated users can read all files in storage.
+    // --- READ ACCESS (Secure) ---
+    // CRITICAL FIX: Restrict read access based on content approval status
+    // This is a fallback rule - specific folder rules below take precedence
     match /{allPaths=**} {
-      allow read: if request.auth != null;
+      allow read: if false; // Deny by default, specific rules below handle access
     }
 
     // --- WRITE ACCESS (Specific Folders) ---
@@ -20,7 +21,7 @@ service firebase.storage {
     // 1. Profile Pictures: Allow authenticated users to upload their *own* profile picture.
     // The folder path MUST be their UID.
     match /profilePictures/{userId}/{fileName} {
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
     // 2. Content Uploads (PDFs, Covers, Logos, etc.):
@@ -30,18 +31,23 @@ service firebase.storage {
     }
 
     match /pdfs/{fileName} {
+      allow read: if request.auth != null && isTeamMember();
       allow write: if request.auth != null && isTeamMember();
     }
     match /bookCovers/{fileName} {
+      allow read: if request.auth != null && isTeamMember();
       allow write: if request.auth != null && isTeamMember();
     }
     match /images/books/{fileName} {
+      allow read: if request.auth != null && isTeamMember();
       allow write: if request.auth != null && isTeamMember();
     }
     match /images/logos/{fileName} {
+      allow read: if request.auth != null && isTeamMember();
       allow write: if request.auth != null && isTeamMember();
     }
     match /images/stores/{fileName} {
+      allow read: if request.auth != null && isTeamMember();
       allow write: if request.auth != null && isTeamMember();
     }
   }

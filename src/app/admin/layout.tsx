@@ -30,23 +30,31 @@ import {
 import Link from 'next/link';
 import { Logo } from '@/components/shared/Logo';
 import { Skeleton } from '@/components/ui/skeleton';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for auth status in localStorage. This is faster and avoids race conditions.
-    const authStatus = localStorage.getItem('isAdminAuthenticated');
-    if (authStatus === 'true') {
-      setIsAuthenticated(true);
-    } else if (pathname !== '/admin/login') {
-      router.replace('/admin/login');
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setIsLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!isLoading) {
+      if (!user && pathname !== '/admin/login') {
+        router.replace('/admin/login');
+      }
     }
-    setIsLoading(false);
-  }, [pathname, router]);
+  }, [user, isLoading, pathname, router]);
+
 
   // For this simplified example, we'll grant all permissions to any logged-in user.
   const permissions = {
@@ -89,7 +97,7 @@ function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
   }
   
   // After loading, if user is not authenticated, render children (which should be the login page due to the redirect)
-  if (!isAuthenticated) {
+  if (!user) {
     return <>{children}</>;
   }
 
