@@ -1,10 +1,9 @@
 
-import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { https, HttpsError } from "firebase-functions";
 import * as admin from "firebase-admin";
 
-initializeApp();
+admin.initializeApp();
 
 export const setAdminClaim = https.onCall(async (data, context) => {
     // Ensure the caller is an admin before making changes.
