@@ -209,41 +209,42 @@ export default function BookmarksPage() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
         if (!user) {
             router.replace('/login');
-        } else {
-            const fetchData = async () => {
-                setIsLoading(true);
-
-                // Fetch all items from all collections
-                const eventsQuery = query(collection(db, 'calendarEvents'), where('status', '==', 'approved'));
-                const storesQuery = query(collection(db, 'stores'), where('status', '==', 'approved'));
-                const orgsQuery = query(collection(db, 'knowledgeHub'), where('status', '==', 'approved'));
-                const booksQuery = query(collection(db, 'books'), where('status', '==', 'approved'));
-                
-                const [eventsSnapshot, storesSnapshot, orgsSnapshot, booksSnapshot] = await Promise.all([
-                    getDocs(eventsQuery),
-                    getDocs(storesQuery),
-                    getDocs(orgsQuery),
-                    getDocs(booksQuery),
-                ]);
-
-                // Filter based on bookmarked IDs
-                const allEvents = eventsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), date: parseDate(doc.data().date) } as CalendarEvent));
-                setBookmarkedEvents(allEvents.filter(event => eventIds.includes(event.id)));
-
-                const allStores = storesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BahujanStore));
-                setBookmarkedStores(allStores.filter(store => storeIds.includes(store.id)));
-
-                const allOrgs = orgsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as KnowledgeOrganization));
-                setBookmarkedOrgs(allOrgs.filter(org => orgIds.includes(org.id)));
-
-                const allBooks = booksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Book));
-                setBookmarkedBooks(allBooks.filter(book => bookIds.includes(book.id)));
-                
-                setIsLoading(false);
-            };
-
-            fetchData();
+            return;
         }
+
+        const fetchData = async () => {
+            setIsLoading(true);
+
+            // Fetch all items from all collections
+            const eventsQuery = query(collection(db, 'calendarEvents'), where('status', '==', 'approved'));
+            const storesQuery = query(collection(db, 'stores'), where('status', '==', 'approved'));
+            const orgsQuery = query(collection(db, 'knowledgeHub'), where('status', '==', 'approved'));
+            const booksQuery = query(collection(db, 'books'), where('status', '==', 'approved'));
+            
+            const [eventsSnapshot, storesSnapshot, orgsSnapshot, booksSnapshot] = await Promise.all([
+                getDocs(eventsQuery),
+                getDocs(storesQuery),
+                getDocs(orgsQuery),
+                getDocs(booksQuery),
+            ]);
+
+            // Filter based on bookmarked IDs
+            const allEvents = eventsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), date: parseDate(doc.data().date) } as CalendarEvent));
+            setBookmarkedEvents(allEvents.filter(event => eventIds.includes(event.id)));
+
+            const allStores = storesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BahujanStore));
+            setBookmarkedStores(allStores.filter(store => storeIds.includes(store.id)));
+
+            const allOrgs = orgsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as KnowledgeOrganization));
+            setBookmarkedOrgs(allOrgs.filter(org => orgIds.includes(org.id)));
+
+            const allBooks = booksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Book));
+            setBookmarkedBooks(allBooks.filter(book => bookIds.includes(book.id)));
+            
+            setIsLoading(false);
+        };
+
+        fetchData();
     });
     return () => unsubscribe();
   }, [router, eventIds, storeIds, orgIds, bookIds]);

@@ -57,13 +57,11 @@ export default function ProfilePage() {
           const profileData = docSnap.data() as UserProfile;
           setUserProfile(profileData);
           setPhotoPreview(profileData.photoUrl || null);
-        } else {
-          router.replace('/login');
         }
+        setIsLoading(false);
       } else {
         router.replace('/login');
       }
-      setIsLoading(false);
     });
 
     return () => unsubscribe();
@@ -275,5 +273,3 @@ export default function ProfilePage() {
     </>
   );
 }
-
-    

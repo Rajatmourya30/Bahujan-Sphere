@@ -12,8 +12,7 @@ import { Bookmark, Globe, Search } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useBookmarkStore } from '@/hooks/use-bookmarks';
-import { auth, db } from '@/lib/firebase';
-import { useRouter } from 'next/navigation';
+import { db } from '@/lib/firebase';
 import { cn } from '@/lib/utils';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 
