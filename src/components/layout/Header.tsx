@@ -66,7 +66,7 @@ export function Header() {
                 </>
             ) : (
                 <Button asChild>
-                    <Link href="/login">Login / Sign Up</Link>
+                    <Link href="/login">Sign In</Link>
                 </Button>
             )}
         </div>
@@ -74,5 +74,3 @@ export function Header() {
     </header>
   );
 }
-
-    

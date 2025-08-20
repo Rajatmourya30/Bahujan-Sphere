@@ -2,14 +2,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/hooks/use-language';
 import Link from 'next/link';
-import { ArrowDown, Book, Calendar, Store, Users, Library, BookOpen, Bookmark as BookmarkIcon } from 'lucide-react';
-import { Logo } from '@/components/shared/Logo';
+import { ArrowDown, Book, Calendar, Store, Users, Library, BookOpen, Bookmark as BookmarkIcon, Building2, ShoppingBag, LibraryBig } from 'lucide-react';
 import Image from 'next/image';
-import { collection, getDocs, limit, query, where, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, limit, query, where, Timestamp, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { KnowledgeOrganization } from '@/lib/knowledge-hub';
 import { Book as BookType } from '@/lib/books';
@@ -17,64 +16,113 @@ import { CalendarEvent } from '@/lib/events';
 import { BahujanStore } from '@/lib/store';
 import { ReadingRoomPdf } from '@/app/admin/reading-room/page';
 import { parseDate } from '@/lib/date-parser';
-import { isValid, isSameDay, getMonth, getDate } from 'date-fns';
+import { isValid, isSameDay, getMonth, getDate, subDays, addDays } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { cn } from '@/lib/utils';
+import { useBookmarkStore } from '@/hooks/use-bookmarks';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { useRouter } from 'next/navigation';
 
-interface PillarCardProps {
-  icon: React.ElementType;
-  title: string;
-  data: string | null;
-  fallback: string;
-  buttonText: string;
-  href: string;
-  isLoading: boolean;
-}
+function ContentCard({ item, type }: { item: any, type: 'readingRoom' | 'store' | 'book' }) {
+    const { t } = useLanguage();
+    const router = useRouter();
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const { isBookmarked, toggleBookmark } = useBookmarkStore('bookBookmarks');
 
-function PillarCard({ icon: Icon, title, data, fallback, buttonText, href, isLoading }: PillarCardProps) {
-  const previewText = data || fallback;
+     useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            setIsAuthenticated(!!user);
+        });
+        return () => unsubscribe();
+    }, []);
 
-  return (
-    <Link href={href} className="group h-full">
-      <div className="flex flex-col items-center text-center p-6 h-full rounded-xl border bg-card text-card-foreground shadow-sm transition-all duration-300 ease-in-out hover:shadow-lg hover:border-primary hover:-translate-y-1">
-        <div className="flex items-center justify-center w-14 h-14 mb-4 rounded-full bg-accent/10 text-accent group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-          <Icon className="h-8 w-8" />
-        </div>
-        <h3 className="font-headline text-lg mb-2">{title}</h3>
-        <div className="text-sm text-muted-foreground mb-4 flex-grow min-h-[40px] flex items-center justify-center">
-          {isLoading ? (
-            <Skeleton className="h-5 w-3/4" />
-          ) : (
-            <p>{previewText}</p>
-          )}
-        </div>
-        <span className="text-sm font-medium text-primary group-hover:underline transition-colors">
-          {buttonText} →
-        </span>
-      </div>
-    </Link>
-  );
+    const handleBookmarkClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isAuthenticated) {
+            toggleBookmark(item.id);
+        } else {
+            router.push('/login');
+        }
+    };
+
+    let title, imageUrl, link, subText, imageAiHint;
+
+    switch(type) {
+        case 'readingRoom':
+            title = item.title;
+            imageUrl = item.coverImageUrl || 'https://placehold.co/400x600.png';
+            link = `/reading-room/${item.id}`;
+            subText = item.author || `Uploaded on ${item.uploadedAt.toDate().toLocaleDateString()}`;
+            imageAiHint = "book cover";
+            break;
+        case 'store':
+            title = t(item.nameKey);
+            imageUrl = item.imageUrl;
+            link = item.storeUrl;
+            subText = t(item.descriptionKey);
+            imageAiHint = item.imageAiHint;
+            break;
+        case 'book':
+            title = t(item.titleKey);
+            imageUrl = item.imageUrl;
+            link = item.affiliateUrl;
+            subText = t(item.authorKey);
+            imageAiHint = item.imageAiHint;
+            break;
+    }
+
+    return (
+        <Link href={link} target={type === 'store' || type === 'book' ? '_blank' : '_self'} className="group block">
+            <Card className="h-full overflow-hidden transition-all duration-300 ease-in-out hover:shadow-lg hover:-translate-y-1">
+                <CardContent className="p-0">
+                    <div className="relative aspect-[3/4] w-full">
+                        <Image src={imageUrl} alt={title} fill className="object-cover" data-ai-hint={imageAiHint} />
+                        {type === 'book' && (
+                             <button
+                                onClick={handleBookmarkClick}
+                                className="absolute top-2 right-2 z-10 p-2 rounded-full bg-background/70 backdrop-blur-sm transition-colors hover:bg-background"
+                                aria-label="Bookmark this book"
+                            >
+                                <BookmarkIcon className={cn("h-5 w-5 text-muted-foreground transition-all", isAuthenticated && isBookmarked(item.id) ? "fill-primary text-primary" : "")} />
+                            </button>
+                        )}
+                    </div>
+                    <div className="p-4">
+                        <p className="font-headline text-base font-semibold truncate">{title}</p>
+                        <p className="text-sm text-muted-foreground truncate">{subText}</p>
+                    </div>
+                </CardContent>
+            </Card>
+        </Link>
+    )
 }
 
 
 export default function HomePage() {
   const { t } = useLanguage();
-  const [userCount, setUserCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
 
   // State for dynamic pillar data
-  const [todayEvent, setTodayEvent] = useState<CalendarEvent | null>(null);
-  const [featuredResource, setFeaturedResource] = useState<ReadingRoomPdf | null>(null);
-  const [featuredOrg, setFeaturedOrg] = useState<KnowledgeOrganization | null>(null);
-  const [featuredStore, setFeaturedStore] = useState<BahujanStore | null>(null);
-  const [featuredBook, setFeaturedBook] = useState<BookType | null>(null);
+  const [dailyEvents, setDailyEvents] = useState<{ yesterday: CalendarEvent[], today: CalendarEvent[], tomorrow: CalendarEvent[] }>({ yesterday: [], today: [], tomorrow: [] });
+  const [recentResources, setRecentResources] = useState<ReadingRoomPdf[]>([]);
+  const [recentOrgs, setRecentOrgs] = useState<KnowledgeOrganization[]>([]);
+  const [recentStores, setRecentStores] = useState<BahujanStore[]>([]);
+  const [essentialBooks, setEssentialBooks] = useState<BookType[]>([]);
+  const [userCount, setUserCount] = useState<number>(0);
+
 
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
         const today = new Date();
+        const yesterday = subDays(today, 1);
+        const tomorrow = addDays(today, 1);
         
-        // Fetch Today's Event
+        // Fetch All Approved Events
         const eventsQuery = query(collection(db, 'calendarEvents'), where('status', '==', 'approved'));
         const eventsSnap = await getDocs(eventsQuery);
         const allEvents = eventsSnap.docs.map(doc => {
@@ -83,37 +131,33 @@ export default function HomePage() {
             if (!isValid(eventDate)) return null;
             return { id: doc.id, ...data, date: eventDate } as CalendarEvent;
         }).filter(Boolean) as CalendarEvent[];
-        const todaysEvents = allEvents.filter(event => getMonth(event.date) === getMonth(today) && getDate(event.date) === getDate(today));
-        setTodayEvent(todaysEvents.length > 0 ? todaysEvents[0] : null);
-
-        // Fetch Featured Resource from Reading Room
-        const resourceQuery = query(collection(db, 'readingRoomPdfs'), where('status', '==', 'approved'), limit(1));
-        const resourceSnap = await getDocs(resourceQuery);
-        if (!resourceSnap.empty) {
-            setFeaturedResource({ id: resourceSnap.docs[0].id, ...resourceSnap.docs[0].data() } as ReadingRoomPdf);
-        }
-
-        // Fetch Featured Organization
-        const orgQuery = query(collection(db, 'knowledgeHub'), where('status', '==', 'approved'), limit(1));
-        const orgSnap = await getDocs(orgQuery);
-        if (!orgSnap.empty) {
-            setFeaturedOrg({ id: orgSnap.docs[0].id, ...orgSnap.docs[0].data() } as KnowledgeOrganization);
-        }
         
-        // Fetch Featured Store
-        const storeQuery = query(collection(db, 'stores'), where('status', '==', 'approved'), limit(1));
-        const storeSnap = await getDocs(storeQuery);
-        if (!storeSnap.empty) {
-            setFeaturedStore({ id: storeSnap.docs[0].id, ...storeSnap.docs[0].data() } as BahujanStore);
-        }
+        setDailyEvents({
+            yesterday: allEvents.filter(e => getMonth(e.date) === getMonth(yesterday) && getDate(e.date) === getDate(yesterday)),
+            today: allEvents.filter(e => getMonth(e.date) === getMonth(today) && getDate(e.date) === getDate(today)),
+            tomorrow: allEvents.filter(e => getMonth(e.date) === getMonth(tomorrow) && getDate(e.date) === getDate(tomorrow)),
+        });
 
-        // Fetch Featured Book
-        const bookQuery = query(collection(db, 'books'), where('status', '==', 'approved'), limit(1));
-        const bookSnap = await getDocs(bookQuery);
-        if (!bookSnap.empty) {
-            setFeaturedBook({ id: bookSnap.docs[0].id, ...bookSnap.docs[0].data() } as BookType);
-        }
+        // Fetch Recent Resources
+        const resourcesQuery = query(collection(db, 'readingRoomPdfs'), where('status', '==', 'approved'), orderBy('uploadedAt', 'desc'), limit(5));
+        const resourcesSnap = await getDocs(resourcesQuery);
+        setRecentResources(resourcesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ReadingRoomPdf)));
 
+        // Fetch Recent Organizations
+        const orgsQuery = query(collection(db, 'knowledgeHub'), where('status', '==', 'approved'), limit(4)); // Limit to 4 for the grid
+        const orgsSnap = await getDocs(orgsQuery);
+        setRecentOrgs(orgsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as KnowledgeOrganization)));
+
+        // Fetch Recent Stores
+        const storesQuery = query(collection(db, 'stores'), where('status', '==', 'approved'), limit(5));
+        const storesSnap = await getDocs(storesQuery);
+        setRecentStores(storesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as BahujanStore)));
+
+        // Fetch Essential Books
+        const booksQuery = query(collection(db, 'books'), where('status', '==', 'approved'), limit(5));
+        const booksSnap = await getDocs(booksQuery);
+        setEssentialBooks(booksSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as BookType)));
+        
         // Fetch User Count
         const usersSnap = await getDocs(collection(db, 'users'));
         setUserCount(usersSnap.size);
@@ -128,20 +172,22 @@ export default function HomePage() {
   }, [t]);
   
   const handleScroll = () => {
-    const element = document.getElementById('pillars');
+    const element = document.getElementById('dashboard-start');
     if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }
 
-  const pillarData = {
-    calendar: todayEvent ? `Today: ${todayEvent.title}` : null,
-    readingRoom: featuredResource ? `Featured: ${featuredResource.title}` : null,
-    knowledge: featuredOrg ? `Featured: ${t(featuredOrg.nameKey)}` : null,
-    store: featuredStore ? `From: ${t(featuredStore.nameKey)}` : null,
-    books: featuredBook ? `Book of the Week: ${t(featuredBook.titleKey)}` : null,
-  };
-
+  const renderEventLinks = (events: CalendarEvent[]) => {
+      if (isLoading) return <Skeleton className="h-5 w-3/4" />;
+      if (events.length === 0) return <p className="text-sm text-muted-foreground italic">No events scheduled for this day.</p>;
+      return events.map((event, index) => (
+          <Link href={`/calendar`} key={event.id} className="text-sm hover:underline text-primary">
+              {event.title}{index < events.length - 1 ? ', ' : ''}
+          </Link>
+      ));
+  }
+  
   return (
     <div className="space-y-16 md:space-y-24">
       {/* Section 1: Hero */}
@@ -149,9 +195,9 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent z-10" />
         <Image src="https://placehold.co/1200x600.png" alt="Bahujan Community" fill className="object-cover" data-ai-hint="community celebration" />
         <div className="relative container z-20">
-          <h1 className="font-headline text-4xl md:text-6xl font-bold mt-4">Your Trusted Source for Bahujan Heritage.</h1>
+          <h1 className="font-headline text-4xl md:text-6xl font-bold mt-4">Your Daily Connection to Bahujan Heritage.</h1>
           <p className="mt-4 text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
-            Explore a curated calendar of history, a digital library, a community directory, a creators' marketplace, and essential books.
+            Explore history, discover knowledge, support creators, and deepen your understanding—all in one place.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" onClick={handleScroll}>
@@ -161,77 +207,117 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Section 2: The Five Pillars */}
-      <section id="pillars" className="container">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-            <PillarCard 
-                icon={Calendar} 
-                title="Calendar"
-                data={pillarData.calendar}
-                fallback="Explore historical events"
-                buttonText="Explore Calendar"
-                href="/calendar"
-                isLoading={isLoading}
-            />
-             <PillarCard 
-                icon={BookOpen} 
-                title="Reading Room"
-                data={pillarData.readingRoom}
-                fallback="Discover our archives"
-                buttonText="Enter Reading Room"
-                href="/reading-room"
-                isLoading={isLoading}
-            />
-            <PillarCard 
-                icon={Library} 
-                title="Knowledge Hub"
-                data={pillarData.knowledge}
-                fallback="Find community organizations"
-                buttonText="Discover Knowledge"
-                href="/knowledge-hub"
-                isLoading={isLoading}
-            />
-            <PillarCard 
-                icon={Store} 
-                title="Store"
-                data={pillarData.store}
-                fallback="Support creators"
-                buttonText="Visit Store"
-                href="/store"
-                isLoading={isLoading}
-            />
-            <PillarCard 
-                icon={BookmarkIcon} 
-                title="Books"
-                data={pillarData.books}
-                fallback="Find essential readings"
-                buttonText="Browse Books"
-                href="/books"
-                isLoading={isLoading}
-            />
-        </div>
+      {/* Section 2: On This Day */}
+      <section id="dashboard-start" className="container">
+        <h2 className="font-headline text-3xl font-bold text-center mb-8">On This Day</h2>
+        <Card className="shadow-lg">
+            <CardContent className="p-0">
+                 <div className="grid grid-cols-1 md:grid-cols-4">
+                    <div className="p-6 space-y-2 border-b md:border-b-0 md:border-r">
+                        <h3 className="font-semibold text-muted-foreground">Yesterday</h3>
+                        <div className="flex flex-wrap gap-x-2">{renderEventLinks(dailyEvents.yesterday)}</div>
+                    </div>
+                    <div className="p-6 space-y-2 col-span-1 md:col-span-2 bg-muted/50 border-b md:border-b-0 md:border-r">
+                        <h3 className="font-headline text-xl font-bold">Today</h3>
+                        <div className="flex flex-wrap gap-x-2">{renderEventLinks(dailyEvents.today)}</div>
+                    </div>
+                    <div className="p-6 space-y-2">
+                        <h3 className="font-semibold text-muted-foreground">Tomorrow</h3>
+                        <div className="flex flex-wrap gap-x-2">{renderEventLinks(dailyEvents.tomorrow)}</div>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
       </section>
 
-      {/* Section 3: Call to Sign Up */}
+      {/* Section 3: Recently Added to Reading Room */}
+      <section className="container">
+         <h2 className="font-headline text-3xl font-bold mb-6">Recently Added to the Reading Room</h2>
+         <Carousel opts={{ align: "start", loop: false }}>
+            <CarouselContent className="-ml-4">
+                {isLoading ? Array.from({length: 5}).map((_, i) => <CarouselItem key={i} className="pl-4 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5"><Skeleton className="h-64 w-full" /></CarouselItem>)
+                : recentResources.map(item => (
+                    <CarouselItem key={item.id} className="pl-4 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5">
+                        <ContentCard item={item} type="readingRoom" />
+                    </CarouselItem>
+                ))}
+            </CarouselContent>
+            <CarouselPrevious className="hidden md:flex" />
+            <CarouselNext className="hidden md:flex" />
+        </Carousel>
+      </section>
+
+      {/* Section 4: Newly Listed Organizations */}
+      <section className="container">
+        <h2 className="font-headline text-3xl font-bold mb-6">Newly Listed Organizations</h2>
+         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+             {isLoading ? Array.from({length: 4}).map((_, i) => <Skeleton key={i} className="h-32 w-full" />)
+             : recentOrgs.map(org => (
+                 <Link href={org.websiteUrl} target="_blank" key={org.id} className="group">
+                    <Card className="h-full flex items-center justify-center p-4 transition-all hover:shadow-lg hover:-translate-y-1">
+                        <div className="relative h-20 w-full">
+                            <Image src={org.logoUrl} alt={t(org.nameKey)} fill className="object-contain" data-ai-hint={org.imageAiHint} />
+                        </div>
+                    </Card>
+                 </Link>
+             ))}
+         </div>
+      </section>
+
+      {/* Section 5: Latest from Our Sellers */}
+      <section className="container">
+         <h2 className="font-headline text-3xl font-bold mb-6">Latest from Our Sellers</h2>
+         <Carousel opts={{ align: "start", loop: false }}>
+            <CarouselContent className="-ml-4">
+                 {isLoading ? Array.from({length: 5}).map((_, i) => <CarouselItem key={i} className="pl-4 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5"><Skeleton className="h-64 w-full" /></CarouselItem>)
+                : recentStores.map(item => (
+                    <CarouselItem key={item.id} className="pl-4 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5">
+                        <ContentCard item={item} type="store" />
+                    </CarouselItem>
+                ))}
+            </CarouselContent>
+            <CarouselPrevious className="hidden md:flex" />
+            <CarouselNext className="hidden md:flex" />
+        </Carousel>
+      </section>
+
+      {/* Section 6: Essential Reads */}
+      <section className="container">
+         <h2 className="font-headline text-3xl font-bold mb-6">Essential Reads</h2>
+         <Carousel opts={{ align: "start", loop: false }}>
+            <CarouselContent className="-ml-4">
+                 {isLoading ? Array.from({length: 5}).map((_, i) => <CarouselItem key={i} className="pl-4 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5"><Skeleton className="h-64 w-full" /></CarouselItem>)
+                : essentialBooks.map(item => (
+                    <CarouselItem key={item.id} className="pl-4 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5">
+                        <ContentCard item={item} type="book" />
+                    </CarouselItem>
+                ))}
+            </CarouselContent>
+            <CarouselPrevious className="hidden md:flex" />
+            <CarouselNext className="hidden md:flex" />
+        </Carousel>
+      </section>
+
+      {/* Section 7: Call to Sign Up */}
       <section className="bg-muted py-16">
         <div className="container text-center">
-            <h2 className="font-headline text-3xl font-bold">Make This Your Own</h2>
+            <h2 className="font-headline text-3xl font-bold">Ready to Make This Your Own?</h2>
             <div className="mt-6 max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 text-left">
                 <div className="flex items-start gap-3">
                     <span className="text-primary">✓</span>
-                    <p><span className="font-semibold">Never miss a date</span> – Bookmark events and get reminders.</p>
+                    <p><span className="font-semibold">Get personalized reminders</span> for events you care about.</p>
                 </div>
                 <div className="flex items-start gap-3">
                     <span className="text-primary">✓</span>
-                    <p><span className="font-semibold">Build your library</span> – Save articles and book lists for later.</p>
+                    <p><span className="font-semibold">Build your personal library</span> by saving books and articles.</p>
                 </div>
                 <div className="flex items-start gap-3">
                     <span className="text-primary">✓</span>
-                    <p><span className="font-semibold">Support directly</span> – Easily track your purchases and wishlists.</p>
+                    <p><span className="font-semibold">Support creators</span> and track your purchases.</p>
                 </div>
                 <div className="flex items-start gap-3">
                     <span className="text-primary">✓</span>
-                    <p><span className="font-semibold">Deepen your knowledge</span> – Curate your personal learning journey.</p>
+                    <p><span className="font-semibold">Curate your own learning journey.</span></p>
                 </div>
             </div>
             <Button asChild size="lg" className="mt-8">
