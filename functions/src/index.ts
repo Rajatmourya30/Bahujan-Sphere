@@ -2,8 +2,10 @@
 import { getAuth } from "firebase-admin/auth";
 import { https, HttpsError } from "firebase-functions";
 import * as admin from "firebase-admin";
+import { getFirestore } from "firebase-admin/firestore";
 
 admin.initializeApp();
+const db = getFirestore();
 
 export const setAdminClaim = https.onCall(async (data, context) => {
     // Ensure the caller is an admin before making changes.
@@ -42,12 +44,21 @@ export const setAdminClaim = https.onCall(async (data, context) => {
 
 // New function to create a user and return their UID
 export const createTeamUser = https.onCall(async (data, context) => {
-    if (context.auth?.token.admin !== true) {
-        throw new HttpsError(
-            "permission-denied",
-            "Only admins can create new team users."
-        );
+    if (!context.auth || !context.auth.token.email) {
+        throw new HttpsError("unauthenticated", "The function must be called while authenticated.");
     }
+
+    // Check if the caller is an admin via custom claim OR by checking the database.
+    // This provides a fallback if the custom claim hasn't propagated yet.
+    const isCustomClaimAdmin = context.auth.token.admin === true;
+    
+    const teamQuery = await db.collection("teamMembers").where("email", "==", context.auth.token.email).limit(1).get();
+    const isDbAdmin = !teamQuery.empty && teamQuery.docs[0].data().role === 'Admin';
+    
+    if (!isCustomClaimAdmin && !isDbAdmin) {
+        throw new HttpsError("permission-denied", "Only admins can create new team users.");
+    }
+
 
     const { email, password } = data;
     if (typeof email !== "string" || typeof password !== "string") {
