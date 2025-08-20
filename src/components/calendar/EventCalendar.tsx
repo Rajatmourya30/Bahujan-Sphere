@@ -14,12 +14,11 @@ import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { EventDetailModal } from './EventDetailModal';
 import { Separator } from '../ui/separator';
-import { isSameDay } from 'date-fns';
+import { isSameDay, isValid } from 'date-fns';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { parseDate } from '@/lib/date-parser';
-import { isValid } from 'date-fns';
 import { Skeleton } from '../ui/skeleton';
 
 
