@@ -12,15 +12,17 @@ service cloud.firestore {
       return isSignedIn() && exists(/databases/$(database)/documents/teamMembers/$(request.auth.uid));
     }
 
+    function getRole() {
+      return get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.role;
+    }
+
     function isApprovedContent(resource) {
       return resource.data.status == 'approved';
     }
 
     // Public content: Only approved content publicly readable
     match /{collectionName}/{docId} where collectionName in ['calendarEvents', 'knowledgeHub', 'stores', 'books', 'readingRoomPdfs'] {
-      allow read: if isApprovedContent(resource);
-      allow read: if isTeamMember();
-      // Allow team members to create, update, AND delete content
+      allow read: if isApprovedContent(resource) || isTeamMember();
       allow write, delete: if isTeamMember();
     }
 
@@ -35,11 +37,14 @@ service cloud.firestore {
       allow create, read, update, delete: if isTeamMember();
     }
     
-    // Team management
+    // Team management: Admins have full control, members can read.
     match /teamMembers/{memberId} {
-      allow read: if isSignedIn() && request.auth.uid == memberId;
-      allow read: if isTeamMember();
-      allow write: if false;
+      // Allow team members to read team data (useful for listing team members in UI)
+      // Allow users to read their own document to verify their role
+      allow read: if isTeamMember() || (isSignedIn() && request.auth.uid == memberId);
+      
+      // Allow ONLY users with the 'Admin' role to create, update, or delete team members.
+      allow create, update, delete: if isSignedIn() && getRole() == 'Admin';
     }
   }
 }
