@@ -3,8 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, User, Bookmark, Library, Store, Book, BookOpenCheck } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { User, Bookmark, Library, Store, BookOpenCheck, Calendar } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/hooks/use-language';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -25,50 +24,48 @@ export function Header() {
   }, []);
 
   const navItems = [
-    { href: '/calendar', label: t('nav.calendar'), icon: Home, auth: false },
-    { href: '/knowledge-hub', label: t('nav.knowledge'), icon: Library, auth: false },
-    { href: '/store', label: t('nav.store'), icon: Store, auth: false },
-    { href: '/books', label: t('nav.books'), icon: Book, auth: false },
-    { href: '/reading-room', label: t('nav.reading_room'), icon: BookOpenCheck, auth: false },
-    { href: '/bookmarks', label: t('nav.bookmarks'), icon: Bookmark, auth: true },
+    { href: '/calendar', label: t('nav.calendar') },
+    { href: '/reading-room', label: t('nav.reading_room') },
+    { href: '/knowledge-hub', label: t('nav.knowledge') },
+    { href: '/store', label: t('nav.store') },
   ];
-
-  const profileItem = { href: '/profile', label: t('nav.profile'), icon: User, auth: true };
 
   // Hide nav on admin pages, login, signup, etc.
   if (pathname.startsWith('/admin') || pathname === '/login' || pathname === '/signup' || pathname === '/language-selection') {
     return null;
   }
   
-  const getNavItem = (item: typeof navItems[0]) => {
-      const href = item.auth && !isAuthenticated ? '/login' : item.href;
-      const isActive = pathname.startsWith(href);
-      return (
-          <Button key={item.label} asChild variant={isActive ? 'secondary' : 'ghost'}>
-              <Link href={href}>
-                  <item.icon className="mr-2 h-4 w-4" />
-                  {item.label}
-              </Link>
-          </Button>
-      );
-  }
-
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 max-w-7xl items-center">
-        <div className="mr-4 flex items-center">
+        <div className="mr-auto flex items-center">
           <Link href="/" className="flex items-center gap-2">
             <Logo />
-            <span className="font-bold text-primary">BahujanSphere</span>
+            <span className="font-bold text-primary hidden sm:inline-block">BahujanSphere</span>
           </Link>
         </div>
-        <nav className="flex flex-1 items-center space-x-2">
-           {navItems.map(getNavItem)}
+        <nav className="hidden md:flex items-center space-x-2">
+           {navItems.map(item => (
+                <Button key={item.label} asChild variant={pathname.startsWith(item.href) ? 'secondary' : 'ghost'}>
+                    <Link href={item.href}>
+                        {item.label}
+                    </Link>
+                </Button>
+           ))}
         </nav>
-        <div className="flex items-center space-x-2">
-            {isAuthenticated ? getNavItem(profileItem) : (
+        <div className="flex items-center space-x-2 ml-auto">
+            {isAuthenticated ? (
+                <>
+                    <Button asChild variant={pathname.startsWith('/bookmarks') ? 'secondary' : 'ghost'} size="icon" aria-label="Bookmarks">
+                        <Link href="/bookmarks"><Bookmark /></Link>
+                    </Button>
+                    <Button asChild variant={pathname.startsWith('/profile') ? 'secondary' : 'ghost'} size="icon" aria-label="Profile">
+                        <Link href="/profile"><User /></Link>
+                    </Button>
+                </>
+            ) : (
                 <Button asChild>
-                    <Link href="/login">Login</Link>
+                    <Link href="/login">Login / Sign Up</Link>
                 </Button>
             )}
         </div>
