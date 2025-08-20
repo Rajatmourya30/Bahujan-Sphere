@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { User, Bookmark, Library, Store, BookOpenCheck, Calendar } from 'lucide-react';
+import { User, Bookmark } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/hooks/use-language';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -28,6 +28,7 @@ export function Header() {
     { href: '/reading-room', label: t('nav.reading_room') },
     { href: '/knowledge-hub', label: t('nav.knowledge') },
     { href: '/store', label: t('nav.store') },
+    { href: '/books', label: t('nav.books') },
   ];
 
   // Hide nav on admin pages, login, signup, etc.
