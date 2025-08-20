@@ -4,7 +4,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLanguage } from '@/hooks/use-language';
-import { allBooks, type Book } from '@/lib/books';
+import { type Book } from '@/lib/books';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -14,12 +14,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useBookmarkStore } from '@/hooks/use-bookmarks';
 import { cn } from '@/lib/utils';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 
 function BookCard({ book }: { book: Book }) {
     const { t } = useLanguage();
     const { isBookmarked, toggleBookmark } = useBookmarkStore('bookBookmarks');
+    const title = book.titleKey ? t(book.titleKey) : book.title;
+    const author = book.authorKey ? t(book.authorKey) : book.author;
+    const description = book.descriptionKey ? t(book.descriptionKey) : book.description;
+
 
     return (
         <Card className="flex flex-col">
@@ -27,16 +32,16 @@ function BookCard({ book }: { book: Book }) {
                 <div className="relative h-32 w-24 flex-shrink-0">
                     <Image
                         src={book.imageUrl}
-                        alt={t(book.titleKey)}
+                        alt={title}
                         fill
                         className="object-cover rounded-md"
                         data-ai-hint={book.imageAiHint}
                     />
                 </div>
                 <div className="flex-grow">
-                    <CardTitle className="font-headline text-lg">{t(book.titleKey)}</CardTitle>
-                    <CardDescription className="text-sm font-medium">{t(book.authorKey)}</CardDescription>
-                    <CardDescription className="mt-2 text-sm line-clamp-3">{t(book.descriptionKey)}</CardDescription>
+                    <CardTitle className="font-headline text-lg">{title}</CardTitle>
+                    <CardDescription className="text-sm font-medium">{author}</CardDescription>
+                    <CardDescription className="mt-2 text-sm line-clamp-3">{description}</CardDescription>
                 </div>
             </CardHeader>
             <CardFooter className="mt-auto flex-col items-start gap-2">
@@ -66,28 +71,45 @@ export default function BooksPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const router = useRouter();
+    const [books, setBooks] = useState<Book[]>([]);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
+        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
             if (!user) {
                 router.replace('/login');
-            } else {
-                setIsLoading(false);
             }
         });
-        return () => unsubscribe();
+
+        const q = query(collection(db, 'books'), where('status', '==', 'approved'));
+        const unsubscribeFirestore = onSnapshot(q, (snapshot) => {
+            const fetchedBooks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Book));
+            setBooks(fetchedBooks);
+            setIsLoading(false);
+        }, (error) => {
+            console.error("Failed to fetch books:", error);
+            setIsLoading(false);
+        });
+
+        return () => {
+            unsubscribeAuth();
+            unsubscribeFirestore();
+        };
     }, [router]);
 
     const filteredBooks = useMemo(() => {
         if (!searchTerm) {
-            return allBooks;
+            return books;
         }
-        return allBooks.filter(book => 
-            t(book.titleKey).toLowerCase().includes(searchTerm.toLowerCase()) ||
-            t(book.authorKey).toLowerCase().includes(searchTerm.toLowerCase()) ||
-            t(book.descriptionKey).toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }, [searchTerm, t]);
+        return books.filter(book => {
+            const title = book.titleKey ? t(book.titleKey) : book.title;
+            const author = book.authorKey ? t(book.authorKey) : book.author;
+            const description = book.descriptionKey ? t(book.descriptionKey) : book.description;
+            
+            return title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                   author.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                   description.toLowerCase().includes(searchTerm.toLowerCase())
+        });
+    }, [searchTerm, t, books]);
 
     if (isLoading) {
         return (
