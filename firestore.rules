@@ -3,50 +3,51 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // HELPER FUNCTIONS
+    
+    // Helper Functions
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Checks if a user is in the teamMembers collection. This is more reliable than custom claims for read rules.
     function isTeamMember() {
+      // Check if a user document exists in the 'teamMembers' collection with the user's UID.
+      // This is a simple and effective way to check for team membership without reading document data.
       return isSignedIn() && exists(/databases/$(database)/documents/teamMembers/$(request.auth.uid));
     }
-
-    // Checks if content has been approved for public viewing.
-    function isApprovedContent(resource) {
-      return resource.data.status == 'approved';
+    
+    // Public Content Rules (e.g., calendar, knowledge hub, etc.)
+    // These collections should be publicly readable but only writable by team members.
+    match /{publicCollection}/{docId} 
+        where publicCollection in ['calendarEvents', 'knowledgeHub', 'stores', 'books', 'readingRoomPdfs'] {
+      allow read: if true;
+      allow write: if isTeamMember();
     }
 
-    // PUBLIC CONTENT COLLECTIONS
-    // These collections are publicly readable if their status is 'approved'.
-    // Team members can read all documents regardless of status.
-    match /{collectionName}/{docId} where collectionName in ['calendarEvents', 'knowledgeHub', 'stores', 'books', 'readingRoomPdfs'] {
-      allow read: if isApprovedContent(resource) || isTeamMember();
-      allow write: if isTeamMember(); // create, update, delete for team members
-    }
-
-    // USER-SPECIFIC DATA
-    // Users can create their own profile, and can only read and update their own.
+    // User Profile Rules
+    // Users can create their own profile and can only read/update their own.
     match /users/{userId} {
       allow read, update: if isSignedIn() && request.auth.uid == userId;
       allow create: if isSignedIn();
     }
 
-    // SUBMISSION QUEUES
-    // Only team members can create, read, and manage submissions.
-    match /{submissionCollection}/{submissionId} where submissionCollection in ['eventSubmissions', 'bookSubmissions', 'storeSubmissions', 'knowledgeHubSubmissions', 'readingRoomSubmissions'] {
+    // Submission Rules (for content pending approval)
+    // Any team member can create, read, and manage submissions.
+    match /{submissionCollection}/{submissionId} 
+        where submissionCollection in ['eventSubmissions', 'bookSubmissions', 'storeSubmissions', 'knowledgeHubSubmissions', 'readingRoomSubmissions'] {
       allow create, read, update, delete: if isTeamMember();
     }
-
-    // TEAM MANAGEMENT
-    // Team members can be managed via secure Cloud Functions. Direct writes are disabled.
-    // Any authenticated user can read their own team member document (needed for role checks in app).
-    // Team members can read the list of other team members.
+    
+    // Team Management Rules
     match /teamMembers/{memberId} {
-      allow read: if (isSignedIn() && request.auth.uid == memberId) || isTeamMember();
-      allow write: if false; // All writes should be handled by a secure Cloud Function.
+      // Allow authenticated users to read their own team member document. This is needed for role checks.
+      allow read: if isSignedIn() && request.auth.uid == memberId;
+      // Allow existing team members to read other team members' documents (e.g., for an admin panel).
+      allow read: if isTeamMember();
+
+      // IMPORTANT: Block all direct writes to the teamMembers collection.
+      // Team management (adding, removing, changing roles) should ONLY be handled
+      // by a secure backend environment, like a Firebase Cloud Function.
+      allow write: if false; 
     }
   }
 }

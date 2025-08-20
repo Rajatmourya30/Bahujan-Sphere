@@ -1,9 +1,10 @@
 
 import type { TranslationKey } from './i18n/translations';
+import type { Timestamp } from 'firebase/firestore';
 
 export interface CalendarEvent {
   id: string;
-  date: Date;
+  date: Date | Timestamp;
   title: string;
   tags: string[];
   summary: string;
@@ -13,3 +14,5 @@ export interface CalendarEvent {
   tagKeys?: TranslationKey[];
   descriptionKey?: TranslationKey;
 }
+
+    

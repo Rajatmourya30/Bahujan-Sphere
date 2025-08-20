@@ -28,7 +28,6 @@ export function Header() {
     { href: '/reading-room', label: t('nav.reading_room') },
     { href: '/knowledge-hub', label: t('nav.knowledge') },
     { href: '/store', label: t('nav.store') },
-    { href: '/books', label: t('nav.books') },
   ];
 
   // Hide nav on admin pages, login, signup, etc.

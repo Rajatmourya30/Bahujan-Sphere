@@ -4,7 +4,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useLanguage } from '@/hooks/use-language';
-import { type KnowledgeOrganization } from '@/lib/knowledge-hub';
+import type { KnowledgeOrganization } from '@/lib/knowledge-hub';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,24 +21,9 @@ import { collection, onSnapshot, query, where } from 'firebase/firestore';
 
 function OrganizationCard({ organization }: { organization: KnowledgeOrganization }) {
     const { t } = useLanguage();
-    const router = useRouter();
     const { isBookmarked, toggleBookmark } = useBookmarkStore('knowledgeHubBookmarks');
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            setIsAuthenticated(!!user);
-        });
-        return () => unsubscribe();
-    }, []);
-
-    const handleBookmarkClick = () => {
-        if (isAuthenticated) {
-            toggleBookmark(organization.id);
-        } else {
-            router.push('/login');
-        }
-    }
+    const name = organization.nameKey ? t(organization.nameKey) : organization.name;
+    const description = organization.descriptionKey ? t(organization.descriptionKey) : organization.description;
 
 
     return (
@@ -47,15 +32,15 @@ function OrganizationCard({ organization }: { organization: KnowledgeOrganizatio
                  <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-md border">
                     <Image
                         src={organization.logoUrl}
-                        alt={t(organization.nameKey)}
+                        alt={name}
                         fill
                         className="object-contain p-1"
                         data-ai-hint={organization.imageAiHint}
                     />
                 </div>
                 <div className="flex-grow">
-                    <CardTitle className="font-headline text-lg">{t(organization.nameKey)}</CardTitle>
-                    <CardDescription className="mt-1 text-sm">{t(organization.descriptionKey)}</CardDescription>
+                    <CardTitle className="font-headline text-lg">{name}</CardTitle>
+                    <CardDescription className="mt-1 text-sm">{description}</CardDescription>
                 </div>
             </CardHeader>
             <CardFooter className="flex items-center gap-2">
@@ -68,11 +53,11 @@ function OrganizationCard({ organization }: { organization: KnowledgeOrganizatio
                 <Button
                     variant="outline"
                     size="icon"
-                    onClick={handleBookmarkClick}
+                    onClick={() => toggleBookmark(organization.id)}
                     aria-label={t('event_calendar.bookmark_button')}
                     className="shrink-0"
                 >
-                    <Bookmark className={cn("h-5 w-5", isAuthenticated && isBookmarked(organization.id) ? "fill-primary text-primary" : "text-muted-foreground")} />
+                    <Bookmark className={cn("h-5 w-5", isBookmarked(organization.id) ? "fill-primary text-primary" : "text-muted-foreground")} />
                 </Button>
             </CardFooter>
         </Card>
@@ -83,31 +68,56 @@ function OrganizationCard({ organization }: { organization: KnowledgeOrganizatio
 export default function KnowledgeHubPage() {
     const { t } = useLanguage();
     const [searchTerm, setSearchTerm] = useState('');
-    const [organizations, setOrganizations] = useState<KnowledgeOrganization[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const router = useRouter();
+    const [organizations, setOrganizations] = useState<KnowledgeOrganization[]>([]);
 
     useEffect(() => {
+        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                router.replace('/login');
+            }
+        });
+
         const q = query(collection(db, 'knowledgeHub'), where('status', '==', 'approved'));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
+        const unsubscribeFirestore = onSnapshot(q, (snapshot) => {
             const fetchedOrgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as KnowledgeOrganization));
             setOrganizations(fetchedOrgs);
             setIsLoading(false);
         }, (error) => {
-            console.error("Error fetching organizations:", error);
+            console.error("Failed to fetch organizations:", error);
             setIsLoading(false);
         });
-        return () => unsubscribe();
-    }, []);
+        
+        return () => {
+            unsubscribeAuth();
+            unsubscribeFirestore();
+        };
+    }, [router]);
 
     const filteredOrganizations = useMemo(() => {
         if (!searchTerm) {
             return organizations;
         }
         return organizations.filter(org => 
-            t(org.nameKey).toLowerCase().includes(searchTerm.toLowerCase()) ||
-            t(org.descriptionKey).toLowerCase().includes(searchTerm.toLowerCase())
+            (org.nameKey ? t(org.nameKey) : org.name).toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (org.descriptionKey ? t(org.descriptionKey) : org.description).toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [searchTerm, t, organizations]);
+
+    if (isLoading) {
+        return (
+            <div className="space-y-4">
+                <Skeleton className="h-8 w-1/2" />
+                <Skeleton className="h-4 w-3/4" />
+                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <Skeleton className="h-40 w-full" />
+                    <Skeleton className="h-40 w-full" />
+                 </div>
+            </div>
+        )
+    }
+
 
     return (
         <div className="space-y-8">
@@ -129,22 +139,15 @@ export default function KnowledgeHubPage() {
                 />
             </div>
             
-            {isLoading ? (
-                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                    <Skeleton className="h-40 w-full" />
-                    <Skeleton className="h-40 w-full" />
-                 </div>
-            ) : (
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                    {filteredOrganizations.length > 0 ? (
-                        filteredOrganizations.map(org => (
-                            <OrganizationCard key={org.id} organization={org} />
-                        ))
-                    ) : (
-                        <p className="text-center text-muted-foreground py-8 md:col-span-2">{t('knowledge_hub.no_results')}</p>
-                    )}
-                </div>
-            )}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                {filteredOrganizations.length > 0 ? (
+                    filteredOrganizations.map(org => (
+                        <OrganizationCard key={org.id} organization={org} />
+                    ))
+                ) : (
+                    <p className="text-center text-muted-foreground py-8 md:col-span-2">{t('knowledge_hub.no_results')}</p>
+                )}
+            </div>
         </div>
     );
 }

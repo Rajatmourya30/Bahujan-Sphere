@@ -21,7 +21,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Image from 'next/image';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { parseDate } from '@/lib/date-parser';
-import { isValid } from 'date-fns';
 
 function EventBookmarkCard({ event, onRemove }: { event: CalendarEvent, onRemove: (id: string) => void }) {
     const { t } = useLanguage();
@@ -66,13 +65,16 @@ function EventBookmarkCard({ event, onRemove }: { event: CalendarEvent, onRemove
 
 function StoreBookmarkCard({ store, onRemove }: { store: BahujanStore, onRemove: (id: string) => void }) {
     const { t } = useLanguage();
+    const name = store.nameKey ? t(store.nameKey) : store.name;
+    const description = store.descriptionKey ? t(store.descriptionKey) : store.description;
+
     return (
         <Card className="flex flex-col text-center">
             <CardHeader className="items-center">
                 <div className="relative h-24 w-24 overflow-hidden rounded-full border">
                     <Image
                         src={store.imageUrl}
-                        alt={t(store.nameKey)}
+                        alt={name}
                         fill
                         className="object-cover"
                         data-ai-hint={store.imageAiHint}
@@ -80,8 +82,8 @@ function StoreBookmarkCard({ store, onRemove }: { store: BahujanStore, onRemove:
                 </div>
             </CardHeader>
             <CardContent className="flex-grow">
-                <CardTitle className="font-headline text-lg">{t(store.nameKey)}</CardTitle>
-                <CardDescription className="mt-2 text-sm">{t(store.descriptionKey)}</CardDescription>
+                <CardTitle className="font-headline text-lg">{name}</CardTitle>
+                <CardDescription className="mt-2 text-sm">{description}</CardDescription>
             </CardContent>
             <CardFooter className="flex flex-col gap-2">
                 <Button asChild className="w-full">
@@ -105,21 +107,24 @@ function StoreBookmarkCard({ store, onRemove }: { store: BahujanStore, onRemove:
 
 function OrgBookmarkCard({ org, onRemove }: { org: KnowledgeOrganization, onRemove: (id: string) => void }) {
     const { t } = useLanguage();
+    const name = org.nameKey ? t(org.nameKey) : org.name;
+    const description = org.descriptionKey ? t(org.descriptionKey) : org.description;
+
     return (
         <Card>
             <CardHeader className="flex flex-row items-start gap-4">
                  <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-md border">
                     <Image
                         src={org.logoUrl}
-                        alt={t(org.nameKey)}
+                        alt={name}
                         fill
                         className="object-contain p-1"
                         data-ai-hint={org.imageAiHint}
                     />
                 </div>
                 <div className="flex-grow">
-                    <CardTitle className="font-headline text-lg">{t(org.nameKey)}</CardTitle>
-                    <CardDescription className="mt-1 text-sm">{t(org.descriptionKey)}</CardDescription>
+                    <CardTitle className="font-headline text-lg">{name}</CardTitle>
+                    <CardDescription className="mt-1 text-sm">{description}</CardDescription>
                 </div>
             </CardHeader>
             <CardFooter className="flex flex-col gap-2">
@@ -145,21 +150,24 @@ function OrgBookmarkCard({ org, onRemove }: { org: KnowledgeOrganization, onRemo
 
 function BookBookmarkCard({ book, onRemove }: { book: Book, onRemove: (id: string) => void }) {
     const { t } = useLanguage();
+    const title = book.titleKey ? t(book.titleKey) : book.title;
+    const author = book.authorKey ? t(book.authorKey) : book.author;
+
     return (
         <Card>
             <CardHeader className="flex-row items-start gap-4">
                  <div className="relative h-32 w-24 flex-shrink-0">
                     <Image
                         src={book.imageUrl}
-                        alt={t(book.titleKey)}
+                        alt={title}
                         fill
                         className="object-cover rounded-md"
                         data-ai-hint={book.imageAiHint}
                     />
                 </div>
                 <div className="flex-grow">
-                    <CardTitle className="font-headline text-lg">{t(book.titleKey)}</CardTitle>
-                    <CardDescription className="text-sm font-medium">{t(book.authorKey)}</CardDescription>
+                    <CardTitle className="font-headline text-lg">{title}</CardTitle>
+                    <CardDescription className="text-sm font-medium">{author}</CardDescription>
                 </div>
             </CardHeader>
             <CardFooter className="flex flex-col gap-2">
@@ -182,7 +190,6 @@ function BookBookmarkCard({ book, onRemove }: { book: Book, onRemove: (id: strin
     );
 }
 
-
 export default function BookmarksPage() {
   const { t } = useLanguage();
   const { bookmarkedIds: eventIds, removeBookmark: removeEvent } = useBookmarkStore('eventBookmarks');
@@ -190,55 +197,56 @@ export default function BookmarksPage() {
   const { bookmarkedIds: orgIds, removeBookmark: removeOrg } = useBookmarkStore('knowledgeHubBookmarks');
   const { bookmarkedIds: bookIds, removeBookmark: removeBook } = useBookmarkStore('bookBookmarks');
 
+  const [bookmarkedEvents, setBookmarkedEvents] = useState<CalendarEvent[]>([]);
+  const [bookmarkedStores, setBookmarkedStores] = useState<BahujanStore[]>([]);
+  const [bookmarkedOrgs, setBookmarkedOrgs] = useState<KnowledgeOrganization[]>([]);
+  const [bookmarkedBooks, setBookmarkedBooks] = useState<Book[]>([]);
+
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
-
-  const [allEvents, setAllEvents] = useState<CalendarEvent[]>([]);
-  const [allStores, setAllStores] = useState<BahujanStore[]>([]);
-  const [allOrgs, setAllOrgs] = useState<KnowledgeOrganization[]>([]);
-  const [allBooks, setAllBooks] = useState<Book[]>([]);
-
+  
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        router.replace('/login');
-      } else {
-        try {
-            const [eventsSnap, storesSnap, orgsSnap, booksSnap] = await Promise.all([
-                getDocs(query(collection(db, 'calendarEvents'), where('status', '==', 'approved'))),
-                getDocs(query(collection(db, 'stores'), where('status', '==', 'approved'))),
-                getDocs(query(collection(db, 'knowledgeHub'), where('status', '==', 'approved'))),
-                getDocs(query(collection(db, 'books'), where('status', '==', 'approved'))),
-            ]);
+        if (!user) {
+            router.replace('/login');
+        } else {
+            const fetchData = async () => {
+                setIsLoading(true);
 
-            const eventsData = eventsSnap.docs.map(doc => {
-                 const data = doc.data();
-                 const eventDate = parseDate(data.date);
-                 if (!isValid(eventDate)) {
-                     console.warn(`Invalid date value encountered on bookmarks page: "${data.date}" for doc ID ${doc.id}`);
-                 }
-                 return { id: doc.id, ...data, date: eventDate } as CalendarEvent;
-            });
-            setAllEvents(eventsData);
+                // Fetch all items from all collections
+                const eventsQuery = query(collection(db, 'calendarEvents'), where('status', '==', 'approved'));
+                const storesQuery = query(collection(db, 'stores'), where('status', '==', 'approved'));
+                const orgsQuery = query(collection(db, 'knowledgeHub'), where('status', '==', 'approved'));
+                const booksQuery = query(collection(db, 'books'), where('status', '==', 'approved'));
+                
+                const [eventsSnapshot, storesSnapshot, orgsSnapshot, booksSnapshot] = await Promise.all([
+                    getDocs(eventsQuery),
+                    getDocs(storesQuery),
+                    getDocs(orgsQuery),
+                    getDocs(booksQuery),
+                ]);
 
-            setAllStores(storesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as BahujanStore)));
-            setAllOrgs(orgsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as KnowledgeOrganization)));
-            setAllBooks(booksSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Book)));
+                // Filter based on bookmarked IDs
+                const allEvents = eventsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), date: parseDate(doc.data().date) } as CalendarEvent));
+                setBookmarkedEvents(allEvents.filter(event => eventIds.includes(event.id)));
 
-        } catch (error) {
-            console.error("Error fetching bookmarked content:", error);
-        } finally {
-            setIsLoading(false);
+                const allStores = storesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BahujanStore));
+                setBookmarkedStores(allStores.filter(store => storeIds.includes(store.id)));
+
+                const allOrgs = orgsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as KnowledgeOrganization));
+                setBookmarkedOrgs(allOrgs.filter(org => orgIds.includes(org.id)));
+
+                const allBooks = booksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Book));
+                setBookmarkedBooks(allBooks.filter(book => bookIds.includes(book.id)));
+                
+                setIsLoading(false);
+            };
+
+            fetchData();
         }
-      }
     });
     return () => unsubscribe();
-  }, [router]);
-
-  const bookmarkedEvents = allEvents.filter(event => eventIds.includes(event.id));
-  const bookmarkedStores = allStores.filter(store => storeIds.includes(store.id));
-  const bookmarkedOrgs = allOrgs.filter(org => orgIds.includes(org.id));
-  const bookmarkedBooks = allBooks.filter(book => bookIds.includes(book.id));
+  }, [router, eventIds, storeIds, orgIds, bookIds]);
 
   const totalBookmarks = bookmarkedEvents.length + bookmarkedStores.length + bookmarkedOrgs.length + bookmarkedBooks.length;
 

@@ -14,35 +14,18 @@ import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { EventDetailModal } from './EventDetailModal';
 import { Separator } from '../ui/separator';
-import { isSameDay, isValid, getMonth, getDate } from 'date-fns';
+import { isSameDay } from 'date-fns';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
+import { Skeleton } from '../ui/skeleton';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { parseDate } from '@/lib/date-parser';
-import { Skeleton } from '../ui/skeleton';
 
 
 function EventDetail({ event, onReadMoreClick }: { event: CalendarEvent, onReadMoreClick: () => void }) {
   const { t } = useLanguage();
   const { isBookmarked, toggleBookmark } = useBookmarkStore('eventBookmarks');
-  const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setIsAuthenticated(!!user);
-    });
-    return () => unsubscribe();
-  }, []);
   
-  const handleBookmarkClick = () => {
-    if (isAuthenticated) {
-        toggleBookmark(event.id);
-    } else {
-        router.push('/login');
-    }
-  }
-
   const descriptionText = event.descriptionKey ? t(event.descriptionKey) : event.summary;
   const isLongDescription = descriptionText.length > 150;
   const displayDescription = isLongDescription
@@ -71,11 +54,11 @@ function EventDetail({ event, onReadMoreClick }: { event: CalendarEvent, onReadM
         <Button
             variant="outline"
             size="icon"
-            onClick={handleBookmarkClick}
+            onClick={() => toggleBookmark(event.id)}
             aria-label={t('event_calendar.bookmark_button')}
             className="shrink-0"
         >
-            <Bookmark className={cn("h-5 w-5", isAuthenticated && isBookmarked(event.id) ? "fill-primary text-primary" : "text-muted-foreground")} />
+            <Bookmark className={cn("h-5 w-5", isBookmarked(event.id) ? "fill-primary text-primary" : "text-muted-foreground")} />
         </Button>
       </div>
     </div>
@@ -86,44 +69,62 @@ export function EventCalendar() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const { t } = useLanguage();
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
+  const [allEvents, setAllEvents] = useState<CalendarEvent[]>([]);
 
   useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+        if (!user) {
+            router.replace('/login');
+        }
+    });
+
     const q = query(collection(db, 'calendarEvents'), where('status', '==', 'approved'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribeFirestore = onSnapshot(q, (snapshot) => {
         const fetchedEvents = snapshot.docs.map(doc => {
             const data = doc.data();
-            const eventDate = parseDate(data.date);
-            if (!isValid(eventDate)) {
-                console.warn(`Invalid date value for doc ID ${doc.id}:`, data.date);
-            }
-            return { id: doc.id, ...data, date: eventDate } as CalendarEvent;
+            return { 
+                id: doc.id, 
+                ...data, 
+                date: parseDate(data.date) 
+            } as CalendarEvent;
         });
-        setEvents(fetchedEvents);
+        setAllEvents(fetchedEvents);
         setIsLoading(false);
     }, (error) => {
-        console.error("Error fetching events:", error);
+        console.error("Failed to fetch events:", error);
         setIsLoading(false);
     });
-
-    return () => unsubscribe();
-  }, []);
+    
+    return () => {
+        unsubscribeAuth();
+        unsubscribeFirestore();
+    };
+  }, [router]);
 
   const eventDates = useMemo(() => {
-    if (isLoading) return [];
-    // Filter out invalid dates to prevent calendar component from crashing
-    return events.filter(event => isValid(event.date)).map(event => event.date);
-  }, [events, isLoading]);
+    return allEvents.map(event => event.date);
+  }, [allEvents]);
 
   const dayEvents = useMemo(() => {
-    if (!date || isLoading) return [];
-    return events.filter(event => {
-      if (!isValid(event.date)) return false;
-      // Compare month and day, ignoring the year for recurring events.
-      return getMonth(event.date) === getMonth(date) && getDate(event.date) === getDate(date);
-    });
-  }, [date, events, isLoading]);
+    if (!date) return [];
+    return allEvents.filter(event => isSameDay(event.date, date));
+  }, [date, allEvents]);
+
+  if (isLoading) {
+      return (
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-5">
+              <div className="lg:col-span-2">
+                  <Skeleton className="h-[320px] w-full" />
+              </div>
+              <div className="lg:col-span-3">
+                  <Skeleton className="h-8 w-1/2 mb-4" />
+                  <Skeleton className="h-64 w-full" />
+              </div>
+          </div>
+      )
+  }
 
   return (
     <>
@@ -136,7 +137,6 @@ export function EventCalendar() {
                 onSelect={setDate}
                 className="p-4"
                 eventDates={eventDates}
-                disabled={isLoading}
               />
             </Card>
         </div>
@@ -145,19 +145,13 @@ export function EventCalendar() {
           <h2 className="font-headline mb-4 text-2xl font-bold">
             {t('event_calendar.events_on_date', {
               date: date
-                ? new Intl.DateTimeFormat(t('locale_code'), { month: 'long', day: 'numeric' }).format(date)
+                ? new Intl.DateTimeFormat(t('locale_code'), { dateStyle: 'long' }).format(date)
                 : t('event_calendar.selected_date'),
             })}
           </h2>
           <Card>
             <CardContent className="p-6">
-              {isLoading ? (
-                <div className="space-y-4">
-                    <Skeleton className="h-6 w-3/4" />
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-1/2" />
-                </div>
-              ) : dayEvents.length > 0 ? (
+              {dayEvents.length > 0 ? (
                 <div className="w-full space-y-4">
                   {dayEvents.map((event, index) => (
                      <div key={event.id} className="space-y-2">

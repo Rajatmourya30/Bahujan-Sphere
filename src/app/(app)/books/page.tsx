@@ -4,7 +4,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLanguage } from '@/hooks/use-language';
-import { type Book } from '@/lib/books';
+import { allBooks, type Book } from '@/lib/books';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -14,31 +14,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useBookmarkStore } from '@/hooks/use-bookmarks';
 import { cn } from '@/lib/utils';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
 
 function BookCard({ book }: { book: Book }) {
     const { t } = useLanguage();
-    const router = useRouter();
     const { isBookmarked, toggleBookmark } = useBookmarkStore('bookBookmarks');
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            setIsAuthenticated(!!user);
-        });
-        return () => unsubscribe();
-    }, []);
-
-    const handleBookmarkClick = () => {
-        if (isAuthenticated) {
-            toggleBookmark(book.id);
-        } else {
-            router.push('/login');
-        }
-    }
-
 
     return (
         <Card className="flex flex-col">
@@ -68,11 +49,11 @@ function BookCard({ book }: { book: Book }) {
                      <Button
                         variant="outline"
                         size="icon"
-                        onClick={handleBookmarkClick}
+                        onClick={() => toggleBookmark(book.id)}
                         aria-label={t('event_calendar.bookmark_button')}
                         className="shrink-0"
                     >
-                        <Bookmark className={cn("h-5 w-5", isAuthenticated && isBookmarked(book.id) ? "fill-primary text-primary" : "text-muted-foreground")} />
+                        <Bookmark className={cn("h-5 w-5", isBookmarked(book.id) ? "fill-primary text-primary" : "text-muted-foreground")} />
                     </Button>
                 </div>
             </CardFooter>
@@ -83,32 +64,43 @@ function BookCard({ book }: { book: Book }) {
 export default function BooksPage() {
     const { t } = useLanguage();
     const [searchTerm, setSearchTerm] = useState('');
-    const [books, setBooks] = useState<Book[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const router = useRouter();
 
     useEffect(() => {
-        const q = query(collection(db, 'books'), where('status', '==', 'approved'));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-          const fetchedBooks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Book));
-          setBooks(fetchedBooks);
-          setIsLoading(false);
-        }, (error) => {
-          console.error("Error fetching books:", error);
-          setIsLoading(false);
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                router.replace('/login');
+            } else {
+                setIsLoading(false);
+            }
         });
         return () => unsubscribe();
-    }, []);
+    }, [router]);
 
     const filteredBooks = useMemo(() => {
         if (!searchTerm) {
-            return books;
+            return allBooks;
         }
-        return books.filter(book => 
+        return allBooks.filter(book => 
             t(book.titleKey).toLowerCase().includes(searchTerm.toLowerCase()) ||
             t(book.authorKey).toLowerCase().includes(searchTerm.toLowerCase()) ||
             t(book.descriptionKey).toLowerCase().includes(searchTerm.toLowerCase())
         );
-    }, [searchTerm, t, books]);
+    }, [searchTerm, t]);
+
+    if (isLoading) {
+        return (
+            <div className="space-y-4">
+                <Skeleton className="h-8 w-1/2" />
+                <Skeleton className="h-4 w-3/4" />
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <Skeleton className="h-48 w-full" />
+                    <Skeleton className="h-48 w-full" />
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className="space-y-8">
@@ -130,24 +122,17 @@ export default function BooksPage() {
                 />
             </div>
 
-            {isLoading ? (
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                    <Skeleton className="h-48 w-full" />
-                    <Skeleton className="h-48 w-full" />
-                </div>
-            ) : (
-                <>
-                    {filteredBooks.length > 0 ? (
-                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                            {filteredBooks.map(item => (
-                                <BookCard key={item.id} book={item} />
-                            ))}
-                        </div>
-                    ) : (
-                        <p className="text-center text-muted-foreground py-8">{t('books_page.no_results')}</p>
-                    )}
-                </>
-            )}
+            <>
+                {filteredBooks.length > 0 ? (
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                        {filteredBooks.map(item => (
+                            <BookCard key={item.id} book={item} />
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-center text-muted-foreground py-8">{t('books_page.no_results')}</p>
+                )}
+            </>
         </div>
     );
 }
