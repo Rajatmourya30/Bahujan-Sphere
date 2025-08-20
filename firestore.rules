@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -11,9 +10,9 @@ service cloud.firestore {
     function isTeamMember() {
       return isSignedIn() && exists(/databases/$(database)/documents/teamMembers/$(request.auth.uid));
     }
-
-    function getRole() {
-      return get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.role;
+    
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
     }
 
     function isApprovedContent(resource) {
@@ -37,14 +36,12 @@ service cloud.firestore {
       allow create, read, update, delete: if isTeamMember();
     }
     
-    // Team management: Admins have full control, members can read.
+    // Team management
     match /teamMembers/{memberId} {
-      // Allow team members to read team data (useful for listing team members in UI)
-      // Allow users to read their own document to verify their role
-      allow read: if isTeamMember() || (isSignedIn() && request.auth.uid == memberId);
-      
-      // Allow ONLY users with the 'Admin' role to create, update, or delete team members.
-      allow create, update, delete: if isSignedIn() && getRole() == 'Admin';
+      // Allow team members to read the team list
+      allow read: if isTeamMember();
+      // Only allow admins (via custom claim) to create, update, or delete team members
+      allow create, update, delete: if isAdmin();
     }
   }
 }
