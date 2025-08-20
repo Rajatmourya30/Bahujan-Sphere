@@ -13,15 +13,43 @@ import { Download, FileUp, Loader2, Table } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { addDoc, collection, doc, getDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { collection, doc, getDoc, serverTimestamp, writeBatch, Timestamp } from 'firebase/firestore';
+import { isValid } from 'date-fns';
 
 interface StagedEvent {
   title: string;
-  date: string;
+  date: Date; // Store as a Date object internally
   summary: string;
   readMoreUrl?: string;
   tags: string[];
 }
+
+// Function to parse various date formats, including Excel serial numbers
+function parseDateFromExcel(dateValue: any): Date | null {
+    if (!dateValue) return null;
+
+    // Try converting to a number first for Excel serial dates
+    const numericDate = Number(dateValue);
+    if (!isNaN(numericDate) && numericDate > 0) {
+        // Excel serial date is days since 1900-01-01. JS Date is ms since 1970-01-01.
+        // 25569 is days between 1900 and 1970, accounting for Excel's 1900 leap year bug.
+        const utcDate = new Date(Date.UTC(0, 0, numericDate - 1));
+        if (isValid(utcDate)) {
+            return utcDate;
+        }
+    }
+    
+    // Fallback for standard string dates
+    if (typeof dateValue === 'string') {
+        const parsedDate = new Date(dateValue);
+        if (isValid(parsedDate)) {
+            return parsedDate;
+        }
+    }
+    
+    return null; // Return null if parsing fails
+}
+
 
 export function BulkUploadForm() {
   const { toast } = useToast();
@@ -75,12 +103,12 @@ export function BulkUploadForm() {
     reader.onload = (e) => {
       try {
         const data = e.target?.result;
-        const workbook = XLSX.read(data, { type: 'binary' });
+        const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const json: any[] = XLSX.utils.sheet_to_json(worksheet);
 
-        const parsedEvents = json.map(row => {
+        const parsedEvents: StagedEvent[] = json.map((row, index) => {
             const lowerCaseRow: { [key: string]: any } = {};
             for (const key in row) {
                 lowerCaseRow[key.toLowerCase()] = row[key];
@@ -89,11 +117,17 @@ export function BulkUploadForm() {
             const { title, date, summary, tags, readmoreurl } = lowerCaseRow;
 
             if (!title || !date || !summary || !tags) {
-                throw new Error('Each row must have title, date, summary, and tags.');
+                throw new Error(`Row ${index + 2}: Each row must have title, date, summary, and tags.`);
             }
+
+            const parsedDate = parseDateFromExcel(date);
+            if (!parsedDate || !isValid(parsedDate)) {
+                 throw new Error(`Row ${index + 2}: The date value "${date}" is invalid or could not be parsed.`);
+            }
+
             return {
                 title: String(title),
-                date: String(date),
+                date: parsedDate,
                 summary: String(summary),
                 readMoreUrl: readmoreurl ? String(readmoreurl) : undefined,
                 tags: String(tags).split(',').map(tag => tag.trim()),
@@ -136,8 +170,10 @@ export function BulkUploadForm() {
 
         stagedEvents.forEach(event => {
             const docRef = doc(targetCollection);
+            const { date, ...restOfEvent } = event;
             const dataToSave: any = {
-                ...event,
+                ...restOfEvent,
+                date: Timestamp.fromDate(date), // Convert JS Date to Firestore Timestamp
                 status: status,
             };
 
@@ -174,7 +210,7 @@ export function BulkUploadForm() {
     const data = [
       {
         "title": "Sample Event Title",
-        "date": "1 January 2025",
+        "date": "2025-01-01",
         "summary": "This is a short summary of the sample event.",
         "readMoreUrl": "https://example.com/sample-event",
         "tags": "sample, template"
@@ -204,7 +240,7 @@ export function BulkUploadForm() {
             <Table className="h-4 w-4" />
             <AlertTitle>Instructions</AlertTitle>
             <AlertDescription>
-                The file must have columns: `title`, `date`, `summary`, and `tags`. `readMoreUrl` is optional. For multiple tags, separate them with a comma (e.g., "tag1, tag2").
+                The file must have columns: `title`, `date`, `summary`, and `tags`. `readMoreUrl` is optional. Dates should be in a standard format (e.g., YYYY-MM-DD). For multiple tags, separate them with a comma.
             </AlertDescription>
             <div className="mt-4">
                 <Button variant="outline" size="sm" onClick={downloadTemplate}>
@@ -235,7 +271,7 @@ export function BulkUploadForm() {
                 {stagedEvents.map((event, index) => (
                   <div key={index} className="text-sm">
                     <p className="font-semibold">{event.title}</p>
-                    <p className="text-muted-foreground">{event.date}</p>
+                    <p className="text-muted-foreground">{event.date.toLocaleDateString()}</p>
                   </div>
                 ))}
               </div>
