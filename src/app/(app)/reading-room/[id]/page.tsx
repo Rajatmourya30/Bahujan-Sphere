@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -7,7 +8,6 @@ import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { PdfViewer } from '@/components/reading-room/PdfViewer';
 import { ReadingRoomPdf } from '@/app/admin/reading-room/page';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function PdfViewPage() {
@@ -79,22 +79,22 @@ export default function PdfViewPage() {
 
   if (error) {
     return (
-        <div className="flex items-center justify-center h-screen">
-            <p className="text-red-500">{error}</p>
+        <div className="flex items-center justify-center h-[calc(100vh-10rem)]">
+            <p className="text-destructive">{error}</p>
         </div>
     );
   }
 
   if (!pdf) {
     return (
-        <div className="flex items-center justify-center h-screen">
+        <div className="flex items-center justify-center h-[calc(100vh-10rem)]">
             <p>No document to display.</p>
         </div>
     );
   }
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-[calc(100vh-10rem)] flex flex-col">
       <header className="p-4 border-b">
         <h1 className="text-xl font-bold">{pdf.title}</h1>
         {pdf.author && <p className="text-sm text-muted-foreground">by {pdf.author}</p>}
@@ -108,12 +108,12 @@ export default function PdfViewPage() {
 
 function LoadingSkeleton() {
     return (
-        <div className="p-4 h-screen">
+        <div className="p-4 h-full">
             <Skeleton className="h-12 w-1/2 mb-4" />
             <Skeleton className="h-6 w-1/4 mb-8" />
             <div className="border rounded-lg overflow-hidden">
-                <Skeleton className="h-12 bg-gray-200" />
-                <Skeleton className="h-[calc(100vh-200px)]" />
+                <Skeleton className="h-12 bg-muted" />
+                <Skeleton className="h-[calc(100vh-25rem)]" />
             </div>
         </div>
     )

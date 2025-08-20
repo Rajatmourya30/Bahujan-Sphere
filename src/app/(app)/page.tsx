@@ -6,12 +6,6 @@ import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/hooks/use-language';
 import Link from 'next/link';
 import { ArrowRight, Book, Calendar, Store, Users } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { Skeleton } from '@/components/ui/skeleton';
-
 
 function FeatureCard({ title, description, href, icon: Icon }: { title: string, description: string, href: string, icon: React.ElementType }) {
   return (
@@ -41,35 +35,6 @@ function FeatureCard({ title, description, href, icon: Icon }: { title: string, 
 
 export default function HomePage() {
   const { t } = useLanguage();
-  const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setIsAuthenticated(!!user);
-      setIsLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-1/2" />
-        <Skeleton className="h-4 w-3/4" />
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <Skeleton className="h-48 w-full" />
-            <Skeleton className="h-48 w-full" />
-        </div>
-      </div>
-    );
-  }
-  
-  if (!isAuthenticated) {
-      router.replace('/login');
-      return null;
-  }
   
   return (
     <div className="space-y-12">

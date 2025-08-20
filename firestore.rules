@@ -4,50 +4,53 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper Functions
     function isSignedIn() {
       return request.auth != null;
     }
 
     function isTeamMember() {
-      // Check if a user document exists in the 'teamMembers' collection with the user's UID.
-      // This is a simple and effective way to check for team membership without reading document data.
+      // Check if a user is signed in and their UID exists in the teamMembers collection.
+      // This is the core function for granting administrative privileges.
       return isSignedIn() && exists(/databases/$(database)/documents/teamMembers/$(request.auth.uid));
     }
-    
-    // Public Content Rules (e.g., calendar, knowledge hub, etc.)
-    // These collections should be publicly readable but only writable by team members.
-    match /{publicCollection}/{docId} 
-        where publicCollection in ['calendarEvents', 'knowledgeHub', 'stores', 'books', 'readingRoomPdfs'] {
-      allow read: if true;
+
+    function isApprovedContent(resource) {
+      // Check if a document has the status of 'approved'.
+      // This is used for all public-facing content.
+      return resource.data.status == 'approved';
+    }
+
+    // PUBLIC CONTENT:
+    // Allow anyone (even unauthenticated users) to read content that is marked as 'approved'.
+    // Allow any team member to read ALL content, regardless of status (for admin/review purposes).
+    // Only allow team members to write (create, update, delete) content.
+    match /{collectionName}/{docId} where collectionName in ['calendarEvents', 'knowledgeHub', 'stores', 'books', 'readingRoomPdfs'] {
+      allow read: if isApprovedContent(resource) || isTeamMember();
       allow write: if isTeamMember();
     }
 
-    // User Profile Rules
-    // Users can create their own profile and can only read/update their own.
+    // USER PROFILES:
+    // Users can create their own profile.
+    // Users can only read and update their own profile.
     match /users/{userId} {
-      allow read, update: if isSignedIn() && request.auth.uid == userId;
+      allow read, update: if request.auth.uid == userId;
       allow create: if isSignedIn();
     }
 
-    // Submission Rules (for content pending approval)
-    // Any team member can create, read, and manage submissions.
-    match /{submissionCollection}/{submissionId} 
-        where submissionCollection in ['eventSubmissions', 'bookSubmissions', 'storeSubmissions', 'knowledgeHubSubmissions', 'readingRoomSubmissions'] {
+    // SUBMISSIONS:
+    // Any team member can create new submissions.
+    // Any team member can read, update, or delete submissions for review.
+    match /{submissionCollection}/{submissionId} where submissionCollection in ['eventSubmissions', 'bookSubmissions', 'storeSubmissions', 'knowledgeHubSubmissions', 'readingRoomSubmissions'] {
       allow create, read, update, delete: if isTeamMember();
     }
     
-    // Team Management Rules
+    // TEAM MANAGEMENT:
+    // A user can read their own team member document to see their role.
+    // A team member can read the documents of other team members.
+    // Writing to team member documents is disallowed; it must be handled by Cloud Functions for security.
     match /teamMembers/{memberId} {
-      // Allow authenticated users to read their own team member document. This is needed for role checks.
-      allow read: if isSignedIn() && request.auth.uid == memberId;
-      // Allow existing team members to read other team members' documents (e.g., for an admin panel).
-      allow read: if isTeamMember();
-
-      // IMPORTANT: Block all direct writes to the teamMembers collection.
-      // Team management (adding, removing, changing roles) should ONLY be handled
-      // by a secure backend environment, like a Firebase Cloud Function.
-      allow write: if false; 
+      allow read: if (isSignedIn() && request.auth.uid == memberId) || isTeamMember();
+      allow write: if false; // Managed by Cloud Functions only
     }
   }
 }

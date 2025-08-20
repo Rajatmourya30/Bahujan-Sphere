@@ -12,7 +12,6 @@ import { Bookmark, Globe, Search } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useBookmarkStore } from '@/hooks/use-bookmarks';
-import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -69,16 +68,9 @@ export default function KnowledgeHubPage() {
     const { t } = useLanguage();
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(true);
-    const router = useRouter();
     const [organizations, setOrganizations] = useState<KnowledgeOrganization[]>([]);
 
     useEffect(() => {
-        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-            if (!user) {
-                router.replace('/login');
-            }
-        });
-
         const q = query(collection(db, 'knowledgeHub'), where('status', '==', 'approved'));
         const unsubscribeFirestore = onSnapshot(q, (snapshot) => {
             const fetchedOrgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as KnowledgeOrganization));
@@ -90,10 +82,9 @@ export default function KnowledgeHubPage() {
         });
         
         return () => {
-            unsubscribeAuth();
             unsubscribeFirestore();
         };
-    }, [router]);
+    }, []);
 
     const filteredOrganizations = useMemo(() => {
         if (!searchTerm) {

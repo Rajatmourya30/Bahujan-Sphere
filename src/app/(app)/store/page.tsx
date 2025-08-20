@@ -13,9 +13,7 @@ import { Bookmark, Search } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useBookmarkStore } from '@/hooks/use-bookmarks';
 import { cn } from '@/lib/utils';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
-import { useRouter } from 'next/navigation';
+import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 
 function StoreCard({ store }: { store: BahujanStore }) {
@@ -67,16 +65,9 @@ export default function StorePage() {
     const { t } = useLanguage();
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(true);
-    const router = useRouter();
     const [stores, setStores] = useState<BahujanStore[]>([]);
 
     useEffect(() => {
-        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-            if (!user) {
-                router.replace('/login');
-            }
-        });
-
         const q = query(collection(db, 'stores'), where('status', '==', 'approved'));
         const unsubscribeFirestore = onSnapshot(q, (snapshot) => {
             const fetchedStores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BahujanStore));
@@ -88,10 +79,9 @@ export default function StorePage() {
         });
 
         return () => {
-            unsubscribeAuth();
             unsubscribeFirestore();
         };
-    }, [router]);
+    }, []);
 
     const filteredStores = useMemo(() => {
         if (!searchTerm) {

@@ -67,7 +67,6 @@ export default function ReadingRoomPage() {
         const q = query(
             collection(db, "readingRoomPdfs"),
             where("status", "==", "approved"),
-            orderBy("status"),
             orderBy("uploadedAt", "desc")
         );
         const unsubscribe = onSnapshot(q, (querySnapshot) => {

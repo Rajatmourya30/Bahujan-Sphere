@@ -13,9 +13,7 @@ import { Bookmark, Search } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useBookmarkStore } from '@/hooks/use-bookmarks';
 import { cn } from '@/lib/utils';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
-import { useRouter } from 'next/navigation';
+import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 
 function BookCard({ book }: { book: Book }) {
@@ -70,16 +68,9 @@ export default function BooksPage() {
     const { t } = useLanguage();
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(true);
-    const router = useRouter();
     const [books, setBooks] = useState<Book[]>([]);
 
     useEffect(() => {
-        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-            if (!user) {
-                router.replace('/login');
-            }
-        });
-
         const q = query(collection(db, 'books'), where('status', '==', 'approved'));
         const unsubscribeFirestore = onSnapshot(q, (snapshot) => {
             const fetchedBooks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Book));
@@ -91,10 +82,9 @@ export default function BooksPage() {
         });
 
         return () => {
-            unsubscribeAuth();
             unsubscribeFirestore();
         };
-    }, [router]);
+    }, []);
 
     const filteredBooks = useMemo(() => {
         if (!searchTerm) {
