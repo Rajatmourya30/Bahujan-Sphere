@@ -18,7 +18,7 @@ import type { CalendarEvent } from "@/lib/events";
 import { Badge } from "../ui/badge";
 import { Input } from "../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { format, isSameDay, isValid } from "date-fns";
+import { format, isSameDay, isValid, getMonth, getDate } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
 import { cn } from "@/lib/utils";
@@ -60,7 +60,7 @@ export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventM
             const eventYear = event.date.getFullYear().toString();
             const matchesYear = selectedYear === 'all' || eventYear === selectedYear;
 
-            const matchesDate = !selectedDate || isSameDay(event.date, selectedDate);
+            const matchesDate = !selectedDate || (getMonth(event.date) === getMonth(selectedDate) && getDate(event.date) === getDate(selectedDate));
 
             return matchesSearch && matchesMonth && matchesYear && matchesDate;
         });

@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { EventDetailModal } from './EventDetailModal';
 import { Separator } from '../ui/separator';
-import { isSameDay, isValid } from 'date-fns';
+import { isSameDay, isValid, getMonth, getDate } from 'date-fns';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
@@ -118,7 +118,11 @@ export function EventCalendar() {
 
   const dayEvents = useMemo(() => {
     if (!date || isLoading) return [];
-    return events.filter(event => isValid(event.date) && isSameDay(event.date, date));
+    return events.filter(event => {
+      if (!isValid(event.date)) return false;
+      // Compare month and day, ignoring the year for recurring events.
+      return getMonth(event.date) === getMonth(date) && getDate(event.date) === getDate(date);
+    });
   }, [date, events, isLoading]);
 
   return (
