@@ -72,7 +72,7 @@ function OrganizationCard({ organization }: { organization: KnowledgeOrganizatio
                     aria-label={t('event_calendar.bookmark_button')}
                     className="shrink-0"
                 >
-                    <Bookmark className={cn("h-5 w-5", isBookmarked(organization.id) ? "fill-primary text-primary" : "text-muted-foreground")} />
+                    <Bookmark className={cn("h-5 w-5", isAuthenticated && isBookmarked(organization.id) ? "fill-primary text-primary" : "text-muted-foreground")} />
                 </Button>
             </CardFooter>
         </Card>

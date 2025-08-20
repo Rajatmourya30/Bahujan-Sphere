@@ -75,7 +75,7 @@ function EventDetail({ event, onReadMoreClick }: { event: CalendarEvent, onReadM
             aria-label={t('event_calendar.bookmark_button')}
             className="shrink-0"
         >
-            <Bookmark className={cn("h-5 w-5", isBookmarked(event.id) ? "fill-primary text-primary" : "text-muted-foreground")} />
+            <Bookmark className={cn("h-5 w-5", isAuthenticated && isBookmarked(event.id) ? "fill-primary text-primary" : "text-muted-foreground")} />
         </Button>
       </div>
     </div>
@@ -145,7 +145,7 @@ export function EventCalendar() {
           <h2 className="font-headline mb-4 text-2xl font-bold">
             {t('event_calendar.events_on_date', {
               date: date
-                ? new Intl.DateTimeFormat(t('locale_code')).format(date)
+                ? new Intl.DateTimeFormat(t('locale_code'), { month: 'long', day: 'numeric' }).format(date)
                 : t('event_calendar.selected_date'),
             })}
           </h2>
