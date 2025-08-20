@@ -14,7 +14,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { collection, doc, getDoc, serverTimestamp, writeBatch, Timestamp } from 'firebase/firestore';
-import { isValid } from 'date-fns';
+import { isValid, parse } from 'date-fns';
 
 interface StagedEvent {
   title: string;
@@ -24,30 +24,51 @@ interface StagedEvent {
   tags: string[];
 }
 
-// Function to parse various date formats, including Excel serial numbers
+// More robust date parsing function
 function parseDateFromExcel(dateValue: any): Date | null {
     if (!dateValue) return null;
 
-    // Try converting to a number first for Excel serial dates
+    // If it's already a Date object (from xlsx library with cellDates:true)
+    if (dateValue instanceof Date && isValid(dateValue)) {
+        return dateValue;
+    }
+
+    // Try parsing as a number (Excel serial date)
     const numericDate = Number(dateValue);
-    if (!isNaN(numericDate) && numericDate > 0) {
-        // Excel serial date is days since 1900-01-01. JS Date is ms since 1970-01-01.
-        // 25569 is days between 1900 and 1970, accounting for Excel's 1900 leap year bug.
-        const utcDate = new Date(Date.UTC(0, 0, numericDate - 1));
-        if (isValid(utcDate)) {
-            return utcDate;
+    if (!isNaN(numericDate) && numericDate > 60) { // Check > 60 to avoid very old dates
+        // Excel's epoch is Dec 30, 1899. JS epoch is Jan 1, 1970.
+        const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+        const jsDate = new Date(excelEpoch.getTime() + numericDate * 24 * 60 * 60 * 1000);
+        if (isValid(jsDate)) {
+            return jsDate;
         }
     }
     
-    // Fallback for standard string dates
+    // Try parsing as a string with various formats
     if (typeof dateValue === 'string') {
-        const parsedDate = new Date(dateValue);
-        if (isValid(parsedDate)) {
-            return parsedDate;
+        const formatsToTry = [
+            "yyyy-MM-dd",
+            "MM/dd/yyyy",
+            "dd-MM-yyyy",
+            "d MMMM yyyy", // e.g., 14 April 1891
+            "EEE MMM dd yyyy HH:mm:ss 'GMT'xx (zzzz)", // The format from the error message
+        ];
+
+        for (const format of formatsToTry) {
+            try {
+                const parsed = parse(dateValue, format, new Date());
+                if (isValid(parsed)) return parsed;
+            } catch (e) {
+                // Ignore parsing errors and try the next format
+            }
         }
+        
+        // Final attempt with the generic Date constructor, which handles many cases
+        const genericParse = new Date(dateValue);
+        if (isValid(genericParse)) return genericParse;
     }
     
-    return null; // Return null if parsing fails
+    return null; // Return null if all parsing attempts fail
 }
 
 
