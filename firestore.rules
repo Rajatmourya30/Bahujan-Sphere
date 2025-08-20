@@ -3,11 +3,43 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // TEMPORARY DEBUG RULES - COMPLETELY OPEN FOR TESTING
-    // TODO: Replace with secure rules once permissions issue is resolved
     
-    match /{document=**} {
-      allow read, write: if true;
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isTeamMember() {
+      return isSignedIn() && exists(/databases/$(database)/documents/teamMembers/$(request.auth.uid));
+    }
+
+    function isApprovedContent(resource) {
+      return resource.data.status == 'approved';
+    }
+
+    // Public content: Only approved content publicly readable
+    match /{collectionName}/{docId} where collectionName in ['calendarEvents', 'knowledgeHub', 'stores', 'books', 'readingRoomPdfs'] {
+      allow read: if isApprovedContent(resource);
+      allow read: if isTeamMember();
+      // Allow team members to create, update, AND delete content
+      allow write, delete: if isTeamMember();
+    }
+
+    // User profiles
+    match /users/{userId} {
+      allow read, update: if request.auth.uid == userId;
+      allow create: if isSignedIn();
+    }
+
+    // Submissions: Team members only
+    match /{submissionCollection}/{submissionId} where submissionCollection in ['eventSubmissions', 'bookSubmissions', 'storeSubmissions', 'knowledgeHubSubmissions', 'readingRoomSubmissions'] {
+      allow create, read, update, delete: if isTeamMember();
+    }
+    
+    // Team management
+    match /teamMembers/{memberId} {
+      allow read: if isSignedIn() && request.auth.uid == memberId;
+      allow read: if isTeamMember();
+      allow write: if false;
     }
   }
 }
