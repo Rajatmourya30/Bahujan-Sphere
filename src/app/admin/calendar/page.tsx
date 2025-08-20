@@ -17,6 +17,7 @@ import { collection, onSnapshot, query, where, addDoc, updateDoc, deleteDoc, doc
 import { useToast } from '@/hooks/use-toast';
 import { isValid } from 'date-fns';
 import { parseDate } from '@/lib/date-parser';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 
 export default function ManageCalendarPage() {
@@ -27,6 +28,7 @@ export default function ManageCalendarPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [eventToDelete, setEventToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
@@ -105,16 +107,16 @@ export default function ManageCalendarPage() {
     }
   };
 
-  const handleRemove = async (eventId: string) => {
-     if (!window.confirm("Are you sure you want to delete this event? This action cannot be undone.")) {
-        return;
-    }
+  const confirmRemove = async () => {
+    if (!eventToDelete) return;
     try {
-        await deleteDoc(doc(db, 'calendarEvents', eventId));
+        await deleteDoc(doc(db, 'calendarEvents', eventToDelete));
         toast({ title: "Event Deleted", description: "The event has been successfully removed." });
     } catch (error) {
         console.error("Error deleting event:", error);
         toast({ title: "Error", description: "Could not delete the event.", variant: "destructive" });
+    } finally {
+        setEventToDelete(null);
     }
   };
   
@@ -147,7 +149,7 @@ export default function ManageCalendarPage() {
             <EventManagementTable
               events={events}
               onEdit={handleOpenDialog}
-              onRemove={handleRemove}
+              onRemove={setEventToDelete}
               onAdd={() => handleOpenDialog()}
             />
         </TabsContent>
@@ -165,7 +167,6 @@ export default function ManageCalendarPage() {
         
       </Tabs>
 
-
       {isDialogOpen && (
         <ManageEventDialog
           event={editingEvent}
@@ -173,6 +174,21 @@ export default function ManageCalendarPage() {
           onSave={handleSave}
         />
       )}
+
+      <AlertDialog open={!!eventToDelete} onOpenChange={(isOpen) => !isOpen && setEventToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the event from the database.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRemove}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
