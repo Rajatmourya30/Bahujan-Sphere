@@ -4,11 +4,11 @@
 
 @layer base {
   :root {
-    --background: 39 56% 95%; /* Pale Yellow - #FAF0E6 */
+    --background: 30 56% 94%; /* Pale Yellow - #FAF0E6 */
     --foreground: 24 98% 10%;
-    --card: 39 56% 95%; /* Pale Yellow */
+    --card: 30 56% 94%; /* Pale Yellow */
     --card-foreground: 24 98% 10%;
-    --popover: 39 56% 95%; /* Pale Yellow */
+    --popover: 30 56% 94%; /* Pale Yellow */
     --popover-foreground: 24 98% 10%;
     --primary: 30 100% 60%; /* Deep Saffron - #FF9933 */
     --primary-foreground: 24 98% 10%;
@@ -29,11 +29,11 @@
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
     --radius: 0.5rem;
-    --sidebar-background: 39 56% 95%;
+    --sidebar-background: 30 56% 94%;
     --sidebar-foreground: 24 98% 10%;
     --sidebar-primary: 30 100% 60%;
     --sidebar-primary-foreground: 24 98% 10%;
-    --sidebar-accent: 39 56% 92%;
+    --sidebar-accent: 30 56% 92%;
     --sidebar-accent-foreground: 24 98% 10%;
     --sidebar-border: 30 100% 85%;
     --sidebar-ring: 30 100% 60%;
