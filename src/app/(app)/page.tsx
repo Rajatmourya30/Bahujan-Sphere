@@ -24,33 +24,34 @@ interface PillarCardProps {
   icon: React.ElementType;
   title: string;
   data: string | null;
+  fallback: string;
   buttonText: string;
   href: string;
   isLoading: boolean;
 }
 
-function PillarCard({ icon: Icon, title, data, buttonText, href, isLoading }: PillarCardProps) {
+function PillarCard({ icon: Icon, title, data, fallback, buttonText, href, isLoading }: PillarCardProps) {
+  const previewText = data || fallback;
+
   return (
-    <Card className="flex flex-col text-center">
-      <CardHeader className="items-center">
-        <div className="bg-primary/10 p-3 rounded-full">
-          <Icon className="h-8 w-8 text-primary" />
+    <Link href={href} className="group h-full">
+      <div className="flex flex-col items-center text-center p-6 h-full rounded-xl border bg-card text-card-foreground shadow-sm transition-all duration-300 ease-in-out hover:shadow-lg hover:border-primary hover:-translate-y-1">
+        <div className="flex items-center justify-center w-14 h-14 mb-4 rounded-full bg-accent/10 text-accent group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+          <Icon className="h-8 w-8" />
         </div>
-        <CardTitle className="font-headline text-xl">{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="flex-grow flex flex-col justify-center items-center p-4 min-h-[100px] bg-muted/50">
-        {isLoading ? (
-          <Skeleton className="h-6 w-3/4" />
-        ) : (
-          <p className="font-semibold text-lg text-accent line-clamp-2">{data || 'No featured content.'}</p>
-        )}
-      </CardContent>
-      <CardFooter>
-        <Button asChild className="w-full">
-          <Link href={href}>{buttonText}</Link>
-        </Button>
-      </CardFooter>
-    </Card>
+        <h3 className="font-headline text-lg mb-2">{title}</h3>
+        <div className="text-sm text-muted-foreground mb-4 flex-grow min-h-[40px] flex items-center justify-center">
+          {isLoading ? (
+            <Skeleton className="h-5 w-3/4" />
+          ) : (
+            <p>{previewText}</p>
+          )}
+        </div>
+        <span className="text-sm font-medium text-primary group-hover:underline transition-colors">
+          {buttonText} →
+        </span>
+      </div>
+    </Link>
   );
 }
 
@@ -124,7 +125,7 @@ export default function HomePage() {
       }
     };
     fetchData();
-  }, []);
+  }, [t]);
   
   const handleScroll = () => {
     const element = document.getElementById('pillars');
@@ -132,6 +133,14 @@ export default function HomePage() {
         element.scrollIntoView({ behavior: 'smooth' });
     }
   }
+
+  const pillarData = {
+    calendar: todayEvent ? `Today: ${todayEvent.title}` : null,
+    readingRoom: featuredResource ? `Featured: ${featuredResource.title}` : null,
+    knowledge: featuredOrg ? `Featured: ${t(featuredOrg.nameKey)}` : null,
+    store: featuredStore ? `From: ${t(featuredStore.nameKey)}` : null,
+    books: featuredBook ? `Book of the Week: ${t(featuredBook.titleKey)}` : null,
+  };
 
   return (
     <div className="space-y-16 md:space-y-24">
@@ -154,11 +163,12 @@ export default function HomePage() {
 
       {/* Section 2: The Five Pillars */}
       <section id="pillars" className="container">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
             <PillarCard 
                 icon={Calendar} 
                 title="Calendar"
-                data={todayEvent ? todayEvent.title : "No events today"}
+                data={pillarData.calendar}
+                fallback="Explore historical events"
                 buttonText="Explore Calendar"
                 href="/calendar"
                 isLoading={isLoading}
@@ -166,7 +176,8 @@ export default function HomePage() {
              <PillarCard 
                 icon={BookOpen} 
                 title="Reading Room"
-                data={featuredResource ? featuredResource.title : null}
+                data={pillarData.readingRoom}
+                fallback="Discover our archives"
                 buttonText="Enter Reading Room"
                 href="/reading-room"
                 isLoading={isLoading}
@@ -174,7 +185,8 @@ export default function HomePage() {
             <PillarCard 
                 icon={Library} 
                 title="Knowledge Hub"
-                data={featuredOrg ? t(featuredOrg.nameKey) : null}
+                data={pillarData.knowledge}
+                fallback="Find community organizations"
                 buttonText="Discover Knowledge"
                 href="/knowledge-hub"
                 isLoading={isLoading}
@@ -182,7 +194,8 @@ export default function HomePage() {
             <PillarCard 
                 icon={Store} 
                 title="Store"
-                data={featuredStore ? t(featuredStore.nameKey) : null}
+                data={pillarData.store}
+                fallback="Support creators"
                 buttonText="Visit Store"
                 href="/store"
                 isLoading={isLoading}
@@ -190,7 +203,8 @@ export default function HomePage() {
             <PillarCard 
                 icon={BookmarkIcon} 
                 title="Books"
-                data={featuredBook ? t(featuredBook.titleKey) : null}
+                data={pillarData.books}
+                fallback="Find essential readings"
                 buttonText="Browse Books"
                 href="/books"
                 isLoading={isLoading}
@@ -224,8 +238,8 @@ export default function HomePage() {
                 <Link href="/signup">Create Your Free Account</Link>
             </Button>
             {userCount > 0 && (
-                <p className="mt-4 text-sm text-muted-foreground flex items-center justify-center gap-2">
-                   <Users className="h-4 w-4" /> Trusted by {userCount} learners and supporters.
+                 <p className="mt-4 text-sm text-muted-foreground flex items-center justify-center gap-2">
+                   <Users className="h-4 w-4" /> Trusted by {isLoading ? <Skeleton className="w-8 h-4" /> : userCount} learners and supporters.
                 </p>
             )}
         </div>
@@ -233,5 +247,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    
