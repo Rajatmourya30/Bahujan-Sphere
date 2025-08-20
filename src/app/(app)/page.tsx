@@ -6,26 +6,30 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/hooks/use-language';
 import Link from 'next/link';
-import { ArrowRight, Book, Calendar, Store, Users } from 'lucide-react';
+import { ArrowDown, Book, Calendar, Store, Users, Library, BookOpen, Bookmark as BookmarkIcon } from 'lucide-react';
 import { Logo } from '@/components/shared/Logo';
 import Image from 'next/image';
-import { collection, getDocs, limit, query, where } from 'firebase/firestore';
+import { collection, getDocs, limit, query, where, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { KnowledgeOrganization } from '@/lib/knowledge-hub';
 import { Book as BookType } from '@/lib/books';
 import { CalendarEvent } from '@/lib/events';
+import { BahujanStore } from '@/lib/store';
+import { ReadingRoomPdf } from '@/app/admin/reading-room/page';
 import { parseDate } from '@/lib/date-parser';
-import { isValid, isSameDay } from 'date-fns';
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel"
+import { isValid, isSameDay, getMonth, getDate } from 'date-fns';
+import { Skeleton } from '@/components/ui/skeleton';
 
+interface PillarCardProps {
+  icon: React.ElementType;
+  title: string;
+  data: string | null;
+  buttonText: string;
+  href: string;
+  isLoading: boolean;
+}
 
-function ValuePropositionCard({ icon: Icon, title, description, linkText, href, children }: { icon: React.ElementType, title: string, description: string, linkText: string, href: string, children: React.ReactNode }) {
+function PillarCard({ icon: Icon, title, data, buttonText, href, isLoading }: PillarCardProps) {
   return (
     <Card className="flex flex-col text-center">
       <CardHeader className="items-center">
@@ -33,85 +37,43 @@ function ValuePropositionCard({ icon: Icon, title, description, linkText, href, 
           <Icon className="h-8 w-8 text-primary" />
         </div>
         <CardTitle className="font-headline text-xl">{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col justify-center items-center p-4 min-h-[100px] bg-muted/50">
-        {children}
+        {isLoading ? (
+          <Skeleton className="h-6 w-3/4" />
+        ) : (
+          <p className="font-semibold text-lg text-accent line-clamp-2">{data || 'No featured content.'}</p>
+        )}
       </CardContent>
       <CardFooter>
-        <Button asChild variant="secondary" className="w-full">
-          <Link href={href}>
-            {linkText} <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
+        <Button asChild className="w-full">
+          <Link href={href}>{buttonText}</Link>
         </Button>
       </CardFooter>
     </Card>
-  )
-}
-
-function FeaturedContentCard({ item, type }: { item: any, type: 'event' | 'book' | 'org' }) {
-    const { t } = useLanguage();
-    let title, description, imageUrl, href, ctaText;
-
-    switch (type) {
-        case 'event':
-            title = item.title;
-            description = item.summary;
-            imageUrl = 'https://placehold.co/600x400.png';
-            href = `/calendar`;
-            ctaText = 'View Event';
-            break;
-        case 'book':
-            title = t(item.titleKey);
-            description = t(item.descriptionKey);
-            imageUrl = item.imageUrl;
-            href = `/books`;
-            ctaText = 'Explore Books';
-            break;
-        case 'org':
-            title = t(item.nameKey);
-            description = t(item.descriptionKey);
-            imageUrl = item.logoUrl;
-            href = `/knowledge-hub`;
-            ctaText = 'Learn More';
-            break;
-    }
-
-    return (
-        <Card className="flex flex-col h-full">
-            <CardHeader>
-                <div className="relative h-40 w-full overflow-hidden rounded-lg">
-                    <Image src={imageUrl} alt={title} fill className="object-cover" />
-                </div>
-            </CardHeader>
-            <CardContent className="flex-grow">
-                <CardTitle className="font-headline text-lg line-clamp-2">{title}</CardTitle>
-                <CardDescription className="mt-2 text-sm line-clamp-3">{description}</CardDescription>
-            </CardContent>
-            <CardFooter>
-                <Button asChild className="w-full">
-                    <Link href={href}>
-                        {ctaText}
-                    </Link>
-                </Button>
-            </CardFooter>
-        </Card>
-    );
+  );
 }
 
 
 export default function HomePage() {
   const { t } = useLanguage();
-  const [todayEvents, setTodayEvents] = useState<CalendarEvent[]>([]);
-  const [featuredOrgs, setFeaturedOrgs] = useState<KnowledgeOrganization[]>([]);
-  const [featuredBook, setFeaturedBook] = useState<BookType | null>(null);
   const [userCount, setUserCount] = useState<number>(0);
-  
-  const today = new Date();
+  const [isLoading, setIsLoading] = useState(true);
+
+  // State for dynamic pillar data
+  const [todayEvent, setTodayEvent] = useState<CalendarEvent | null>(null);
+  const [featuredResource, setFeaturedResource] = useState<ReadingRoomPdf | null>(null);
+  const [featuredOrg, setFeaturedOrg] = useState<KnowledgeOrganization | null>(null);
+  const [featuredStore, setFeaturedStore] = useState<BahujanStore | null>(null);
+  const [featuredBook, setFeaturedBook] = useState<BookType | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
-        // Fetch Today's Events
+      setIsLoading(true);
+      try {
+        const today = new Date();
+        
+        // Fetch Today's Event
         const eventsQuery = query(collection(db, 'calendarEvents'), where('status', '==', 'approved'));
         const eventsSnap = await getDocs(eventsQuery);
         const allEvents = eventsSnap.docs.map(doc => {
@@ -120,130 +82,142 @@ export default function HomePage() {
             if (!isValid(eventDate)) return null;
             return { id: doc.id, ...data, date: eventDate } as CalendarEvent;
         }).filter(Boolean) as CalendarEvent[];
-        setTodayEvents(allEvents.filter(event => isSameDay(event.date, today)));
+        const todaysEvents = allEvents.filter(event => getMonth(event.date) === getMonth(today) && getDate(event.date) === getDate(today));
+        setTodayEvent(todaysEvents.length > 0 ? todaysEvents[0] : null);
 
-        // Fetch Featured Orgs
-        const orgsQuery = query(collection(db, 'knowledgeHub'), where('status', '==', 'approved'), limit(3));
-        const orgsSnap = await getDocs(orgsQuery);
-        setFeaturedOrgs(orgsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as KnowledgeOrganization)));
+        // Fetch Featured Resource from Reading Room
+        const resourceQuery = query(collection(db, 'readingRoomPdfs'), where('status', '==', 'approved'), limit(1));
+        const resourceSnap = await getDocs(resourceQuery);
+        if (!resourceSnap.empty) {
+            setFeaturedResource({ id: resourceSnap.docs[0].id, ...resourceSnap.docs[0].data() } as ReadingRoomPdf);
+        }
 
-        // Fetch Featured Book
-        const booksQuery = query(collection(db, 'books'), where('status', '==', 'approved'), limit(1));
-        const booksSnap = await getDocs(booksQuery);
-        if (!booksSnap.empty) {
-            setFeaturedBook({ id: booksSnap.docs[0].id, ...booksSnap.docs[0].data() } as BookType);
+        // Fetch Featured Organization
+        const orgQuery = query(collection(db, 'knowledgeHub'), where('status', '==', 'approved'), limit(1));
+        const orgSnap = await getDocs(orgQuery);
+        if (!orgSnap.empty) {
+            setFeaturedOrg({ id: orgSnap.docs[0].id, ...orgSnap.docs[0].data() } as KnowledgeOrganization);
         }
         
+        // Fetch Featured Store
+        const storeQuery = query(collection(db, 'stores'), where('status', '==', 'approved'), limit(1));
+        const storeSnap = await getDocs(storeQuery);
+        if (!storeSnap.empty) {
+            setFeaturedStore({ id: storeSnap.docs[0].id, ...storeSnap.docs[0].data() } as BahujanStore);
+        }
+
+        // Fetch Featured Book
+        const bookQuery = query(collection(db, 'books'), where('status', '==', 'approved'), limit(1));
+        const bookSnap = await getDocs(bookQuery);
+        if (!bookSnap.empty) {
+            setFeaturedBook({ id: bookSnap.docs[0].id, ...bookSnap.docs[0].data() } as BookType);
+        }
+
         // Fetch User Count
         const usersSnap = await getDocs(collection(db, 'users'));
         setUserCount(usersSnap.size);
+
+      } catch (error) {
+        console.error("Error fetching homepage data:", error);
+      } finally {
+        setIsLoading(false);
+      }
     };
     fetchData();
   }, []);
-
-  const featuredContent = [
-      ...todayEvents.slice(0, 1).map(item => ({ type: 'event' as const, data: item })),
-      ...(featuredBook ? [{ type: 'book' as const, data: featuredBook }] : []),
-      ...featuredOrgs.slice(0, 1).map(item => ({ type: 'org' as const, data: item }))
-  ];
+  
+  const handleScroll = () => {
+    const element = document.getElementById('pillars');
+    if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+    }
+  }
 
   return (
     <div className="space-y-16 md:space-y-24">
       {/* Section 1: Hero */}
-      <section className="relative text-center py-16 md:py-24 rounded-lg overflow-hidden">
+      <section className="relative text-center py-16 md:py-24 rounded-lg overflow-hidden min-h-[60vh] flex items-center justify-center">
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent z-10" />
         <Image src="https://placehold.co/1200x600.png" alt="Bahujan Community" fill className="object-cover" data-ai-hint="community celebration" />
         <div className="relative container z-20">
-          <div className="flex justify-center items-center gap-2">
-            <Logo className="h-12 w-12" />
-          </div>
-          <h1 className="font-headline text-4xl md:text-6xl font-bold mt-4">Discover, Celebrate, and Strengthen Bahujan Heritage.</h1>
+          <h1 className="font-headline text-4xl md:text-6xl font-bold mt-4">Your Trusted Source for Bahujan Heritage.</h1>
           <p className="mt-4 text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
-            Explore our historical calendar, digital library, and marketplace supporting community creators.
+            Explore a curated calendar of history, a digital library, a community directory, a creators' marketplace, and essential books.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild size="lg">
-              <Link href="/calendar">Explore the Calendar</Link>
-            </Button>
-            <Button asChild variant="link" size="lg" className="text-foreground">
-              <Link href="#value-prop">Learn More ▼</Link>
+            <Button size="lg" onClick={handleScroll}>
+              Explore Everything <ArrowDown className="ml-2 h-4 w-4" />
             </Button>
           </div>
         </div>
       </section>
 
-      {/* Section 2: Value Proposition */}
-      <section id="value-prop" className="container">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <ValuePropositionCard icon={Calendar} title="Our Living History" description="Discover significant events from Bahujan history, culture, and resistance." linkText="Browse Full Calendar" href="/calendar">
-                <div className="font-bold text-primary text-5xl">{today.getDate()}</div>
-                <div className="font-semibold text-lg">{today.toLocaleString('default', { month: 'long' })}</div>
-                {todayEvents.length > 0 ? (
-                    <p className="text-sm mt-1">Today in History: {todayEvents[0].title}</p>
-                ): (
-                    <p className="text-sm mt-1 text-muted-foreground">No major events today.</p>
-                )}
-            </ValuePropositionCard>
-             <ValuePropositionCard icon={Store} title="Community Directory" description="Connect with and support organizations dedicated to empowerment." linkText="Discover Organizations" href="/knowledge-hub">
-               <div className="flex items-center justify-center gap-4">
-                    {featuredOrgs.map(org => (
-                        <div key={org.id} className="relative h-12 w-12 rounded-full border bg-background p-1">
-                            <Image src={org.logoUrl} alt={t(org.nameKey)} fill className="object-contain" />
-                        </div>
-                    ))}
-               </div>
-            </ValuePropositionCard>
-            <ValuePropositionCard icon={Book} title="Support Creators" description="Find books and products from Bahujan creators and businesses." linkText="Explore the Store" href="/store">
-                 {featuredBook && (
-                    <div className="relative h-24 w-20">
-                         <Image src={featuredBook.imageUrl} alt={t(featuredBook.titleKey)} fill className="object-cover rounded" />
-                    </div>
-                )}
-            </ValuePropositionCard>
+      {/* Section 2: The Five Pillars */}
+      <section id="pillars" className="container">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8">
+            <PillarCard 
+                icon={Calendar} 
+                title="Calendar"
+                data={todayEvent ? todayEvent.title : "No events today"}
+                buttonText="Explore Calendar"
+                href="/calendar"
+                isLoading={isLoading}
+            />
+             <PillarCard 
+                icon={BookOpen} 
+                title="Reading Room"
+                data={featuredResource ? featuredResource.title : null}
+                buttonText="Enter Reading Room"
+                href="/reading-room"
+                isLoading={isLoading}
+            />
+            <PillarCard 
+                icon={Library} 
+                title="Knowledge Hub"
+                data={featuredOrg ? t(featuredOrg.nameKey) : null}
+                buttonText="Discover Knowledge"
+                href="/knowledge-hub"
+                isLoading={isLoading}
+            />
+            <PillarCard 
+                icon={Store} 
+                title="Store"
+                data={featuredStore ? t(featuredStore.nameKey) : null}
+                buttonText="Visit Store"
+                href="/store"
+                isLoading={isLoading}
+            />
+            <PillarCard 
+                icon={BookmarkIcon} 
+                title="Books"
+                data={featuredBook ? t(featuredBook.titleKey) : null}
+                buttonText="Browse Books"
+                href="/books"
+                isLoading={isLoading}
+            />
         </div>
       </section>
 
-      {/* Section 3: Featured Content */}
-      <section className="container">
-         <h2 className="font-headline text-3xl font-bold text-center">From Our Community</h2>
-         <p className="text-muted-foreground text-center mt-2">The latest and most important content from across BahujanSphere.</p>
-         <div className="mt-8">
-            <Carousel opts={{ align: "start", loop: true }} className="w-full">
-                <CarouselContent>
-                    {featuredContent.map((item, index) => (
-                        <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
-                            <div className="p-1 h-full">
-                                <FeaturedContentCard item={item.data} type={item.type} />
-                            </div>
-                        </CarouselItem>
-                    ))}
-                </CarouselContent>
-                <CarouselPrevious className="hidden sm:flex" />
-                <CarouselNext className="hidden sm:flex" />
-            </Carousel>
-         </div>
-      </section>
-      
-      {/* Section 4: Call to Sign Up */}
+      {/* Section 3: Call to Sign Up */}
       <section className="bg-muted py-16">
         <div className="container text-center">
-            <h2 className="font-headline text-3xl font-bold">Join Your Digital Commons</h2>
+            <h2 className="font-headline text-3xl font-bold">Make This Your Own</h2>
             <div className="mt-6 max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 text-left">
                 <div className="flex items-start gap-3">
                     <span className="text-primary">✓</span>
-                    <p><span className="font-semibold">Bookmark events</span> and articles for later.</p>
+                    <p><span className="font-semibold">Never miss a date</span> – Bookmark events and get reminders.</p>
                 </div>
                 <div className="flex items-start gap-3">
                     <span className="text-primary">✓</span>
-                    <p><span className="font-semibold">Get reminders</span> for important anniversaries.</p>
+                    <p><span className="font-semibold">Build your library</span> – Save articles and book lists for later.</p>
                 </div>
                 <div className="flex items-start gap-3">
                     <span className="text-primary">✓</span>
-                    <p><span className="font-semibold">Build your personal wishlist</span> of books.</p>
+                    <p><span className="font-semibold">Support directly</span> – Easily track your purchases and wishlists.</p>
                 </div>
                 <div className="flex items-start gap-3">
                     <span className="text-primary">✓</span>
-                    <p><span className="font-semibold">Contribute</span> to our growing knowledge base.</p>
+                    <p><span className="font-semibold">Deepen your knowledge</span> – Curate your personal learning journey.</p>
                 </div>
             </div>
             <Button asChild size="lg" className="mt-8">
@@ -251,12 +225,13 @@ export default function HomePage() {
             </Button>
             {userCount > 0 && (
                 <p className="mt-4 text-sm text-muted-foreground flex items-center justify-center gap-2">
-                   <Users className="h-4 w-4" /> Joined by over {userCount} community members.
+                   <Users className="h-4 w-4" /> Trusted by {userCount} learners and supporters.
                 </p>
             )}
         </div>
       </section>
-
     </div>
   );
 }
+
+    
