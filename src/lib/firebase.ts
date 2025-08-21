@@ -4,6 +4,7 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getFunctions } from "firebase/functions";
+import { getAnalytics, isSupported } from "firebase/analytics";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -25,4 +26,7 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 const functions = getFunctions(app);
 
-export { app, auth, db, storage, functions };
+// Initialize Analytics and export it
+const analytics = isSupported().then(yes => yes ? getAnalytics(app) : null);
+
+export { app, auth, db, storage, functions, analytics };
