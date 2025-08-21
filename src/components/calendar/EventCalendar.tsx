@@ -105,7 +105,13 @@ export function EventCalendar() {
             return { 
                 id: doc.id, 
                 ...data, 
-                date: parseDate(data.date) 
+                date: parseDate(data.date),
+                title: data.title,
+                summary: data.summary,
+                tags: data.tags,
+                imageUrl: data.imageUrl,
+                imageAiHint: data.imageAiHint,
+                readMoreUrl: data.readMoreUrl,
             } as CalendarEvent;
         });
         setAllEvents(fetchedEvents);
