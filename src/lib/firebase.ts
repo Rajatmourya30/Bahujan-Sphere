@@ -1,4 +1,3 @@
-
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
@@ -6,17 +5,16 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getFunctions } from "firebase/functions";
 
-// Your web app's Firebase configuration will be fetched dynamically
-// Note: This requires your app to be hosted on Firebase Hosting or App Hosting
-// to automatically get the config. For local development, you might need
-// to provide the config manually or use the Firebase Local Emulator Suite.
+// Your web app's Firebase configuration
 const firebaseConfig = {
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  apiKey: "AIzaSyDyg5huOpWkk0KZybL7U6c5rPGLvAw8ffM",
+  authDomain: "bahujansphere-90sqv.firebaseapp.com",
+  databaseURL: "https://bahujansphere-90sqv-default-rtdb.firebaseio.com",
+  projectId: "bahujansphere-90sqv",
+  storageBucket: "bahujansphere-90sqv.appspot.com",
+  messagingSenderId: "3324981248",
+  appId: "1:3324981248:web:ac368f108131bf2bed68e5",
+  measurementId: "G-K6QXH1FK7M"
 };
 
 
