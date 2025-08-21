@@ -17,6 +17,8 @@ import { cn } from '@/lib/utils';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { useAuthAction } from '@/hooks/useAuthAction';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { KNOWLEDGE_HUB_CATEGORIES } from '@/lib/categories';
 
 
 function OrganizationCard({ organization }: { organization: KnowledgeOrganization }) {
@@ -75,6 +77,7 @@ function OrganizationCard({ organization }: { organization: KnowledgeOrganizatio
 export default function KnowledgeHubPage() {
     const { t } = useLanguage();
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState('all');
     const [isLoading, setIsLoading] = useState(true);
     const [organizations, setOrganizations] = useState<KnowledgeOrganization[]>([]);
 
@@ -95,14 +98,16 @@ export default function KnowledgeHubPage() {
     }, []);
 
     const filteredOrganizations = useMemo(() => {
-        if (!searchTerm) {
-            return organizations;
-        }
-        return organizations.filter(org => 
-            (org.nameKey ? t(org.nameKey) : org.name).toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (org.descriptionKey ? t(org.descriptionKey) : org.description).toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }, [searchTerm, t, organizations]);
+        return organizations.filter(org => {
+            const matchesSearch = 
+                (org.nameKey ? t(org.nameKey) : org.name).toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (org.descriptionKey ? t(org.descriptionKey) : org.description).toLowerCase().includes(searchTerm.toLowerCase());
+
+            const matchesCategory = selectedCategory === 'all' || org.categoryKey === selectedCategory;
+
+            return matchesSearch && matchesCategory;
+        });
+    }, [searchTerm, selectedCategory, t, organizations]);
 
     if (isLoading) {
         return (
@@ -127,15 +132,30 @@ export default function KnowledgeHubPage() {
                 </p>
             </header>
 
-            <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                    type="search"
-                    placeholder={t('knowledge_hub.search_placeholder')}
-                    className="pl-10"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
+            <div className="flex flex-col sm:flex-row gap-4">
+                <div className="relative flex-grow">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input
+                        type="search"
+                        placeholder={t('knowledge_hub.search_placeholder')}
+                        className="pl-10"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <SelectTrigger className="w-full sm:w-[280px]">
+                        <SelectValue placeholder="Filter by category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Categories</SelectItem>
+                        {KNOWLEDGE_HUB_CATEGORIES.map(category => (
+                            <SelectItem key={category.key} value={category.key}>
+                                {category.label}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
             
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
