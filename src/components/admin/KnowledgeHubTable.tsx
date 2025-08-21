@@ -60,7 +60,7 @@ export function KnowledgeHubTable({ organizations, onEdit, onRemove }: Knowledge
                                             <Edit className="mr-2 h-4 w-4" />
                                             Edit
                                         </Button>
-                                        <Button variant="destructive" size="sm" onClick={() => onRemove(org.id)}>
+                                        <Button variant="outline" size="sm" onClick={() => onRemove(org.id)}>
                                             <Trash2 className="mr-2 h-4 w-4" />
                                             Remove
                                         </Button>
