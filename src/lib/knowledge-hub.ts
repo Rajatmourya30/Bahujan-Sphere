@@ -5,8 +5,10 @@ export interface KnowledgeOrganization {
   id: string;
   name: string;
   description: string;
+  category: string;
   nameKey?: TranslationKey;
   descriptionKey?: TranslationKey;
+  categoryKey?: TranslationKey;
   logoUrl: string;
   logoStoragePath?: string;
   websiteUrl: string;

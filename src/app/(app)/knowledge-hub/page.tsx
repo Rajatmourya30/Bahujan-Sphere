@@ -16,6 +16,7 @@ import { db } from '@/lib/firebase';
 import { cn } from '@/lib/utils';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { useAuthAction } from '@/hooks/useAuthAction';
+import { Badge } from '@/components/ui/badge';
 
 
 function OrganizationCard({ organization }: { organization: KnowledgeOrganization }) {
@@ -25,6 +26,7 @@ function OrganizationCard({ organization }: { organization: KnowledgeOrganizatio
 
     const name = organization.nameKey ? t(organization.nameKey) : organization.name;
     const description = organization.descriptionKey ? t(organization.descriptionKey) : organization.description;
+    const category = organization.categoryKey ? t(organization.categoryKey) : organization.category;
 
 
     return (
@@ -43,6 +45,7 @@ function OrganizationCard({ organization }: { organization: KnowledgeOrganizatio
                     </div>
                     <div className="flex-grow">
                         <CardTitle className="font-headline text-lg">{name}</CardTitle>
+                        {category && <Badge variant="outline" className="mt-1">{category}</Badge>}
                         <CardDescription className="mt-1 text-sm">{description}</CardDescription>
                     </div>
                 </CardHeader>

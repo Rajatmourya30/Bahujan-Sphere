@@ -21,6 +21,7 @@ import Image from 'next/image';
 const formSchema = z.object({
   nameKey: z.string().min(1, 'Key is required'),
   descriptionKey: z.string().min(1, 'Key is required'),
+  categoryKey: z.string().min(1, 'Category key is required'),
   logoFile: z.instanceof(File, { message: 'A logo image is required.' }).refine(file => file.size > 0, 'A logo image is required.'),
   websiteUrl: z.string().url('Must be a valid URL'),
 });
@@ -59,6 +60,7 @@ export function KnowledgeHubSubmissionForm() {
     defaultValues: {
       nameKey: '',
       descriptionKey: '',
+      categoryKey: '',
       websiteUrl: '',
     },
   });
@@ -83,6 +85,8 @@ export function KnowledgeHubSubmissionForm() {
       const dataToSave: any = {
         nameKey: values.nameKey,
         descriptionKey: values.descriptionKey,
+        categoryKey: values.categoryKey,
+        category: values.categoryKey.split('_').pop(), // Simple conversion from key
         websiteUrl: values.websiteUrl,
         logoUrl: logoUrl,
         logoStoragePath: imageRef.fullPath,
@@ -135,6 +139,13 @@ export function KnowledgeHubSubmissionForm() {
                 <FormItem>
                   <FormLabel>Description Key</FormLabel>
                   <FormControl><Textarea placeholder="e.g., org_new_desc" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+            )} />
+            <FormField control={form.control} name="categoryKey" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Category Key</FormLabel>
+                  <FormControl><Input placeholder="e.g., category_political" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
             )} />

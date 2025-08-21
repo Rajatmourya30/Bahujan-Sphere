@@ -18,6 +18,7 @@ import { collection, doc, getDoc, serverTimestamp, writeBatch } from 'firebase/f
 interface StagedOrganization {
   nameKey: string;
   descriptionKey: string;
+  categoryKey: string;
   websiteUrl: string;
 }
 
@@ -82,15 +83,16 @@ export function KnowledgeHubBulkUpload() {
                 lowerCaseRow[key.toLowerCase()] = row[key];
             }
 
-            const { namekey, descriptionkey, websiteurl } = lowerCaseRow;
+            const { namekey, descriptionkey, categorykey, websiteurl } = lowerCaseRow;
 
-            if (!namekey || !descriptionkey || !websiteurl) {
-                throw new Error(`Row ${index + 2}: Each row must have nameKey, descriptionKey, and websiteUrl.`);
+            if (!namekey || !descriptionkey || !categorykey || !websiteurl) {
+                throw new Error(`Row ${index + 2}: Each row must have nameKey, descriptionKey, categoryKey, and websiteUrl.`);
             }
 
             return {
                 nameKey: String(namekey),
                 descriptionKey: String(descriptionkey),
+                categoryKey: String(categorykey),
                 websiteUrl: String(websiteurl),
             };
         });
@@ -133,6 +135,7 @@ export function KnowledgeHubBulkUpload() {
             const docRef = doc(targetCollection);
             const dataToSave: any = {
                 ...org,
+                category: org.categoryKey.split('_').pop(),
                 logoUrl: 'https://placehold.co/400x400.png', // Placeholder logo
                 logoStoragePath: '',
                 imageAiHint: 'logo placeholder',
@@ -169,11 +172,12 @@ export function KnowledgeHubBulkUpload() {
   };
   
   const downloadTemplate = () => {
-    const headers = ["nameKey", "descriptionKey", "websiteUrl"];
+    const headers = ["nameKey", "descriptionKey", "categoryKey", "websiteUrl"];
     const data = [
       {
         "nameKey": "org_sample_name",
         "descriptionKey": "org_sample_description",
+        "categoryKey": "category_social",
         "websiteUrl": "https://example.com",
       }
     ];
@@ -201,7 +205,7 @@ export function KnowledgeHubBulkUpload() {
             <Table className="h-4 w-4" />
             <AlertTitle>Instructions</AlertTitle>
             <AlertDescription>
-                The file must have columns: `nameKey`, `descriptionKey`, and `websiteUrl`. All other fields will be set to default values.
+                The file must have columns: `nameKey`, `descriptionKey`, `categoryKey`, and `websiteUrl`. All other fields will be set to default values.
             </AlertDescription>
             <div className="mt-4">
                 <Button variant="outline" size="sm" onClick={downloadTemplate}>
