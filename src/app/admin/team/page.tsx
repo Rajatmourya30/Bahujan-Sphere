@@ -91,22 +91,17 @@ export default function TeamManagementPage() {
 
  const handleAddMember = async (newMember: NewTeamMember, uid: string) => {
     try {
-      // Step 1: Create the team member document in Firestore.
-      // Use the user's UID from Auth as the document ID for easy mapping.
+      // The Cloud Function now handles user creation and claim setting.
+      // This function's only job is to create the Firestore document.
       await setDoc(doc(db, 'teamMembers', uid), {
         ...newMember,
         joinedAt: serverTimestamp(),
       });
       
-      // Step 2: Set a custom claim if the user is an Admin.
-      // This is crucial for securing Firebase Functions and rules.
-      const isAdmin = newMember.role === 'Admin';
-      await setAdminClaim({ email: newMember.email, admin: isAdmin });
-
-      toast({ title: 'Success', description: `New team member added. Admin claim set to: ${isAdmin}` });
-      setIsAddDialogOpen(false); // Close the dialog on success
+      toast({ title: 'Success', description: `New team member '${newMember.name}' has been added.` });
+      setIsAddDialogOpen(false);
     } catch (error) {
-      console.error("Error adding member to Firestore or setting claim:", error);
+      console.error("Error adding member to Firestore:", error);
       toast({ 
           title: 'Error Saving Member Details', 
           description: 'The user login was created, but their details could not be saved to the database. Please check Firestore permissions.', 

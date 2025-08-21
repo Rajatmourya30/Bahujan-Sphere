@@ -71,15 +71,19 @@ export function AddMemberDialog({ onOpenChange, onSave }: AddMemberDialogProps) 
   const onSubmit = async (values: FormValues) => {
     setIsLoading(true);
     try {
-      // Step 1: Create the user in Firebase Auth via the Cloud Function
-      const result: any = await createTeamUser({ email: values.email, password: values.password });
+      // Step 1: Create user and set claims via the Cloud Function
+      const result: any = await createTeamUser({ 
+        email: values.email, 
+        password: values.password,
+        role: values.role // Pass the role to the function
+      });
       const { uid } = result.data;
 
       if (!uid) {
           throw new Error('Failed to create user: UID was not returned.');
       }
 
-      // Step 2: Call the onSave prop to handle Firestore and custom claims
+      // Step 2: Call the onSave prop to handle Firestore document creation
       await onSave({
         name: values.name,
         email: values.email,
