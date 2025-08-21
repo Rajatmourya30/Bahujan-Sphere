@@ -57,6 +57,10 @@ export default function ProfilePage() {
           const profileData = docSnap.data() as UserProfile;
           setUserProfile(profileData);
           setPhotoPreview(profileData.photoUrl || null);
+        } else {
+            // If the profile doesn't exist, we should still stop loading
+            // and maybe handle this case explicitly, e.g., by showing a message.
+            setUserProfile(null); 
         }
         setIsLoading(false);
       } else {
@@ -140,7 +144,7 @@ export default function ProfilePage() {
   };
 
 
-  if (isLoading || !userProfile) {
+  if (isLoading) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="md:col-span-1">
@@ -151,6 +155,26 @@ export default function ProfilePage() {
                 <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-10 w-full" />
             </div>
+        </div>
+    );
+  }
+  
+  if (!userProfile) {
+    return (
+        <div className="flex flex-col items-center justify-center text-center py-16">
+            <Card className="w-full max-w-md">
+                <CardHeader>
+                    <CardTitle>Profile Not Found</CardTitle>
+                    <CardDescription>We couldn't load your profile data. This might happen if your account setup is incomplete.</CardDescription>
+                </CardHeader>
+                <CardFooter className="flex-col gap-4">
+                     <Button onClick={handleLogout} variant="outline" className="w-full">
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Logout
+                    </Button>
+                    <p className="text-xs text-muted-foreground">Please try logging out and back in, or contact support if the problem persists.</p>
+                </CardFooter>
+            </Card>
         </div>
     );
   }
@@ -273,3 +297,5 @@ export default function ProfilePage() {
     </>
   );
 }
+
+    
