@@ -92,7 +92,7 @@ export default function ManageCalendarPage() {
             imageStoragePath = imageRef.fullPath;
         }
 
-        const dataToSave = {
+        const dataToSave: any = {
             ...eventData,
             date: Timestamp.fromDate(eventData.date as Date),
             imageUrl,
