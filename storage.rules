@@ -3,26 +3,14 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     
-    // Allow public read access for content folders
-    match /pdfs/{allPaths=**} {
-      allow read: if true;
-    }
-    match /bookCovers/{allPaths=**} {
-      allow read: if true;
-    }
-    match /images/{allPaths=**} {
+    // Public read access for images, covers, and documents
+    match /{folder}/{allPaths=**} where folder in ['images', 'bookCovers', 'pdfs'] {
       allow read: if true;
     }
 
-    // Allow any authenticated user to write to content folders.
-    // This will solve the admin authorization issue.
-    match /{folder}/{allPaths=**} where folder in ['images', 'pdfs', 'bookCovers'] {
+    // Authenticated users can write to content folders
+    match /{folder}/{allPaths=**} where folder in ['images', 'bookCovers', 'pdfs', 'profilePictures'] {
       allow write: if request.auth != null;
-    }
-
-    // Secure profile pictures: Only the user can read/write their own files.
-    match /profilePictures/{userId}/{allPaths=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
