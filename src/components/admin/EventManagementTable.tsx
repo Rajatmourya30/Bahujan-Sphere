@@ -11,17 +11,17 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Calendar as CalendarIcon, MoreHorizontal, PlusCircle, Search, Edit, Trash2 } from "lucide-react";
+import { Calendar as CalendarIcon, MoreHorizontal, PlusCircle, Search, Edit, Trash2, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "../ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import type { CalendarEvent } from "@/lib/events";
 import { Badge } from "../ui/badge";
 import { Input } from "../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { format, isSameDay, isValid, getMonth, getDate } from "date-fns";
+import { format, getMonth, getDate, isValid } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 interface EventManagementTableProps {
     events: CalendarEvent[];
@@ -161,6 +161,7 @@ export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventM
                     <Table>
                         <TableHeader>
                             <TableRow>
+                                <TableHead>Image</TableHead>
                                 <TableHead>Title</TableHead>
                                 <TableHead>Date</TableHead>
                                 <TableHead>Tags</TableHead>
@@ -171,6 +172,22 @@ export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventM
                         <TableBody>
                             {filteredEvents.length > 0 ? filteredEvents.map((event) => (
                                 <TableRow key={event.id}>
+                                    <TableCell>
+                                        {event.imageUrl ? (
+                                            <div className="relative h-12 w-12 flex-shrink-0">
+                                                <Image 
+                                                    src={event.imageUrl}
+                                                    alt={event.title}
+                                                    fill
+                                                    className="rounded-md object-cover"
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div className="flex h-12 w-12 items-center justify-center rounded-md bg-muted">
+                                                <XCircle className="h-6 w-6 text-muted-foreground" />
+                                            </div>
+                                        )}
+                                    </TableCell>
                                     <TableCell className="font-medium">
                                         <span className="font-bold">{event.title}</span>
                                     </TableCell>
@@ -202,7 +219,7 @@ export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventM
                                 </TableRow>
                             )) : (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="h-24 text-center">
+                                    <TableCell colSpan={6} className="h-24 text-center">
                                         No results found.
                                     </TableCell>
                                 </TableRow>
