@@ -47,7 +47,10 @@ export function KnowledgeHubTable({ organizations, onEdit, onRemove }: Knowledge
                                                 data-ai-hint={org.imageAiHint}
                                             />
                                         </div>
-                                        <span className="font-bold">{org.name}</span>
+                                        <div>
+                                            <span className="font-bold">{org.name}</span>
+                                            <p className="text-sm text-muted-foreground line-clamp-2">{org.description}</p>
+                                        </div>
                                     </div>
                                 </TableCell>
                                 <TableCell>
