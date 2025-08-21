@@ -14,5 +14,3 @@ export interface Book {
   pdfUrl?: string;
   imageAiHint: string;
 }
-
-    

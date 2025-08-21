@@ -2,6 +2,7 @@
 
 
 
+
 // This is a minimal set of translations to get started.
 // In a real app, you would have a more robust system.
 
@@ -556,7 +557,7 @@ const mr = {
 
 const bn = {
   "locale_code": "bn-IN",
-  "home.tagline": "बहुজন উত্তরাধিকার গঠনকারী মুহূর্ত এবং আন্দোলন অন্বেষণ করা।",
+  "home.tagline": "বহুজন উত্তরাধিকার গঠনকারী মুহূর্ত এবং আন্দোলন অন্বেষণ করা।",
   "nav.calendar": "ক্যালেন্ডার",
   "nav.knowledge": "জ্ঞান",
   "nav.store": "স্টোর",

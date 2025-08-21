@@ -12,5 +12,3 @@ export interface BahujanStore {
   storeUrl: string;
   imageAiHint: string;
 }
-
-    

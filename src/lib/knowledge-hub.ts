@@ -19,5 +19,3 @@ export interface KnowledgeArticle {
     descriptionKey: TranslationKey;
     fullArticleUrl: string;
 }
-
-    
