@@ -28,7 +28,7 @@ import { RevenueByCategoryChart } from '@/components/admin/RevenueByCategoryChar
 import { TopAdPlacementsChart } from '@/components/admin/TopAdPlacementsChart';
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 
 
 const UserGrowthChart = dynamic(
@@ -50,9 +50,10 @@ export default function AdminDashboardPage() {
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<UserRole>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [totalUsers, setTotalUsers] = useState(0);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setFirebaseUser(user);
         
@@ -69,13 +70,22 @@ export default function AdminDashboardPage() {
           localStorage.removeItem('adminUserRole');
         }
 
+        // Fetch total users
+        const usersCol = collection(db, "users");
+        const unsubscribeUsers = onSnapshot(usersCol, (snapshot) => {
+          setTotalUsers(snapshot.size);
+        });
+        
+        setIsLoading(false);
+        return () => unsubscribeUsers(); // Cleanup user listener
+
       } else {
         router.replace('/admin/login');
+        setIsLoading(false);
       }
-      setIsLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeAuth(); // Cleanup auth listener
   }, [router]);
 
   const handleLogout = async () => {
@@ -135,7 +145,7 @@ export default function AdminDashboardPage() {
                     <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">8</div>
+                    <div className="text-2xl font-bold">{totalUsers}</div>
                     <p className="text-xs text-muted-foreground">All registered users</p>
                 </CardContent>
             </Card>
