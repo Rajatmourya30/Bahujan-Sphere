@@ -26,7 +26,7 @@ function OrganizationCard({ organization }: { organization: KnowledgeOrganizatio
 
     const name = organization.nameKey ? t(organization.nameKey) : organization.name;
     const description = organization.descriptionKey ? t(organization.descriptionKey) : organization.description;
-    const category = organization.categoryKey ? t(organization.categoryKey) : organization.category;
+    const category = organization.category;
 
 
     return (
