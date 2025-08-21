@@ -63,7 +63,7 @@ export function Header() {
                   </Button>
               ) : (
                   <Button asChild variant="ghost" size="icon" aria-label="Sign In">
-                      <Link href="/login"><LogIn /></Link>
+                      <Link href="/login"><User /></Link>
                   </Button>
               )}
           </div>
