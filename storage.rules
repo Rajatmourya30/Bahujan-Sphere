@@ -2,37 +2,34 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    
-    // Profile pictures: Only the authenticated user can read/write their own files.
-    match /profilePictures/{userId}/{allPaths=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+    // Helper function to check if the authenticated user exists in the teamMembers collection in Firestore.
+    // This is the secure way to grant write permissions.
+    function isTeamMember() {
+      return exists(/databases/(default)/documents/teamMembers/$(request.auth.uid));
     }
 
-    // Public content folders: PDFs, book covers, event images, logos, and store images.
-    // Anyone can read these files, but only authenticated users (team members) can write them.
+    // --- Content Folders ---
+    // Anyone can read content, but only verified team members can upload, update, or delete.
     match /pdfs/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if request.auth != null && isTeamMember();
     }
 
     match /bookCovers/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if request.auth != null && isTeamMember();
     }
 
-    match /images/events/{allPaths=**} {
+    match /images/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null;
-    }
-    
-    match /images/logos/{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if request.auth != null && isTeamMember();
     }
 
-    match /images/stores/{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null;
+    // --- Profile Pictures ---
+    // Users can only read and write to their own profile picture folder.
+    match /profilePictures/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
