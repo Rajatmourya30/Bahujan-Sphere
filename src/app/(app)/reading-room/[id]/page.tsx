@@ -2,34 +2,46 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { PdfViewer } from '@/components/reading-room/PdfViewer';
 import { ReadingRoomPdf } from '@/app/admin/reading-room/page';
 import { Skeleton } from '@/components/ui/skeleton';
+import { isTeamMember as checkIsTeamMember } from '@/lib/firebase-utils';
 
 export default function PdfViewPage() {
   const params = useParams();
+  const router = useRouter();
   const { id } = params;
   const [pdf, setPdf] = useState<ReadingRoomPdf | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [isTeamMember, setIsTeamMember] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
           const userDoc = await getDoc(doc(db, 'teamMembers', user.uid));
-          setUserRole(userDoc.exists() ? userDoc.data().role : null);
+          if (userDoc.exists()) {
+              const role = userDoc.data().role;
+              setUserRole(role);
+              setIsTeamMember(checkIsTeamMember(role));
+          } else {
+              setUserRole(null);
+              setIsTeamMember(false);
+          }
         } catch (error) {
           console.error("Error fetching user role:", error);
           setUserRole(null);
+          setIsTeamMember(false);
         }
       } else {
         setUserRole(null);
+        setIsTeamMember(false);
       }
     });
     return () => unsubscribe();
@@ -50,11 +62,10 @@ export default function PdfViewPage() {
         if (docSnap.exists()) {
           const pdfData = { id: docSnap.id, ...docSnap.data() } as ReadingRoomPdf;
           
-          // CRITICAL FIX: Verify document status
-          const isTeamMember = userRole && ['Admin', 'Manager', 'Editor', 'Reviewer', 'Contributor'].includes(userRole);
-          
+          // CRITICAL SECURITY FIX: Verify document status on the client-side
           if (pdfData.status !== 'approved' && !isTeamMember) {
             setError('This document is not available for public viewing.');
+            setIsLoading(false);
             return;
           }
           
@@ -70,8 +81,11 @@ export default function PdfViewPage() {
       }
     };
 
-    fetchPdf();
-  }, [id, userRole]);
+    // We wait for the user role to be determined before fetching the PDF
+    if (userRole !== undefined) {
+        fetchPdf();
+    }
+  }, [id, userRole, isTeamMember]);
 
   if (isLoading) {
     return <LoadingSkeleton />;
@@ -80,7 +94,7 @@ export default function PdfViewPage() {
   if (error) {
     return (
         <div className="flex items-center justify-center h-[calc(100vh-10rem)]">
-            <p className="text-destructive">{error}</p>
+            <p className="text-destructive text-center p-4">{error}</p>
         </div>
     );
   }

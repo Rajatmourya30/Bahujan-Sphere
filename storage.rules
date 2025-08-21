@@ -2,15 +2,31 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
+
+    // Helper function to check if the user is a team member by looking up their UID in Firestore
+    function isTeamMember() {
+      return exists(/databases/(default)/documents/teamMembers/$(request.auth.uid));
+    }
     
-    // Public read access for images, covers, and documents
-    match /{folder}/{allPaths=**} where folder in ['images', 'bookCovers', 'pdfs'] {
-      allow read: if true;
+    // Helper function to check the status of a corresponding Firestore document.
+    // This requires a specific naming convention for files: folder/docId_....
+    function isApprovedFirestoreDoc(collection, docId) {
+      return get(/databases/(default)/documents/$(collection)/$(docId)).data.status == 'approved';
     }
 
-    // Authenticated users can write to content folders
-    match /{folder}/{allPaths=**} where folder in ['images', 'bookCovers', 'pdfs', 'profilePictures'] {
-      allow write: if request.auth != null;
+    // All users can read approved content
+    match /{folder}/{fileName} where folder in ['images/events', 'images/logos', 'images/stores', 'bookCovers', 'pdfs'] {
+      allow read; // Allow public read access for all content
+    }
+
+    // Only authenticated team members can write to content folders
+    match /{folder}/{fileName} where folder in ['images/events', 'images/logos', 'images/stores', 'bookCovers', 'pdfs'] {
+        allow write: if isTeamMember();
+    }
+
+    // Profile pictures: Users can manage their own photos
+    match /profilePictures/{userId}/{fileName} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }

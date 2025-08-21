@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -9,48 +8,46 @@ service cloud.firestore {
     }
 
     function isTeamMember() {
-      // Check if a user is signed in and their UID exists in the teamMembers collection.
-      // This is the core function for granting administrative privileges.
+      // Check if a user is in the teamMembers collection
       return isSignedIn() && exists(/databases/$(database)/documents/teamMembers/$(request.auth.uid));
     }
 
     function isApprovedContent(resource) {
-      // Check if a document has the status of 'approved'.
-      // This is used for all public-facing content.
+      // Check if the document has a status of 'approved'
       return resource.data.status == 'approved';
     }
 
-    // PUBLIC CONTENT:
-    // Allow anyone (even unauthenticated users) to read content that is marked as 'approved'.
-    // Allow any team member to read ALL content, regardless of status (for admin/review purposes).
-    // Only allow team members to write (create, update, delete) content.
+    // Public content collections: Only approved content is publicly readable
     match /{collectionName}/{docId} where collectionName in ['calendarEvents', 'knowledgeHub', 'stores', 'books', 'readingRoomPdfs'] {
-      allow read: if isApprovedContent(resource) || isTeamMember();
+      // Public users can ONLY read approved content.
+      allow read: if isApprovedContent(resource);
+      
+      // Team members can read ALL content (pending, approved, etc.)
+      allow read: if isTeamMember();
+
+      // Only team members can write/modify content.
       allow write: if isTeamMember();
     }
 
-    // USER PROFILES:
-    // Users can create their own profile.
-    // Users can only read and update their own profile.
+    // User profiles: Users can manage their own profile
     match /users/{userId} {
       allow read, update: if request.auth.uid == userId;
       allow create: if isSignedIn();
     }
 
-    // SUBMISSIONS:
-    // Any team member can create new submissions.
-    // Any team member can read, update, or delete submissions for review.
+    // Submissions collections: Only team members can access
     match /{submissionCollection}/{submissionId} where submissionCollection in ['eventSubmissions', 'bookSubmissions', 'storeSubmissions', 'knowledgeHubSubmissions', 'readingRoomSubmissions'] {
       allow create, read, update, delete: if isTeamMember();
     }
     
-    // TEAM MANAGEMENT:
-    // A user can read their own team member document to see their role.
-    // A team member can read the documents of other team members.
-    // Writing to team member documents is disallowed; it must be handled by Cloud Functions for security.
+    // Team management: Secure access
     match /teamMembers/{memberId} {
-      allow read: if (isSignedIn() && request.auth.uid == memberId) || isTeamMember();
-      allow write: if false; // Managed by Cloud Functions only
+      // A user can read their own team member document
+      allow read: if isSignedIn() && request.auth.uid == memberId;
+      // A team member can read other team members' documents
+      allow read: if isTeamMember();
+      // Writing to teamMembers is restricted (e.g., only via Cloud Functions)
+      allow write: if false;
     }
   }
 }

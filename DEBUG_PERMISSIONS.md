@@ -1,121 +1,87 @@
 # Debug Firebase Permissions Issue
 
 ## 🚨 Current Status
-**Error**: "Error fetching submissions: FirebaseError: Missing or insufficient permissions"
-**Component**: `ReviewReadingRoomSubmissionsTab`
-**Query**: `collection(db, "readingRoomSubmissions"), where("status", "==", "pending")`
+**Error**: "Error fetching submissions: FirebaseError: Missing or insufficient permissions" or "Firebase Storage: User does not have permission..."
+**Component**: Any component interacting with Firestore or Storage.
+**Query/Action**: Any read/write operation that is failing.
 
 ## 🔍 Debugging Steps
 
 ### Step 1: Deploy the Rules
-**CRITICAL**: The rules must be deployed to take effect!
+**CRITICAL**: The rules must be deployed to take effect! Use the provided script for convenience.
 
 ```bash
-# Make the script executable
+# Make the script executable (only need to do this once)
 chmod +x deploy-rules.sh
 
 # Run the deployment
 ./deploy-rules.sh
 
-# OR manually deploy
+# OR manually deploy both
 firebase deploy --only firestore:rules,storage
 ```
 
-### Step 2: Verify User Authentication
-Check if the user is properly authenticated:
+### Step 2: Verify User Authentication in the App
+Check if the user is properly authenticated in the browser console.
 
 ```javascript
-// Add this to the component for debugging
-useEffect(() => {
-  onAuthStateChanged(auth, (user) => {
-    console.log("Current user:", user);
-    console.log("User UID:", user?.uid);
-    console.log("User email:", user?.email);
-  });
-}, []);
-```
+// Add this to a component's useEffect for debugging
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
-### Step 3: Check Team Member Document
-Verify the user has a team member document:
-
-```javascript
-// Add this debugging code
 useEffect(() => {
-  const checkTeamMember = async () => {
-    if (auth.currentUser) {
-      try {
-        const teamMemberDoc = await getDoc(doc(db, 'teamMembers', auth.currentUser.uid));
-        console.log("Team member exists:", teamMemberDoc.exists());
-        console.log("Team member data:", teamMemberDoc.data());
-      } catch (error) {
-        console.error("Error checking team member:", error);
-      }
+  const unsubscribe = onAuthStateChanged(auth, (user) => {
+    if (user) {
+      console.log("✅ Current user is authenticated:", user.email, user.uid);
+    } else {
+      console.log("❌ User is not authenticated.");
     }
-  };
-  checkTeamMember();
+  });
+  return () => unsubscribe();
 }, []);
 ```
 
-### Step 4: Test Direct Collection Access
-Try a simple read operation:
+### Step 3: Check Team Member Document in Firestore
+Verify the currently authenticated user has a corresponding document in the `teamMembers` collection in your Firestore database.
 
-```javascript
-// Add this test function
-const testCollectionAccess = async () => {
-  try {
-    const testQuery = query(collection(db, "readingRoomSubmissions"), limit(1));
-    const snapshot = await getDocs(testQuery);
-    console.log("Collection access successful, docs:", snapshot.size);
-  } catch (error) {
-    console.error("Collection access failed:", error);
-  }
-};
-```
+1. Go to the **Firebase Console**.
+2. Navigate to **Firestore Database**.
+3. Go to the **`teamMembers`** collection.
+4. **Check for a document where the Document ID is the UID of your logged-in user.**
+5. Verify that this document has a `role` field (e.g., `role: "Admin"`).
 
-### Step 5: Check Firebase Console
-1. Go to Firebase Console → Firestore → Rules
-2. Verify the rules show the latest version
-3. Check the "Rules playground" to simulate the query
+If this document is missing, the security rules will correctly deny access.
 
-### Step 6: Verify Collection Exists
-Check if the `readingRoomSubmissions` collection actually exists:
-1. Go to Firebase Console → Firestore → Data
-2. Look for the `readingRoomSubmissions` collection
-3. If it doesn't exist, create a test document
+### Step 4: Use the Firebase Rules Playground
+The Rules Playground is the most powerful tool for debugging.
 
-## 🔧 Temporary Workaround Rules
+1. Go to **Firebase Console → Firestore Database → Rules**.
+2. Click on the **"Rules Playground"** tab.
+3. **Simulation type**: Choose `get`, `list`, `create`, etc.
+4. **Location**: Enter the path to the document you're trying to access (e.g., `/readingRoomSubmissions/some-doc-id`).
+5. **Authenticated**: Toggle this ON.
+6. **Provider**: `Anonymous` or `Google`, etc.
+7. **Firebase UID**: Paste the UID of the user you are testing with.
+8. Click **Run**. The playground will show you which lines of your rules passed or failed.
 
-I've temporarily opened the submission rules to all authenticated users:
+### Step 5: Check CORS Configuration for Storage
+If you are still getting Storage errors after deploying the correct rules, the CORS configuration for your Storage bucket may need to be updated.
 
-```javascript
-match /{submissionCollection}/{submissionId} where submissionCollection in [...] {
-  allow read: if isSignedIn(); // Temporarily open
-}
-```
-
-This should allow any authenticated user to read submissions while we debug.
-
-## 🎯 Expected Behavior After Fix
-
-1. **Authenticated users** should be able to read from `readingRoomSubmissions`
-2. **The error should disappear** from the admin interface
-3. **Public content security** should remain intact (only approved content visible)
+1. Make sure the `cors.json` file exists in your project root.
+2. Run the gsutil command to apply it:
+   ```bash
+   # You may need to install gsutil first: gcloud components install gsutil
+   # Find your bucket URL in Firebase Console -> Storage
+   gsutil cors set cors.json gs://<YOUR_BUCKET_URL>
+   ```
+   Example: `gsutil cors set cors.json gs://my-awesome-project.appspot.com`
 
 ## 🚨 If Issue Persists
 
-If the error continues after deployment, the issue might be:
+If the error continues after all these steps, the issue might be:
 
-1. **Rules not deployed**: Check Firebase Console to verify latest rules
-2. **User not authenticated**: Verify user login status
-3. **Collection doesn't exist**: Check Firestore data in console
-4. **Browser cache**: Try hard refresh or incognito mode
-5. **Firebase project mismatch**: Verify correct project is selected
-
-## 📞 Next Steps
-
-1. **Deploy the rules** using the script
-2. **Test the admin interface** 
-3. **Check browser console** for detailed error messages
-4. **Report back** with any new error details or success
-
-The temporary rules should resolve the permissions issue immediately after deployment.
+1. **Rules Not Deployed**: Double-check the Firebase Console to verify the latest rules are active.
+2. **User Not Authenticated**: Verify user login status in the app.
+3. **Missing `teamMembers` Document**: Ensure the user has a record in the `teamMembers` collection.
+4. **Browser Cache**: Try a hard refresh (Ctrl+Shift+R) or an incognito window.
+5. **Firebase Project Mismatch**: Verify your local Firebase CLI is configured for the correct project (`firebase use <project_id>`).
