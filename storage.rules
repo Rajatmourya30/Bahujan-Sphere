@@ -3,32 +3,36 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     
-    // Default deny all access to prevent accidental exposure
-    match /{allPaths=**} {
-      allow read, write: if false;
+    // Profile pictures: Only the authenticated user can read/write their own files.
+    match /profilePictures/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Public read access for images, covers, and PDFs.
-    // Write access is restricted to authenticated users (team members/admins).
-    match /images/{allPaths=**} {
-      allow read;
+    // Public content folders: PDFs, book covers, event images, logos, and store images.
+    // Anyone can read these files, but only authenticated users (team members) can write them.
+    match /pdfs/{allPaths=**} {
+      allow read: if true;
       allow write: if request.auth != null;
     }
 
     match /bookCovers/{allPaths=**} {
-      allow read;
+      allow read: if true;
       allow write: if request.auth != null;
     }
 
-    match /pdfs/{allPaths=**} {
-      allow read;
+    match /images/events/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    match /images/logos/{allPaths=**} {
+      allow read: if true;
       allow write: if request.auth != null;
     }
 
-    // Users can only read and write to their own profile picture folder.
-    match /profilePictures/{userId}/{allPaths=**} {
-      allow read;
-      allow write: if request.auth != null && request.auth.uid == userId;
+    match /images/stores/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
     }
   }
 }
