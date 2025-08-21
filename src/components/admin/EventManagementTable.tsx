@@ -11,8 +11,9 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Calendar as CalendarIcon, MoreHorizontal, PlusCircle, Search, Edit, Trash2, CheckCircle2, XCircle } from "lucide-react";
+import { Calendar as CalendarIcon, MoreHorizontal, PlusCircle, Search } from "lucide-react";
 import { Button } from "../ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import type { CalendarEvent } from "@/lib/events";
 import { Badge } from "../ui/badge";
 import { Input } from "../ui/input";
@@ -21,7 +22,6 @@ import { format, getMonth, getDate, isValid } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
 import { cn } from "@/lib/utils";
-import Image from "next/image";
 
 interface EventManagementTableProps {
     events: CalendarEvent[];
@@ -161,33 +161,16 @@ export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventM
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Image</TableHead>
                                 <TableHead>Title</TableHead>
                                 <TableHead>Date</TableHead>
                                 <TableHead>Tags</TableHead>
-                                <TableHead>Description</TableHead>
+                                <TableHead className="max-w-md">Description</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {filteredEvents.length > 0 ? filteredEvents.map((event) => (
                                 <TableRow key={event.id}>
-                                    <TableCell>
-                                        {event.imageUrl ? (
-                                            <div className="relative h-12 w-12 flex-shrink-0">
-                                                <Image 
-                                                    src={event.imageUrl}
-                                                    alt={event.title}
-                                                    fill
-                                                    className="rounded-md object-cover"
-                                                />
-                                            </div>
-                                        ) : (
-                                            <div className="flex h-12 w-12 items-center justify-center rounded-md bg-muted">
-                                                <XCircle className="h-6 w-6 text-muted-foreground" />
-                                            </div>
-                                        )}
-                                    </TableCell>
                                     <TableCell className="font-medium">
                                         <span className="font-bold">{event.title}</span>
                                     </TableCell>
@@ -199,27 +182,37 @@ export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventM
                                             ))}
                                         </div>
                                     </TableCell>
-                                    <TableCell className="max-w-[200px] sm:max-w-md">
+                                    <TableCell className="max-w-md">
                                         <p className="text-sm text-muted-foreground truncate">
                                             {event.summary}
                                         </p>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <div className="flex justify-end gap-2">
-                                            <Button variant="outline" size="sm" onClick={() => onEdit(event)}>
-                                                <Edit className="mr-2 h-3 w-3" />
-                                                Edit
-                                            </Button>
-                                            <Button variant="outline" size="sm" onClick={() => onRemove(event.id)}>
-                                                 <Trash2 className="mr-2 h-3 w-3" />
-                                                Remove
-                                            </Button>
-                                        </div>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                                    <span className="sr-only">Open menu</span>
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                <DropdownMenuItem onClick={() => onEdit(event)}>
+                                                    Edit
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                                                    onClick={() => onRemove(event.id)}
+                                                >
+                                                    Remove
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </TableCell>
                                 </TableRow>
                             )) : (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="h-24 text-center">
+                                    <TableCell colSpan={5} className="h-24 text-center">
                                         No results found.
                                     </TableCell>
                                 </TableRow>

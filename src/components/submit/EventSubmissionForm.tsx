@@ -4,8 +4,8 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { useState, useTransition, useEffect, useRef } from 'react';
-import { Wand2, X, Loader2, CalendarIcon, ImageUp } from 'lucide-react';
+import { useState, useTransition, useEffect } from 'react';
+import { Wand2, X, Loader2, CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { Button } from '@/components/ui/button';
@@ -25,14 +25,12 @@ import { getTagSuggestions } from '@/lib/actions';
 import { Badge } from '../ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/use-language';
-import { auth, db, storage } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { addDoc, collection, doc, getDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
 import { cn } from '@/lib/utils';
-import Image from 'next/image';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 const formSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters long.'),
@@ -42,7 +40,6 @@ const formSchema = z.object({
   summary: z.string().min(20, 'Summary needs to be at least 20 characters.'),
   readMoreUrl: z.string().url('Please enter a valid URL.').optional().or(z.literal('')),
   tags: z.array(z.string()).min(1, 'At least one tag is required.'),
-  imageFile: z.instanceof(File, { message: 'An image is required.' }).refine(file => file.size > 0, 'An image is required.'),
 });
 
 export function EventSubmissionForm() {
@@ -53,8 +50,6 @@ export function EventSubmissionForm() {
   const { t } = useLanguage();
   const [user, setUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -135,18 +130,9 @@ export function EventSubmissionForm() {
     const status = canPublishDirectly ? 'approved' : 'pending';
 
     try {
-      // 1. Upload image
-      const imageRef = ref(storage, `images/events/${Date.now()}-${values.imageFile.name}`);
-      const uploadResult = await uploadBytes(imageRef, values.imageFile);
-      const imageUrl = await getDownloadURL(uploadResult.ref);
-
-      const { imageFile, ...restOfValues } = values;
-
       const dataToSave: any = {
-        ...restOfValues,
+        ...values,
         status: status,
-        imageUrl,
-        imageStoragePath: imageRef.fullPath,
       };
 
       if (canPublishDirectly) {
@@ -165,8 +151,6 @@ export function EventSubmissionForm() {
         description: canPublishDirectly ? "The event is now live on the calendar." : "Your event is now pending review.",
       });
       form.reset();
-      setImagePreview(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
       setSuggestedTags([]);
     } catch (error) {
       console.error("Error submitting event:", error);
@@ -264,42 +248,6 @@ export function EventSubmissionForm() {
                 </FormItem>
               )}
             />
-
-            <FormField
-              control={form.control}
-              name="imageFile"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Event Image</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      ref={fileInputRef}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          field.onChange(file);
-                          setImagePreview(URL.createObjectURL(file));
-                        }
-                      }}
-                    />
-                  </FormControl>
-                  {imagePreview && (
-                    <div className="relative mt-2 h-48 w-full">
-                      <Image
-                        src={imagePreview}
-                        alt="Event image preview"
-                        fill
-                        className="object-cover rounded-md"
-                      />
-                    </div>
-                  )}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             <FormField
               control={form.control}
               name="readMoreUrl"
