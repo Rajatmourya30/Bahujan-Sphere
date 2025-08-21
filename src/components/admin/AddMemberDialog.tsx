@@ -71,6 +71,7 @@ export function AddMemberDialog({ onOpenChange, onSave }: AddMemberDialogProps) 
   const onSubmit = async (values: FormValues) => {
     setIsLoading(true);
     try {
+      // Step 1: Create the user in Firebase Auth via the Cloud Function
       const result: any = await createTeamUser({ email: values.email, password: values.password });
       const { uid } = result.data;
 
@@ -78,6 +79,7 @@ export function AddMemberDialog({ onOpenChange, onSave }: AddMemberDialogProps) 
           throw new Error('Failed to create user: UID was not returned.');
       }
 
+      // Step 2: Call the onSave prop to handle Firestore and custom claims
       await onSave({
         name: values.name,
         email: values.email,
@@ -88,7 +90,7 @@ export function AddMemberDialog({ onOpenChange, onSave }: AddMemberDialogProps) 
       console.error("Error creating user:", error);
       toast({
         title: 'User Creation Failed',
-        description: error.message || "An unexpected error occurred.",
+        description: error.message || "An unexpected error occurred. This could be due to an existing email or a server-side issue.",
         variant: 'destructive',
       });
     } finally {

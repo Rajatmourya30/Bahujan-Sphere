@@ -10,7 +10,7 @@ import { TeamMemberTable } from '@/components/admin/TeamMemberTable';
 import { AddMemberDialog } from '@/components/admin/AddMemberDialog';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { NewTeamMember, TeamMember, TeamMemberWithId } from '@/lib/team';
 import { httpsCallable } from 'firebase/functions';
@@ -73,6 +73,11 @@ export default function TeamManagementPage() {
   };
 
   const handleRemoveMember = async (member: TeamMemberWithId) => {
+    if (member.email === user?.email) {
+      toast({ title: 'Action Denied', description: 'You cannot remove yourself.', variant: 'destructive' });
+      return;
+    }
+
     const memberDocRef = doc(db, 'teamMembers', member.id);
     try {
       await deleteDoc(memberDocRef);
@@ -86,22 +91,25 @@ export default function TeamManagementPage() {
 
  const handleAddMember = async (newMember: NewTeamMember, uid: string) => {
     try {
-      // Use the user's UID as the document ID
+      // Step 1: Create the team member document in Firestore.
+      // Use the user's UID from Auth as the document ID for easy mapping.
       await setDoc(doc(db, 'teamMembers', uid), {
         ...newMember,
         joinedAt: serverTimestamp(),
       });
       
+      // Step 2: Set a custom claim if the user is an Admin.
+      // This is crucial for securing Firebase Functions and rules.
       const isAdmin = newMember.role === 'Admin';
       await setAdminClaim({ email: newMember.email, admin: isAdmin });
 
       toast({ title: 'Success', description: `New team member added. Admin claim set to: ${isAdmin}` });
-      setIsAddDialogOpen(false);
+      setIsAddDialogOpen(false); // Close the dialog on success
     } catch (error) {
-      console.error("Error adding member to Firestore:", error);
+      console.error("Error adding member to Firestore or setting claim:", error);
       toast({ 
           title: 'Error Saving Member Details', 
-          description: 'The user login was created, but their details could not be saved to the database.', 
+          description: 'The user login was created, but their details could not be saved to the database. Please check Firestore permissions.', 
           variant: 'destructive' 
       });
     }
