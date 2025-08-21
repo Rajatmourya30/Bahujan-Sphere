@@ -2,53 +2,31 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-
-    // Helper function to get the user's role from Firestore.
-    // Assumes a 'teamMembers' collection where the document ID is the user's UID.
-    function getRole() {
-      return get(/databases/(default)/documents/teamMembers/$(request.auth.uid)).data.role;
-    }
-
-    // --- READ ACCESS (Secure) ---
-    // CRITICAL FIX: Restrict read access based on content approval status
-    // This is a fallback rule - specific folder rules below take precedence
+    // Default to denying all access unless explicitly allowed
     match /{allPaths=**} {
-      allow read: if false; // Deny by default, specific rules below handle access
+      allow read, write: if false;
     }
 
-    // --- WRITE ACCESS (Specific Folders) ---
-
-    // 1. Profile Pictures: Allow authenticated users to upload their *own* profile picture.
-    // The folder path MUST be their UID.
-    match /profilePictures/{userId}/{fileName} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    // Allow public read access for essential image and content folders
+    match /images/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null; // Allow writes for authenticated users
     }
 
-    // 2. Content Uploads (PDFs, Covers, Logos, etc.):
-    // Allow users with a role in the teamMembers collection to write to these folders.
-    function isTeamMember() {
-      return getRole() in ['Admin', 'Manager', 'Editor', 'Reviewer', 'Contributor'];
+    match /bookCovers/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
     }
 
-    match /pdfs/{fileName} {
-      allow read: if request.auth != null && isTeamMember();
-      allow write: if request.auth != null && isTeamMember();
+    match /pdfs/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
     }
-    match /bookCovers/{fileName} {
-      allow read: if request.auth != null && isTeamMember();
-      allow write: if request.auth != null && isTeamMember();
-    }
-    match /images/books/{fileName} {
-      allow read: if request.auth != null && isTeamMember();
-      allow write: if request.auth != null && isTeamMember();
-    }
-    match /images/logos/{fileName} {
-      allow read: if request.auth != null && isTeamMember();
-      allow write: if request.auth != null && isTeamMember();
-    }
-    match /images/stores/{fileName} {
-      allow read: if request.auth != null && isTeamMember();
-      allow write: if request.auth != null && isTeamMember();
+
+    // Users can read all profile pictures, but can only write to their own directory
+    match /profilePictures/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
