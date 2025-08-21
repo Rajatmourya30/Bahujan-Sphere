@@ -58,9 +58,17 @@ export default function ProfilePage() {
           setUserProfile(profileData);
           setPhotoPreview(profileData.photoUrl || null);
         } else {
-            // If the profile doesn't exist, we should still stop loading
-            // and maybe handle this case explicitly, e.g., by showing a message.
-            setUserProfile(null); 
+            // If the profile doesn't exist, create a default one from auth data
+            setUserProfile({
+                email: user.email || 'No email found',
+                name: user.displayName || user.email?.split('@')[0] || 'User',
+                country: '',
+                state: '',
+                city: '',
+                birthYear: 0,
+                photoUrl: user.photoURL || '',
+            });
+            setPhotoPreview(user.photoURL || null);
         }
         setIsLoading(false);
       } else {
@@ -144,7 +152,7 @@ export default function ProfilePage() {
   };
 
 
-  if (isLoading) {
+  if (isLoading || !userProfile) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="md:col-span-1">
@@ -155,26 +163,6 @@ export default function ProfilePage() {
                 <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-10 w-full" />
             </div>
-        </div>
-    );
-  }
-  
-  if (!userProfile) {
-    return (
-        <div className="flex flex-col items-center justify-center text-center py-16">
-            <Card className="w-full max-w-md">
-                <CardHeader>
-                    <CardTitle>Profile Not Found</CardTitle>
-                    <CardDescription>We couldn't load your profile data. This might happen if your account setup is incomplete.</CardDescription>
-                </CardHeader>
-                <CardFooter className="flex-col gap-4">
-                     <Button onClick={handleLogout} variant="outline" className="w-full">
-                        <LogOut className="mr-2 h-4 w-4" />
-                        Logout
-                    </Button>
-                    <p className="text-xs text-muted-foreground">Please try logging out and back in, or contact support if the problem persists.</p>
-                </CardFooter>
-            </Card>
         </div>
     );
   }
@@ -222,19 +210,19 @@ export default function ProfilePage() {
                         <div className="space-y-4">
                              <div>
                                 <p className="font-medium text-muted-foreground">{t('profile_page.city')}</p>
-                                <p>{userProfile.city}</p>
+                                <p>{userProfile.city || 'Not specified'}</p>
                             </div>
                              <div>
                                 <p className="font-medium text-muted-foreground">{t('profile_page.state')}</p>
-                                <p>{userProfile.state}</p>
+                                <p>{userProfile.state || 'Not specified'}</p>
                             </div>
                             <div>
                                 <p className="font-medium text-muted-foreground">{t('profile_page.country')}</p>
-                                <p>{userProfile.country}</p>
+                                <p>{userProfile.country || 'Not specified'}</p>
                             </div>
                              <div>
                                 <p className="font-medium text-muted-foreground">{t('profile_page.birth_year')}</p>
-                                <p>{userProfile.birthYear}</p>
+                                <p>{userProfile.birthYear || 'Not specified'}</p>
                             </div>
                         </div>
                     </CardContent>
