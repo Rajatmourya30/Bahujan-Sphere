@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { KnowledgeHubSubmissionForm } from '@/components/admin/submissions/KnowledgeHubSubmissionForm';
 import { ReviewKnowledgeHubSubmissionsTab } from '@/components/admin/review/ReviewKnowledgeHubSubmissionsTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { KnowledgeHubBulkUpload } from '@/components/admin/submissions/KnowledgeHubBulkUpload';
 
 export default function ManageKnowledgeHubPage() {
   const router = useRouter();
@@ -45,12 +46,16 @@ export default function ManageKnowledgeHubPage() {
       </header>
 
       <Tabs defaultValue="submit">
-        <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="submit">Submit New Organization</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="submit">Submit Single</TabsTrigger>
+            <TabsTrigger value="bulk-upload">Bulk Upload</TabsTrigger>
             <TabsTrigger value="review">Review Submissions</TabsTrigger>
         </TabsList>
         <TabsContent value="submit" className="mt-6">
             <KnowledgeHubSubmissionForm />
+        </TabsContent>
+        <TabsContent value="bulk-upload" className="mt-6">
+            <KnowledgeHubBulkUpload />
         </TabsContent>
          <TabsContent value="review" className="mt-6">
             <ReviewKnowledgeHubSubmissionsTab currentUser={user} />
