@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { StoreSubmissionForm } from '@/components/admin/submissions/StoreSubmissionForm';
 import { ReviewStoreSubmissionsTab } from '@/components/admin/review/ReviewStoreSubmissionsTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { StoreBulkUpload } from '@/components/admin/submissions/StoreBulkUpload';
 
 export default function ManageStorePage() {
   const router = useRouter();
@@ -45,12 +46,16 @@ export default function ManageStorePage() {
       </header>
 
        <Tabs defaultValue="submit">
-        <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="submit">Submit New Store</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="submit">Submit Single</TabsTrigger>
+            <TabsTrigger value="bulk-upload">Bulk Upload</TabsTrigger>
             <TabsTrigger value="review">Review Submissions</TabsTrigger>
         </TabsList>
         <TabsContent value="submit" className="mt-6">
             <StoreSubmissionForm />
+        </TabsContent>
+        <TabsContent value="bulk-upload" className="mt-6">
+            <StoreBulkUpload />
         </TabsContent>
          <TabsContent value="review" className="mt-6">
             <ReviewStoreSubmissionsTab currentUser={user} />
