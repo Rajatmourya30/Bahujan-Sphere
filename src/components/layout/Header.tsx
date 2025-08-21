@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { User, Bookmark } from 'lucide-react';
+import { User, Bookmark, LogIn } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/hooks/use-language';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -65,8 +65,8 @@ export function Header() {
                     </Button>
                 </>
             ) : (
-                <Button asChild>
-                    <Link href="/login">Sign In</Link>
+                <Button asChild variant="ghost" size="icon" aria-label="Sign In">
+                    <Link href="/login"><LogIn /></Link>
                 </Button>
             )}
         </div>
