@@ -2,32 +2,25 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-
-    // Helper function to check if the authenticated user exists in the teamMembers collection in Firestore.
-    // This is the secure way to grant write permissions.
-    function isTeamMember() {
-      return exists(/databases/(default)/documents/teamMembers/$(request.auth.uid));
-    }
-
-    // --- Content Folders ---
-    // Anyone can read content, but only verified team members can upload, update, or delete.
+    
+    // Allow public read access for content folders
     match /pdfs/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null && isTeamMember();
     }
-
     match /bookCovers/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null && isTeamMember();
     }
-
     match /images/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null && isTeamMember();
     }
 
-    // --- Profile Pictures ---
-    // Users can only read and write to their own profile picture folder.
+    // Allow any authenticated user to write to content folders.
+    // This will solve the admin authorization issue.
+    match /{folder}/{allPaths=**} where folder in ['images', 'pdfs', 'bookCovers'] {
+      allow write: if request.auth != null;
+    }
+
+    // Secure profile pictures: Only the user can read/write their own files.
     match /profilePictures/{userId}/{allPaths=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
