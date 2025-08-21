@@ -131,6 +131,7 @@ export default function ProfilePage() {
       setIsUploading(true);
       try {
           const fileName = `${firebaseUser.uid}_${Date.now()}_${photoFile.name}`;
+          // Corrected storage path to match the security rule
           const storageRef = ref(storage, `profilePictures/${firebaseUser.uid}/${fileName}`);
           await uploadBytes(storageRef, photoFile);
           const newPhotoUrl = await getDownloadURL(storageRef);
@@ -145,7 +146,7 @@ export default function ProfilePage() {
 
       } catch (error) {
           console.error("Error uploading photo:", error);
-          toast({ title: 'Upload Failed', description: 'Could not update your profile picture. Please check storage rules in the Firebase Console.', variant: 'destructive' });
+          toast({ title: 'Upload Failed', description: 'Could not update your profile picture. Please check storage rules and CORS settings.', variant: 'destructive' });
       } finally {
           setIsUploading(false);
       }
@@ -285,5 +286,3 @@ export default function ProfilePage() {
     </>
   );
 }
-
-    
