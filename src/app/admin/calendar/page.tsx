@@ -11,13 +11,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EventSubmissionForm } from '@/components/submit/EventSubmissionForm';
 import { BulkUploadForm } from '@/components/submit/BulkUploadForm';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
+import { auth, db, storage } from '@/lib/firebase';
 import { ReviewSubmissionsTab } from '@/components/admin/ReviewSubmissionsTab';
 import { collection, onSnapshot, query, where, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { isValid } from 'date-fns';
 import { parseDate } from '@/lib/date-parser';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 
 export default function ManageCalendarPage() {
@@ -74,16 +75,28 @@ export default function ManageCalendarPage() {
     setIsDialogOpen(true);
   };
 
-  const handleSave = async (eventData: Omit<CalendarEvent, 'id'>) => {
+  const handleSave = async (eventData: Omit<CalendarEvent, 'id'>, newImageFile?: File) => {
     if (!firebaseUser) {
         toast({ title: "Authentication Error", description: "You must be logged in to save.", variant: "destructive" });
         return;
     }
 
     try {
+        let imageUrl = editingEvent?.imageUrl || '';
+        let imageStoragePath = editingEvent?.imageStoragePath || '';
+
+        if (newImageFile) {
+            const imageRef = ref(storage, `images/events/${Date.now()}-${newImageFile.name}`);
+            await uploadBytes(imageRef, newImageFile);
+            imageUrl = await getDownloadURL(imageRef);
+            imageStoragePath = imageRef.fullPath;
+        }
+
         const dataToSave = {
             ...eventData,
-            date: Timestamp.fromDate(eventData.date),
+            date: Timestamp.fromDate(eventData.date as Date),
+            imageUrl,
+            imageStoragePath,
         };
 
         if (editingEvent) {
