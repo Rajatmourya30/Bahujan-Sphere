@@ -14,7 +14,7 @@ import Link from 'next/link';
 import { BookmarkX, Globe } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -204,17 +204,14 @@ export default function BookmarksPage() {
 
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
   
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-        if (!user) {
-            router.replace('/login');
-            return;
-        }
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+        setUser(currentUser); // Set user, can be null
+        setIsLoading(true);
 
         const fetchData = async () => {
-            setIsLoading(true);
-
             // Fetch all items from all collections
             const eventsQuery = query(collection(db, 'calendarEvents'), where('status', '==', 'approved'));
             const storesQuery = query(collection(db, 'stores'), where('status', '==', 'approved'));
@@ -262,6 +259,28 @@ export default function BookmarksPage() {
         </div>
       </div>
     );
+  }
+  
+  if (!user) {
+    return (
+        <div className="space-y-8">
+             <header>
+                <h1 className="font-headline text-4xl font-bold">{t('bookmarks_page.title')}</h1>
+                <p className="mt-2 text-lg text-muted-foreground">
+                    {t('bookmarks_page.description')}
+                </p>
+            </header>
+             <Card className="text-center py-16">
+                <CardContent>
+                    <h3 className="text-lg font-medium">Please Log In</h3>
+                    <p className="text-muted-foreground mt-2">Log in to see your bookmarked items.</p>
+                    <Button asChild className="mt-4">
+                        <Link href="/login">Log In</Link>
+                    </Button>
+                </CardContent>
+            </Card>
+        </div>
+    )
   }
 
   return (
