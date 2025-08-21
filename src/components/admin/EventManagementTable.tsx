@@ -193,7 +193,7 @@ export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventM
                                                 <Edit className="mr-2 h-4 w-4"/>
                                                 Edit
                                             </Button>
-                                            <Button variant="outline" size="sm" onClick={() => onRemove(event.id)} className="text-destructive hover:bg-destructive/10 hover:text-destructive-foreground">
+                                            <Button variant="outline" size="sm" onClick={() => onRemove(event.id)}>
                                                 <Trash2 className="mr-2 h-4 w-4"/>
                                                 Remove
                                             </Button>
