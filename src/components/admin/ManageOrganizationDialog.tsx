@@ -27,11 +27,14 @@ import type { KnowledgeOrganization } from '@/lib/knowledge-hub';
 import { useState, useRef } from 'react';
 import Image from 'next/image';
 import { UploadCloud } from 'lucide-react';
+import { KNOWLEDGE_HUB_CATEGORIES } from '@/lib/categories';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 const formSchema = z.object({
-  nameKey: z.string().min(1, 'Key is required'),
-  descriptionKey: z.string().min(1, 'Key is required'),
+  name: z.string().min(1, 'Name is required'),
+  description: z.string().min(1, 'Description is required'),
   websiteUrl: z.string().url('Must be a valid URL'),
+  categoryKey: z.string().min(1, 'Category is required'),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -39,7 +42,7 @@ type FormValues = z.infer<typeof formSchema>;
 interface ManageOrganizationDialogProps {
   organization: KnowledgeOrganization | null;
   onOpenChange: (open: boolean) => void;
-  onSave: (data: Omit<KnowledgeOrganization, 'id' | 'logoUrl'>, newImageFile?: File) => void;
+  onSave: (data: Omit<KnowledgeOrganization, 'id' | 'logoUrl' | 'nameKey' | 'descriptionKey'>, newImageFile?: File) => void;
 }
 
 export function ManageOrganizationDialog({ organization, onOpenChange, onSave }: ManageOrganizationDialogProps) {
@@ -50,9 +53,10 @@ export function ManageOrganizationDialog({ organization, onOpenChange, onSave }:
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      nameKey: organization?.nameKey || '',
-      descriptionKey: organization?.descriptionKey || '',
+      name: organization?.name || '',
+      description: organization?.description || '',
       websiteUrl: organization?.websiteUrl || '',
+      categoryKey: organization?.categoryKey || '',
     },
   });
 
@@ -69,7 +73,12 @@ export function ManageOrganizationDialog({ organization, onOpenChange, onSave }:
   };
 
   const onSubmit = (values: FormValues) => {
-    onSave(values, imageFile || undefined);
+    const selectedCategory = KNOWLEDGE_HUB_CATEGORIES.find(c => c.key === values.categoryKey);
+    const data = {
+        ...values,
+        category: selectedCategory ? selectedCategory.label : values.categoryKey,
+    }
+    onSave(data, imageFile || undefined);
     onOpenChange(false);
   };
 
@@ -83,15 +92,15 @@ export function ManageOrganizationDialog({ organization, onOpenChange, onSave }:
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
             <FormField
               control={form.control}
-              name="nameKey"
+              name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name Key</FormLabel>
+                  <FormLabel>Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. org_1_name" {...field} />
+                    <Input placeholder="e.g. Ambedkar Institute" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -99,13 +108,37 @@ export function ManageOrganizationDialog({ organization, onOpenChange, onSave }:
             />
             <FormField
               control={form.control}
-              name="descriptionKey"
+              name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description Key</FormLabel>
+                  <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="e.g. org_1_desc" {...field} />
+                    <Textarea placeholder="e.g. A brief description of the organization." {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="categoryKey"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Category</FormLabel>
+                   <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {KNOWLEDGE_HUB_CATEGORIES.map((category) => (
+                        <SelectItem key={category.key} value={category.key}>
+                          {category.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

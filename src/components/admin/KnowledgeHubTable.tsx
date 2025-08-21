@@ -14,8 +14,8 @@ import { MoreHorizontal } from "lucide-react";
 import { Button } from "../ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import Image from "next/image";
-import { useLanguage } from "@/hooks/use-language";
 import type { KnowledgeOrganization } from "@/lib/knowledge-hub";
+import { Badge } from "../ui/badge";
 
 interface KnowledgeHubTableProps {
     organizations: KnowledgeOrganization[];
@@ -24,8 +24,6 @@ interface KnowledgeHubTableProps {
 }
 
 export function KnowledgeHubTable({ organizations, onEdit, onRemove }: KnowledgeHubTableProps) {
-    const { t } = useLanguage();
-
     return (
         <Card>
             <CardContent className="p-0">
@@ -33,7 +31,7 @@ export function KnowledgeHubTable({ organizations, onEdit, onRemove }: Knowledge
                     <TableHeader>
                         <TableRow>
                             <TableHead>Organization</TableHead>
-                            <TableHead>Description</TableHead>
+                            <TableHead>Category</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -45,19 +43,17 @@ export function KnowledgeHubTable({ organizations, onEdit, onRemove }: Knowledge
                                         <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-md border">
                                             <Image
                                                 src={org.logoUrl}
-                                                alt={t(org.nameKey)}
+                                                alt={org.name}
                                                 fill
                                                 className="object-contain p-1"
                                                 data-ai-hint={org.imageAiHint}
                                             />
                                         </div>
-                                        <span className="font-bold">{t(org.nameKey)}</span>
+                                        <span className="font-bold">{org.name}</span>
                                     </div>
                                 </TableCell>
-                                <TableCell className="max-w-md">
-                                    <p className="text-sm text-muted-foreground truncate">
-                                        {t(org.descriptionKey)}
-                                    </p>
+                                <TableCell>
+                                    <Badge variant="outline">{org.category}</Badge>
                                 </TableCell>
                                 <TableCell className="text-right">
                                     <DropdownMenu>
