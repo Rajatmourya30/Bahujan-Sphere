@@ -84,7 +84,7 @@ export function ManageEventDialog({ event, onOpenChange, onSave }: ManageEventDi
 
   const onSubmit = (values: FormValues) => {
     // We remove `imageFile` from the data being saved to Firestore
-    const { imageFile, ...eventData } = values;
+    const { imageFile: formImageFile, ...eventData } = values;
     onSave(eventData as Omit<CalendarEvent, 'id'>, imageFile || undefined);
     onOpenChange(false);
   };
