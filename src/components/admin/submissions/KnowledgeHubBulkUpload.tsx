@@ -79,6 +79,7 @@ export function KnowledgeHubBulkUpload() {
         const json: any[] = XLSX.utils.sheet_to_json(worksheet);
         
         const validCategoryKeys = new Set(KNOWLEDGE_HUB_CATEGORIES.map(c => c.key));
+        const categoryLabelToKeyMap = new Map(KNOWLEDGE_HUB_CATEGORIES.map(c => [c.label.toLowerCase(), c.key]));
 
         const parsedOrgs: StagedOrganization[] = json.map((row, index) => {
             const lowerCaseRow: { [key: string]: any } = {};
@@ -91,15 +92,22 @@ export function KnowledgeHubBulkUpload() {
             if (!namekey || !descriptionkey || !categorykey || !websiteurl) {
                 throw new Error(`Row ${index + 2}: Each row must have nameKey, descriptionKey, categoryKey, and websiteUrl.`);
             }
-
-            if (!validCategoryKeys.has(String(categorykey))) {
-                throw new Error(`Row ${index + 2}: Invalid categoryKey "${categorykey}". Please use a valid key from the template.`);
+            
+            let finalCategoryKey = String(categorykey);
+            if (!validCategoryKeys.has(finalCategoryKey)) {
+                const keyFromLabel = categoryLabelToKeyMap.get(finalCategoryKey.toLowerCase());
+                if (keyFromLabel) {
+                    finalCategoryKey = keyFromLabel;
+                } else {
+                    throw new Error(`Row ${index + 2}: Invalid categoryKey "${categorykey}". Please use a valid key or label from the template.`);
+                }
             }
+
 
             return {
                 nameKey: String(namekey),
                 descriptionKey: String(descriptionkey),
-                categoryKey: String(categorykey),
+                categoryKey: finalCategoryKey,
                 websiteUrl: String(websiteurl),
             };
         });
