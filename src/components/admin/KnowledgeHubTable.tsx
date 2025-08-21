@@ -10,7 +10,7 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import { Card, CardContent } from "@/components/ui/card";
-import { MoreHorizontal } from "lucide-react";
+import { Edit, MoreHorizontal, Trash2 } from "lucide-react";
 import { Button } from "../ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import Image from "next/image";
@@ -56,26 +56,16 @@ export function KnowledgeHubTable({ organizations, onEdit, onRemove }: Knowledge
                                     <Badge variant="outline">{org.category}</Badge>
                                 </TableCell>
                                 <TableCell className="text-right">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                                <span className="sr-only">Open menu</span>
-                                                <MoreHorizontal className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                            <DropdownMenuItem onClick={() => onEdit(org)}>
-                                                Edit
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                                className="text-destructive focus:text-destructive focus:bg-destructive/10"
-                                                onClick={() => onRemove(org.id)}
-                                            >
-                                                Remove
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
+                                     <div className="flex gap-2 justify-end">
+                                        <Button variant="outline" size="sm" onClick={() => onEdit(org)}>
+                                            <Edit className="mr-2 h-4 w-4" />
+                                            Edit
+                                        </Button>
+                                        <Button variant="destructive" size="sm" onClick={() => onRemove(org.id)}>
+                                            <Trash2 className="mr-2 h-4 w-4" />
+                                            Remove
+                                        </Button>
+                                    </div>
                                 </TableCell>
                             </TableRow>
                         ))}
