@@ -27,7 +27,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import type { CalendarEvent } from '@/lib/events';
-import type { TranslationKey } from '@/lib/i18n/translations';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
 import { cn } from '@/lib/utils';
@@ -42,7 +41,6 @@ const formSchema = z.object({
   date: z.date({
     required_error: "A date is required.",
   }),
-  imageFile: z.instanceof(File).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -83,9 +81,8 @@ export function ManageEventDialog({ event, onOpenChange, onSave }: ManageEventDi
 
 
   const onSubmit = (values: FormValues) => {
-    // We remove `imageFile` from the data being saved to Firestore
-    const { imageFile: formImageFile, ...eventData } = values;
-    onSave(eventData as Omit<CalendarEvent, 'id'>, imageFile || undefined);
+    const eventData = values as Omit<CalendarEvent, 'id'>;
+    onSave(eventData, imageFile || undefined);
     onOpenChange(false);
   };
 
@@ -165,45 +162,35 @@ export function ManageEventDialog({ event, onOpenChange, onSave }: ManageEventDi
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="imageFile"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Event Image</FormLabel>
-                  <FormControl>
-                     <Input
-                        type="file"
-                        accept="image/*"
-                        ref={fileInputRef}
-                        className="hidden"
-                        onChange={(e) => {
-                           const file = e.target.files?.[0];
-                           if(file) {
-                               field.onChange(file);
-                               handleImageChange(e);
-                           }
-                        }}
-                      />
-                  </FormControl>
-                  <div className="flex items-center gap-4">
-                    <div className="relative h-24 w-24 flex-shrink-0">
-                      <Image
-                        src={imagePreview || 'https://placehold.co/400x400.png'}
-                        alt="Event image preview"
-                        fill
-                        className="object-cover rounded-md"
-                      />
-                    </div>
-                    <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
-                      <ImageUp className="mr-2 h-4 w-4" />
-                      Change Image
-                    </Button>
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <FormItem>
+              <FormLabel>Event Image</FormLabel>
+              <div className="flex items-center gap-4">
+                <div className="relative h-24 w-24 flex-shrink-0">
+                  <Image
+                    src={imagePreview || 'https://placehold.co/400x400.png'}
+                    alt="Event image preview"
+                    fill
+                    className="object-cover rounded-md"
+                  />
+                </div>
+                <div className="flex-grow">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    ref={fileInputRef}
+                    className="hidden"
+                    onChange={handleImageChange}
+                  />
+                  <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                    <ImageUp className="mr-2 h-4 w-4" />
+                    Change Image
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Upload a new image to replace the current one.
+                  </p>
+                </div>
+              </div>
+            </FormItem>
 
             <FormField
               control={form.control}
