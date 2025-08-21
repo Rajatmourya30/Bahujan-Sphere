@@ -13,6 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useLanguage } from '@/hooks/use-language';
 import type { CalendarEvent } from '@/lib/events';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface EventDetailModalProps {
   event: CalendarEvent;
@@ -33,9 +34,22 @@ export function EventDetailModal({ event, isOpen, onClose }: EventDetailModalPro
         <DialogHeader>
           <DialogTitle className="font-headline text-2xl">{title}</DialogTitle>
         </DialogHeader>
-        <ScrollArea className="max-h-[50vh] pr-4">
-          <p className="text-muted-foreground">{description}</p>
-        </ScrollArea>
+        <div className="grid gap-4">
+            {event.imageUrl && (
+                <div className="relative h-48 w-full">
+                    <Image
+                        src={event.imageUrl}
+                        alt={title}
+                        fill
+                        className="object-cover rounded-md"
+                        data-ai-hint={event.imageAiHint}
+                    />
+                </div>
+            )}
+            <ScrollArea className="max-h-[40vh] pr-4">
+            <p className="text-muted-foreground">{description}</p>
+            </ScrollArea>
+        </div>
         
         {/* Placeholder for banner ad */}
         <div className="my-4 flex h-24 items-center justify-center rounded-md border-2 border-dashed bg-muted/50">

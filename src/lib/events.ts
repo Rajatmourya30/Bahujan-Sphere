@@ -9,6 +9,9 @@ export interface CalendarEvent {
   tags: string[];
   summary: string;
   readMoreUrl?: string;
+  imageUrl?: string;
+  imageStoragePath?: string;
+  imageAiHint?: string;
   // Legacy fields for i18n, can be phased out
   titleKey?: TranslationKey;
   tagKeys?: TranslationKey[];

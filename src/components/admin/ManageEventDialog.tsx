@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from "date-fns"
-import { CalendarIcon } from "lucide-react"
+import { CalendarIcon, ImageUp } from "lucide-react"
 
 import {
   Dialog,
@@ -31,15 +31,18 @@ import type { TranslationKey } from '@/lib/i18n/translations';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
 import { cn } from '@/lib/utils';
+import { useState, useRef } from 'react';
+import Image from 'next/image';
 
 const formSchema = z.object({
-  titleKey: z.string().min(1, 'Key is required') as z.ZodType<TranslationKey>,
-  descriptionKey: z.string().min(1, 'Key is required') as z.ZodType<TranslationKey>,
-  tagKeys: z.string().min(1, 'At least one tag key is required').transform(val => val.split(',').map(s => s.trim()) as TranslationKey[]),
-  readMoreUrl: z.string().url('Must be a valid URL'),
+  title: z.string().min(1, 'Title is required'),
+  summary: z.string().min(1, 'Summary is required'),
+  tags: z.string().min(1, 'At least one tag is required').transform(val => val.split(',').map(s => s.trim())),
+  readMoreUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   date: z.date({
     required_error: "A date is required.",
   }),
+  imageFile: z.instanceof(File).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -47,23 +50,42 @@ type FormValues = z.infer<typeof formSchema>;
 interface ManageEventDialogProps {
   event: CalendarEvent | null;
   onOpenChange: (open: boolean) => void;
-  onSave: (data: Omit<CalendarEvent, 'id'>) => void;
+  onSave: (data: Omit<CalendarEvent, 'id'>, newImageFile?: File) => void;
 }
 
 export function ManageEventDialog({ event, onOpenChange, onSave }: ManageEventDialogProps) {
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(event?.imageUrl || null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      titleKey: event?.titleKey || '',
-      descriptionKey: event?.descriptionKey || '',
-      tagKeys: event?.tagKeys || [],
+      title: event?.title || '',
+      summary: event?.summary || '',
+      tags: event?.tags || [],
       readMoreUrl: event?.readMoreUrl || '',
-      date: event?.date || undefined,
+      date: event?.date ? new Date(event.date as any) : undefined,
     },
   });
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+
   const onSubmit = (values: FormValues) => {
-    onSave(values);
+    // We remove `imageFile` from the data being saved to Firestore
+    const { imageFile, ...eventData } = values;
+    onSave(eventData as Omit<CalendarEvent, 'id'>, imageFile || undefined);
     onOpenChange(false);
   };
 
@@ -73,19 +95,19 @@ export function ManageEventDialog({ event, onOpenChange, onSave }: ManageEventDi
         <DialogHeader>
           <DialogTitle>{event ? 'Edit Event' : 'Add New Event'}</DialogTitle>
           <DialogDescription>
-            Fill in the details for the calendar event. These are translation keys.
+            Fill in the details for the calendar event.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
             <FormField
               control={form.control}
-              name="titleKey"
+              name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Title Key</FormLabel>
+                  <FormLabel>Title</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. event_ambedkar_birth_title" {...field} />
+                    <Input placeholder="e.g. Birth of Dr. B. R. Ambedkar" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -121,9 +143,6 @@ export function ManageEventDialog({ event, onOpenChange, onSave }: ManageEventDi
                         mode="single"
                         selected={field.value}
                         onSelect={field.onChange}
-                        disabled={(date) =>
-                          date > new Date() || date < new Date("1900-01-01")
-                        }
                         initialFocus
                       />
                     </PopoverContent>
@@ -134,29 +153,69 @@ export function ManageEventDialog({ event, onOpenChange, onSave }: ManageEventDi
             />
             <FormField
               control={form.control}
-              name="descriptionKey"
+              name="summary"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description Key</FormLabel>
+                  <FormLabel>Summary</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="e.g. event_ambedkar_birth_desc" {...field} />
+                    <Textarea placeholder="e.g. A short summary of the event's significance" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
-              name="tagKeys"
+              name="imageFile"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Tag Keys</FormLabel>
+                  <FormLabel>Event Image</FormLabel>
+                  <FormControl>
+                     <Input
+                        type="file"
+                        accept="image/*"
+                        ref={fileInputRef}
+                        className="hidden"
+                        onChange={(e) => {
+                           const file = e.target.files?.[0];
+                           if(file) {
+                               field.onChange(file);
+                               handleImageChange(e);
+                           }
+                        }}
+                      />
+                  </FormControl>
+                  <div className="flex items-center gap-4">
+                    <div className="relative h-24 w-24 flex-shrink-0">
+                      <Image
+                        src={imagePreview || 'https://placehold.co/400x400.png'}
+                        alt="Event image preview"
+                        fill
+                        className="object-cover rounded-md"
+                      />
+                    </div>
+                    <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                      <ImageUp className="mr-2 h-4 w-4" />
+                      Change Image
+                    </Button>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="tags"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tags (comma-separated)</FormLabel>
                   <FormControl>
                     <Input 
-                      placeholder="e.g. tag_ambedkarite,tag_buddhist" 
+                      placeholder="e.g. Ambedkarite, Buddhist" 
                       {...field} 
-                      value={Array.isArray(field.value) ? field.value.join(', ') : field.value}
-                      onChange={(e) => field.onChange(e.target.value)}
+                      value={Array.isArray(field.value) ? field.value.join(', ') : ''}
                     />
                   </FormControl>
                   <FormMessage />
