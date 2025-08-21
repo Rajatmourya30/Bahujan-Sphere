@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { EventDetailModal } from './EventDetailModal';
 import { Separator } from '../ui/separator';
-import { isSameDay } from 'date-fns';
+import { getMonth, getDate, isSameDay } from 'date-fns';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { Skeleton } from '../ui/skeleton';
@@ -65,6 +65,11 @@ function EventDetail({ event, onReadMoreClick }: { event: CalendarEvent, onReadM
   );
 }
 
+// Helper function to check for anniversaries (same month and day)
+const isAnniversary = (eventDate: Date, selectedDate: Date) => {
+    return getMonth(eventDate) === getMonth(selectedDate) && getDate(eventDate) === getDate(selectedDate);
+}
+
 export function EventCalendar() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const { t } = useLanguage();
@@ -102,15 +107,16 @@ export function EventCalendar() {
         unsubscribeFirestore();
     };
   }, [router]);
-
-  const eventDates = useMemo(() => {
-    return allEvents.map(event => event.date);
-  }, [allEvents]);
-
+  
   const dayEvents = useMemo(() => {
     if (!date) return [];
-    return allEvents.filter(event => isSameDay(event.date, date));
+    return allEvents.filter(event => isAnniversary(event.date as Date, date));
   }, [date, allEvents]);
+  
+  const eventDates = useMemo(() => {
+    return allEvents.map(event => event.date as Date);
+  }, [allEvents]);
+
 
   if (isLoading) {
       return (
@@ -137,6 +143,7 @@ export function EventCalendar() {
                 onSelect={setDate}
                 className="p-4"
                 eventDates={eventDates}
+                isAnniversary={isAnniversary}
               />
             </Card>
         </div>

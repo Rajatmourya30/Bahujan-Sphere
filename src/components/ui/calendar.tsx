@@ -4,13 +4,13 @@
 import * as React from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { DayPicker } from "react-day-picker"
-import { isSameDay } from "date-fns"
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker> & {
   eventDates?: Date[];
+  isAnniversary?: (eventDate: Date, selectedDate: Date) => boolean;
 }
 
 function Calendar({
@@ -18,12 +18,16 @@ function Calendar({
   classNames,
   showOutsideDays = true,
   eventDates = [],
+  isAnniversary,
   ...props
 }: CalendarProps) {
 
   const modifiers = {
     ...props.modifiers,
-    event: (date: Date) => eventDates.some(eventDate => isSameDay(date, eventDate)),
+    event: (date: Date) => 
+        isAnniversary 
+        ? eventDates.some(eventDate => isAnniversary(eventDate, date))
+        : eventDates.some(eventDate => new Date(eventDate).toDateString() === date.toDateString()),
   };
 
   const modifiersClassNames = {
