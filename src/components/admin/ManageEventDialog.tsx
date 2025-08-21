@@ -63,7 +63,7 @@ export function ManageEventDialog({ event, onOpenChange, onSave }: ManageEventDi
     defaultValues: {
       title: event?.title || '',
       summary: event?.summary || '',
-      tags: event?.tags || [],
+      tags: Array.isArray(event?.tags) ? event.tags.join(', ') : '',
       readMoreUrl: event?.readMoreUrl || '',
       date: event?.date ? new Date(event.date as any) : undefined,
     },
@@ -215,7 +215,7 @@ export function ManageEventDialog({ event, onOpenChange, onSave }: ManageEventDi
                     <Input 
                       placeholder="e.g. Ambedkarite, Buddhist" 
                       {...field} 
-                      value={Array.isArray(field.value) ? field.value.join(', ') : ''}
+                      value={Array.isArray(field.value) ? field.value.join(', ') : field.value}
                     />
                   </FormControl>
                   <FormMessage />
