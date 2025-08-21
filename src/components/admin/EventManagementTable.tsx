@@ -201,7 +201,7 @@ export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventM
                                                     Edit
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem
-                                                    className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                                                    className="text-destructive"
                                                     onClick={() => onRemove(event.id)}
                                                 >
                                                     Remove
