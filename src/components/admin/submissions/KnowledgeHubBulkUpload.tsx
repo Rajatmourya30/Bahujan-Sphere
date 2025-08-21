@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -14,6 +13,7 @@ import { ScrollArea } from '../../ui/scroll-area';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { collection, doc, getDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { KNOWLEDGE_HUB_CATEGORIES } from '@/lib/categories';
 
 interface StagedOrganization {
   nameKey: string;
@@ -76,6 +76,8 @@ export function KnowledgeHubBulkUpload() {
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const json: any[] = XLSX.utils.sheet_to_json(worksheet);
+        
+        const validCategoryKeys = new Set(KNOWLEDGE_HUB_CATEGORIES.map(c => c.key));
 
         const parsedOrgs: StagedOrganization[] = json.map((row, index) => {
             const lowerCaseRow: { [key: string]: any } = {};
@@ -87,6 +89,10 @@ export function KnowledgeHubBulkUpload() {
 
             if (!namekey || !descriptionkey || !categorykey || !websiteurl) {
                 throw new Error(`Row ${index + 2}: Each row must have nameKey, descriptionKey, categoryKey, and websiteUrl.`);
+            }
+
+            if (!validCategoryKeys.has(String(categorykey))) {
+                throw new Error(`Row ${index + 2}: Invalid categoryKey "${categorykey}". Please use a valid key from the template.`);
             }
 
             return {
@@ -133,9 +139,11 @@ export function KnowledgeHubBulkUpload() {
 
         stagedOrgs.forEach(org => {
             const docRef = doc(targetCollection);
+            const categoryLabel = KNOWLEDGE_HUB_CATEGORIES.find(c => c.key === org.categoryKey)?.label || org.categoryKey;
+            
             const dataToSave: any = {
                 ...org,
-                category: org.categoryKey.split('_').pop(),
+                category: categoryLabel,
                 logoUrl: 'https://placehold.co/400x400.png', // Placeholder logo
                 logoStoragePath: '',
                 imageAiHint: 'logo placeholder',
@@ -173,14 +181,13 @@ export function KnowledgeHubBulkUpload() {
   
   const downloadTemplate = () => {
     const headers = ["nameKey", "descriptionKey", "categoryKey", "websiteUrl"];
-    const data = [
-      {
-        "nameKey": "org_sample_name",
-        "descriptionKey": "org_sample_description",
-        "categoryKey": "category_social",
-        "websiteUrl": "https://example.com",
-      }
-    ];
+    const data = KNOWLEDGE_HUB_CATEGORIES.slice(0, 1).map(cat => ({
+      nameKey: "org_sample_name",
+      descriptionKey: "org_sample_description",
+      categoryKey: cat.key,
+      websiteUrl: "https://example.com",
+    }));
+
     const worksheet = XLSX.utils.json_to_sheet(data, { header: headers });
     const csv = XLSX.utils.sheet_to_csv(worksheet);
     const dataStr = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
@@ -205,7 +212,7 @@ export function KnowledgeHubBulkUpload() {
             <Table className="h-4 w-4" />
             <AlertTitle>Instructions</AlertTitle>
             <AlertDescription>
-                The file must have columns: `nameKey`, `descriptionKey`, `categoryKey`, and `websiteUrl`. All other fields will be set to default values.
+                The file must have columns: `nameKey`, `descriptionKey`, `categoryKey`, and `websiteUrl`. The `categoryKey` must be one of the predefined values from the template.
             </AlertDescription>
             <div className="mt-4">
                 <Button variant="outline" size="sm" onClick={downloadTemplate}>

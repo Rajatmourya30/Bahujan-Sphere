@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,11 +16,13 @@ import { addDoc, collection, serverTimestamp, doc, getDoc } from 'firebase/fires
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import Image from 'next/image';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { KNOWLEDGE_HUB_CATEGORIES } from '@/lib/categories';
 
 const formSchema = z.object({
   nameKey: z.string().min(1, 'Key is required'),
   descriptionKey: z.string().min(1, 'Key is required'),
-  categoryKey: z.string().min(1, 'Category key is required'),
+  categoryKey: z.string().min(1, 'Category is required'),
   logoFile: z.instanceof(File, { message: 'A logo image is required.' }).refine(file => file.size > 0, 'A logo image is required.'),
   websiteUrl: z.string().url('Must be a valid URL'),
 });
@@ -76,6 +77,8 @@ export function KnowledgeHubSubmissionForm() {
     const canPublishDirectly = userRole === 'Admin' || userRole === 'Manager';
     const collectionName = canPublishDirectly ? 'knowledgeHub' : 'knowledgeHubSubmissions';
     const status = canPublishDirectly ? 'approved' : 'pending';
+    const selectedCategory = KNOWLEDGE_HUB_CATEGORIES.find(c => c.key === values.categoryKey);
+
 
     try {
       const imageRef = ref(storage, `images/logos/${Date.now()}-${values.logoFile.name}`);
@@ -86,7 +89,7 @@ export function KnowledgeHubSubmissionForm() {
         nameKey: values.nameKey,
         descriptionKey: values.descriptionKey,
         categoryKey: values.categoryKey,
-        category: values.categoryKey.split('_').pop(), // Simple conversion from key
+        category: selectedCategory ? selectedCategory.label : values.categoryKey,
         websiteUrl: values.websiteUrl,
         logoUrl: logoUrl,
         logoStoragePath: imageRef.fullPath,
@@ -142,13 +145,30 @@ export function KnowledgeHubSubmissionForm() {
                   <FormMessage />
                 </FormItem>
             )} />
-            <FormField control={form.control} name="categoryKey" render={({ field }) => (
+            <FormField
+              control={form.control}
+              name="categoryKey"
+              render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Category Key</FormLabel>
-                  <FormControl><Input placeholder="e.g., category_political" {...field} /></FormControl>
+                  <FormLabel>Category</FormLabel>
+                   <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {KNOWLEDGE_HUB_CATEGORIES.map((category) => (
+                        <SelectItem key={category.key} value={category.key}>
+                          {category.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
-            )} />
+              )}
+            />
             <FormField
               control={form.control}
               name="logoFile"

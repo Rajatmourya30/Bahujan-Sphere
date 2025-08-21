@@ -13,6 +13,7 @@ export interface KnowledgeOrganization {
   logoStoragePath?: string;
   websiteUrl: string;
   imageAiHint: string;
+  status?: 'approved' | 'pending' | 'rejected';
 }
 
 export interface KnowledgeArticle {
