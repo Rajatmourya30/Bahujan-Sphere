@@ -48,7 +48,8 @@ export const createTeamUser = https.onCall(async (data, context) => {
         throw new HttpsError("unauthenticated", "The function must be called while authenticated.");
     }
 
-    // Check if the caller is an admin via custom claim OR by checking the database.
+    // CRITICAL FIX: Check if the caller is an admin via EITHER a custom claim OR by checking the database.
+    // This allows the first admin to create other users even before their own custom claim has propagated.
     const isCustomClaimAdmin = context.auth.token.admin === true;
     
     const teamQuery = await db.collection("teamMembers").where("email", "==", context.auth.token.email).limit(1).get();
@@ -57,6 +58,7 @@ export const createTeamUser = https.onCall(async (data, context) => {
     if (!isCustomClaimAdmin && !isDbAdmin) {
         throw new HttpsError("permission-denied", "Only admins can create new team users.");
     }
+
 
     const { email, password, role } = data;
     if (typeof email !== "string" || typeof password !== "string" || typeof role !== 'string') {
