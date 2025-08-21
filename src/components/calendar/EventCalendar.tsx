@@ -15,17 +15,18 @@ import { useRouter } from 'next/navigation';
 import { EventDetailModal } from './EventDetailModal';
 import { Separator } from '../ui/separator';
 import { getMonth, getDate } from 'date-fns';
-import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { Skeleton } from '../ui/skeleton';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { parseDate } from '@/lib/date-parser';
 import Image from 'next/image';
+import { useAuthAction } from '@/hooks/useAuthAction';
 
 
 function EventDetail({ event, onReadMoreClick }: { event: CalendarEvent, onReadMoreClick: () => void }) {
   const { t } = useLanguage();
   const { isBookmarked, toggleBookmark } = useBookmarkStore('eventBookmarks');
+  const { performAction, AuthActionPrompt } = useAuthAction();
   
   const descriptionText = event.descriptionKey ? t(event.descriptionKey) : event.summary;
   const isLongDescription = descriptionText.length > 150;
@@ -37,45 +38,48 @@ function EventDetail({ event, onReadMoreClick }: { event: CalendarEvent, onReadM
 
 
   return (
-    <div className="flex flex-col sm:flex-row gap-4">
-      {event.imageUrl && (
-        <div className="relative w-full sm:w-1/3 aspect-square flex-shrink-0">
-            <Image 
-                src={event.imageUrl}
-                alt={event.title}
-                fill
-                className="rounded-lg object-cover"
-                data-ai-hint={event.imageAiHint}
-            />
-        </div>
-      )}
-      <div className="flex flex-col flex-grow space-y-3">
-          <div className="flex flex-wrap gap-2">
-            {tagsToDisplay?.map((tag) => (
-              <Badge key={tag} variant="secondary">{tag}</Badge>
-            ))}
+    <>
+      <AuthActionPrompt />
+      <div className="flex flex-col sm:flex-row gap-4">
+        {event.imageUrl && (
+          <div className="relative w-full sm:w-1/3 aspect-square flex-shrink-0">
+              <Image 
+                  src={event.imageUrl}
+                  alt={event.title}
+                  fill
+                  className="rounded-lg object-cover"
+                  data-ai-hint={event.imageAiHint}
+              />
           </div>
-          <p className="text-sm flex-grow">
-            {displayDescription}
-          </p>
-          <div className="flex justify-between items-center mt-auto">
-             <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={onReadMoreClick}>
-                    {t('event_calendar.read_more_button')}
-                </Button>
+        )}
+        <div className="flex flex-col flex-grow space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {tagsToDisplay?.map((tag) => (
+                <Badge key={tag} variant="secondary">{tag}</Badge>
+              ))}
             </div>
-            <Button
-                variant="outline"
-                size="icon"
-                onClick={() => toggleBookmark(event.id)}
-                aria-label={t('event_calendar.bookmark_button')}
-                className="shrink-0"
-            >
-                <Bookmark className={cn("h-5 w-5", isBookmarked(event.id) ? "fill-primary text-primary" : "text-muted-foreground")} />
-            </Button>
-          </div>
+            <p className="text-sm flex-grow">
+              {displayDescription}
+            </p>
+            <div className="flex justify-between items-center mt-auto">
+               <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={onReadMoreClick}>
+                      {t('event_calendar.read_more_button')}
+                  </Button>
+              </div>
+              <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => performAction(() => toggleBookmark(event.id))}
+                  aria-label={t('event_calendar.bookmark_button')}
+                  className="shrink-0"
+              >
+                  <Bookmark className={cn("h-5 w-5", isBookmarked(event.id) ? "fill-primary text-primary" : "text-muted-foreground")} />
+              </Button>
+            </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -88,16 +92,10 @@ export function EventCalendar() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const { t } = useLanguage();
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [allEvents, setAllEvents] = useState<CalendarEvent[]>([]);
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-        // We allow anonymous users now, so we don't redirect.
-        // We might want logic here later if the user *is* logged in.
-    });
-
     const q = query(collection(db, 'calendarEvents'), where('status', '==', 'approved'));
     const unsubscribeFirestore = onSnapshot(q, (snapshot) => {
         const fetchedEvents = snapshot.docs.map(doc => {
@@ -122,10 +120,9 @@ export function EventCalendar() {
     });
     
     return () => {
-        unsubscribeAuth();
         unsubscribeFirestore();
     };
-  }, [router]);
+  }, []);
   
   const dayEvents = useMemo(() => {
     if (!date) return [];

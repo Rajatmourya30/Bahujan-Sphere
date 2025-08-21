@@ -1,6 +1,7 @@
 
 
 
+
 // This is a minimal set of translations to get started.
 // In a real app, you would have a more robust system.
 
@@ -39,6 +40,10 @@ const en = {
   "login_page.signup_link": "Sign up",
   "login_page.toast_failed_title": "Login Failed",
   "login_page.toast_failed_description": "Incorrect email or password. Please try again.",
+  "login_prompt.title": "Feature Locked",
+  "login_prompt.description": "Please log in or create an account to save bookmarks and access your personalized profile.",
+  "login_prompt.cancel_button": "Cancel",
+  "login_prompt.login_button": "Log In / Sign Up",
   "signup_page.title": "Sign Up",
   "signup_page.description": "Create an account to get started.",
   "signup_page.name_label": "Full Name",
@@ -218,6 +223,10 @@ const hi = {
   "login_page.signup_link": "साइन अप करें",
   "login_page.toast_failed_title": "लॉगिन विफल",
   "login_page.toast_failed_description": "गलत ईमेल या पासवर्ड। कृपया पुन: प्रयास करें।",
+  "login_prompt.title": "सुविधा लॉक है",
+  "login_prompt.description": "बुकमार्क सहेजने और अपनी व्यक्तिगत प्रोफ़ाइल तक पहुंचने के लिए कृपया लॉग इन करें या एक खाता बनाएं।",
+  "login_prompt.cancel_button": "रद्द करें",
+  "login_prompt.login_button": "लॉग इन / साइन अप",
   "signup_page.title": "साइन अप करें",
   "signup_page.description": "शुरू करने के लिए एक खाता बनाएँ।",
   "signup_page.name_label": "पूरा नाम",
@@ -397,6 +406,10 @@ const mr = {
   "login_page.signup_link": "साइन अप करा",
   "login_page.toast_failed_title": "लॉगिन अयशस्वी",
   "login_page.toast_failed_description": "चुकीचा ईमेल किंवा पासवर्ड. कृपया पुन्हा प्रयत्न करा.",
+  "login_prompt.title": "सुविधा लॉक केली आहे",
+  "login_prompt.description": "बुकमार्क जतन करण्यासाठी आणि आपल्या वैयक्तिक प्रोफाइलमध्ये प्रवेश करण्यासाठी कृपया लॉग इन करा किंवा खाते तयार करा.",
+  "login_prompt.cancel_button": "रद्द करा",
+  "login_prompt.login_button": "लॉग इन / साइन अप",
   "signup_page.title": "साइन अप",
   "signup_page.description": "सुरुवात करण्यासाठी एक खाते तयार करा.",
   "signup_page.name_label": "पूर्ण नाव",
@@ -576,6 +589,10 @@ const bn = {
   "login_page.signup_link": "সাইন আপ করুন",
   "login_page.toast_failed_title": "লগইন ব্যর্থ হয়েছে",
   "login_page.toast_failed_description": "ভুল ইমেল বা পাসওয়ার্ড। আবার চেষ্টা করুন.",
+  "login_prompt.title": "সুবিধা লক করা আছে",
+  "login_prompt.description": "বুকমার্ক সংরক্ষণ করতে এবং আপনার ব্যক্তিগত প্রোফাইল অ্যাক্সেস করতে অনুগ্রহ করে লগ ইন করুন বা একটি অ্যাকাউন্ট তৈরি করুন।",
+  "login_prompt.cancel_button": "বাতিল করুন",
+  "login_prompt.login_button": "লগইন / সাইন আপ",
   "signup_page.title": "সাইন আপ করুন",
   "signup_page.description": "শুরু করতে একটি অ্যাকাউন্ট তৈরি করুন।",
   "signup_page.name_label": "পুরো নাম",
@@ -755,6 +772,10 @@ const ta = {
   "login_page.signup_link": "பதிவு செய்க",
   "login_page.toast_failed_title": "உள்நுழைவு தோல்வியடைந்தது",
   "login_page.toast_failed_description": "தவறான மின்னஞ்சல் அல்லது கடவுச்சொல். தயவுசெய்து மீண்டும் முயற்சிக்கவும்.",
+  "login_prompt.title": "அம்சம் பூட்டப்பட்டுள்ளது",
+  "login_prompt.description": "புக்மார்க்குகளைச் சேமிக்கவும், உங்கள் தனிப்பட்ட சுயவிவரத்தை அணுகவும் உள்நுழையவும் அல்லது கணக்கை உருவாக்கவும்.",
+  "login_prompt.cancel_button": "ரத்துசெய்",
+  "login_prompt.login_button": "உள்நுழை / பதிவு செய்க",
   "signup_page.title": "பதிவு செய்க",
   "signup_page.description": "தொடங்குவதற்கு ஒரு கணக்கை உருவாக்கவும்.",
   "signup_page.name_label": "முழு பெயர்",
@@ -934,6 +955,10 @@ const te = {
   "login_page.signup_link": "సైన్ అప్ చేయండి",
   "login_page.toast_failed_title": "లాగిన్ విఫలమైంది",
   "login_page.toast_failed_description": "తప్పు ఇమెయిల్ లేదా పాస్‌వర్డ్. దయచేసి మళ్లీ ప్రయత్నించండి.",
+  "login_prompt.title": "ఫీచర్ లాక్ చేయబడింది",
+  "login_prompt.description": "బుక్‌మార్క్‌లను సేవ్ చేయడానికి మరియు మీ వ్యక్తిగత ప్రొఫైల్‌ను యాక్సెస్ చేయడానికి దయచేసి లాగిన్ చేయండి లేదా ఖాతాను సృష్టించండి.",
+  "login_prompt.cancel_button": "రద్దు చేయి",
+  "login_prompt.login_button": "లాగిన్ / సైన్ అప్",
   "signup_page.title": "సైన్ అప్ చేయండి",
   "signup_page.description": "ప్రారంభించడానికి ఒక ఖాతాను సృష్టించండి.",
   "signup_page.name_label": "పూర్తి పేరు",

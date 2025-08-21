@@ -15,50 +15,56 @@ import { useBookmarkStore } from '@/hooks/use-bookmarks';
 import { db } from '@/lib/firebase';
 import { cn } from '@/lib/utils';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { useAuthAction } from '@/hooks/useAuthAction';
 
 
 function OrganizationCard({ organization }: { organization: KnowledgeOrganization }) {
     const { t } = useLanguage();
     const { isBookmarked, toggleBookmark } = useBookmarkStore('knowledgeHubBookmarks');
+    const { performAction, AuthActionPrompt } = useAuthAction();
+
     const name = organization.nameKey ? t(organization.nameKey) : organization.name;
     const description = organization.descriptionKey ? t(organization.descriptionKey) : organization.description;
 
 
     return (
-        <Card>
-            <CardHeader className="flex flex-row items-start gap-4">
-                 <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-md border">
-                    <Image
-                        src={organization.logoUrl}
-                        alt={name}
-                        fill
-                        className="object-contain p-1"
-                        data-ai-hint={organization.imageAiHint}
-                    />
-                </div>
-                <div className="flex-grow">
-                    <CardTitle className="font-headline text-lg">{name}</CardTitle>
-                    <CardDescription className="mt-1 text-sm">{description}</CardDescription>
-                </div>
-            </CardHeader>
-            <CardFooter className="flex items-center gap-2">
-                 <Button asChild variant="outline" className="flex-grow">
-                    <Link href={organization.websiteUrl} target="_blank">
-                        <Globe className="mr-2" />
-                        {t('knowledge_hub.visit_website_button')}
-                    </Link>
-                </Button>
-                <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => toggleBookmark(organization.id)}
-                    aria-label={t('event_calendar.bookmark_button')}
-                    className="shrink-0"
-                >
-                    <Bookmark className={cn("h-5 w-5", isBookmarked(organization.id) ? "fill-primary text-primary" : "text-muted-foreground")} />
-                </Button>
-            </CardFooter>
-        </Card>
+        <>
+            <AuthActionPrompt />
+            <Card>
+                <CardHeader className="flex flex-row items-start gap-4">
+                     <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-md border">
+                        <Image
+                            src={organization.logoUrl}
+                            alt={name}
+                            fill
+                            className="object-contain p-1"
+                            data-ai-hint={organization.imageAiHint}
+                        />
+                    </div>
+                    <div className="flex-grow">
+                        <CardTitle className="font-headline text-lg">{name}</CardTitle>
+                        <CardDescription className="mt-1 text-sm">{description}</CardDescription>
+                    </div>
+                </CardHeader>
+                <CardFooter className="flex items-center gap-2">
+                     <Button asChild variant="outline" className="flex-grow">
+                        <Link href={organization.websiteUrl} target="_blank">
+                            <Globe className="mr-2" />
+                            {t('knowledge_hub.visit_website_button')}
+                        </Link>
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => performAction(() => toggleBookmark(organization.id))}
+                        aria-label={t('event_calendar.bookmark_button')}
+                        className="shrink-0"
+                    >
+                        <Bookmark className={cn("h-5 w-5", isBookmarked(organization.id) ? "fill-primary text-primary" : "text-muted-foreground")} />
+                    </Button>
+                </CardFooter>
+            </Card>
+        </>
     )
 }
 

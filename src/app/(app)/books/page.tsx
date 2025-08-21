@@ -15,52 +15,58 @@ import { useBookmarkStore } from '@/hooks/use-bookmarks';
 import { cn } from '@/lib/utils';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { useAuthAction } from '@/hooks/useAuthAction';
 
 function BookCard({ book }: { book: Book }) {
     const { t } = useLanguage();
     const { isBookmarked, toggleBookmark } = useBookmarkStore('bookBookmarks');
+    const { performAction, AuthActionPrompt } = useAuthAction();
+
     const title = book.titleKey ? t(book.titleKey) : book.title;
     const author = book.authorKey ? t(book.authorKey) : book.author;
     const description = book.descriptionKey ? t(book.descriptionKey) : book.description;
 
 
     return (
-        <Card className="flex flex-col">
-            <CardHeader className="flex-row items-start gap-4">
-                <div className="relative h-32 w-24 flex-shrink-0">
-                    <Image
-                        src={book.imageUrl}
-                        alt={title}
-                        fill
-                        className="object-cover rounded-md"
-                        data-ai-hint={book.imageAiHint}
-                    />
-                </div>
-                <div className="flex-grow">
-                    <CardTitle className="font-headline text-lg">{title}</CardTitle>
-                    <CardDescription className="text-sm font-medium">{author}</CardDescription>
-                    <CardDescription className="mt-2 text-sm line-clamp-3">{description}</CardDescription>
-                </div>
-            </CardHeader>
-            <CardFooter className="mt-auto flex-col items-start gap-2">
-                 <div className="flex w-full items-center gap-2">
-                    <Button asChild className="flex-grow">
-                        <Link href={book.affiliateUrl} target="_blank">
-                            {t('books_page.buy_now_button')}
-                        </Link>
-                    </Button>
-                     <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => toggleBookmark(book.id)}
-                        aria-label={t('event_calendar.bookmark_button')}
-                        className="shrink-0"
-                    >
-                        <Bookmark className={cn("h-5 w-5", isBookmarked(book.id) ? "fill-primary text-primary" : "text-muted-foreground")} />
-                    </Button>
-                </div>
-            </CardFooter>
-        </Card>
+        <>
+            <AuthActionPrompt />
+            <Card className="flex flex-col">
+                <CardHeader className="flex-row items-start gap-4">
+                    <div className="relative h-32 w-24 flex-shrink-0">
+                        <Image
+                            src={book.imageUrl}
+                            alt={title}
+                            fill
+                            className="object-cover rounded-md"
+                            data-ai-hint={book.imageAiHint}
+                        />
+                    </div>
+                    <div className="flex-grow">
+                        <CardTitle className="font-headline text-lg">{title}</CardTitle>
+                        <CardDescription className="text-sm font-medium">{author}</CardDescription>
+                        <CardDescription className="mt-2 text-sm line-clamp-3">{description}</CardDescription>
+                    </div>
+                </CardHeader>
+                <CardFooter className="mt-auto flex-col items-start gap-2">
+                     <div className="flex w-full items-center gap-2">
+                        <Button asChild className="flex-grow">
+                            <Link href={book.affiliateUrl} target="_blank">
+                                {t('books_page.buy_now_button')}
+                            </Link>
+                        </Button>
+                         <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => performAction(() => toggleBookmark(book.id))}
+                            aria-label={t('event_calendar.bookmark_button')}
+                            className="shrink-0"
+                        >
+                            <Bookmark className={cn("h-5 w-5", isBookmarked(book.id) ? "fill-primary text-primary" : "text-muted-foreground")} />
+                        </Button>
+                    </div>
+                </CardFooter>
+            </Card>
+        </>
     )
 }
 

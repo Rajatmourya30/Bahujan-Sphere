@@ -15,49 +15,55 @@ import { useBookmarkStore } from '@/hooks/use-bookmarks';
 import { cn } from '@/lib/utils';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { useAuthAction } from '@/hooks/useAuthAction';
 
 function StoreCard({ store }: { store: BahujanStore }) {
     const { t } = useLanguage();
     const { isBookmarked, toggleBookmark } = useBookmarkStore('storeBookmarks');
+    const { performAction, AuthActionPrompt } = useAuthAction();
+
     const name = store.nameKey ? t(store.nameKey) : store.name;
     const description = store.descriptionKey ? t(store.descriptionKey) : store.description;
 
     return (
-        <Card className="flex flex-col text-center">
-            <CardHeader className="items-center">
-                <div className="relative h-24 w-24 overflow-hidden rounded-full border">
-                    <Image
-                        src={store.imageUrl}
-                        alt={name}
-                        fill
-                        className="object-cover"
-                        data-ai-hint={store.imageAiHint}
-                    />
-                </div>
-            </CardHeader>
-            <CardContent className="flex-grow">
-                <CardTitle className="font-headline text-lg">{name}</CardTitle>
-                <CardDescription className="mt-2 text-sm">{description}</CardDescription>
-            </CardContent>
-            <CardFooter className="flex-col gap-2">
-                <div className="flex w-full items-center gap-2">
-                    <Button asChild className="flex-grow">
-                        <Link href={store.storeUrl} target="_blank">
-                            {t('store.visit_store_button')}
-                        </Link>
-                    </Button>
-                     <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => toggleBookmark(store.id)}
-                        aria-label={t('event_calendar.bookmark_button')}
-                        className="shrink-0"
-                    >
-                        <Bookmark className={cn("h-5 w-5", isBookmarked(store.id) ? "fill-primary text-primary" : "text-muted-foreground")} />
-                    </Button>
-                </div>
-            </CardFooter>
-        </Card>
+        <>
+            <AuthActionPrompt />
+            <Card className="flex flex-col text-center">
+                <CardHeader className="items-center">
+                    <div className="relative h-24 w-24 overflow-hidden rounded-full border">
+                        <Image
+                            src={store.imageUrl}
+                            alt={name}
+                            fill
+                            className="object-cover"
+                            data-ai-hint={store.imageAiHint}
+                        />
+                    </div>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                    <CardTitle className="font-headline text-lg">{name}</CardTitle>
+                    <CardDescription className="mt-2 text-sm">{description}</CardDescription>
+                </CardContent>
+                <CardFooter className="flex-col gap-2">
+                    <div className="flex w-full items-center gap-2">
+                        <Button asChild className="flex-grow">
+                            <Link href={store.storeUrl} target="_blank">
+                                {t('store.visit_store_button')}
+                            </Link>
+                        </Button>
+                         <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => performAction(() => toggleBookmark(store.id))}
+                            aria-label={t('event_calendar.bookmark_button')}
+                            className="shrink-0"
+                        >
+                            <Bookmark className={cn("h-5 w-5", isBookmarked(store.id) ? "fill-primary text-primary" : "text-muted-foreground")} />
+                        </Button>
+                    </div>
+                </CardFooter>
+            </Card>
+        </>
     )
 }
 
