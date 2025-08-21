@@ -10,9 +10,8 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import { Card, CardContent } from "@/components/ui/card";
-import { Edit, MoreHorizontal, Trash2 } from "lucide-react";
+import { Edit, Trash2 } from "lucide-react";
 import { Button } from "../ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import Image from "next/image";
 import type { KnowledgeOrganization } from "@/lib/knowledge-hub";
 import { Badge } from "../ui/badge";
