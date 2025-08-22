@@ -1,0 +1,69 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for common security patterns
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isTeamMember() {
+      // exists() is more efficient and requires less permission than get()
+      return isSignedIn() && exists(/databases/$(database)/documents/teamMembers/$(request.auth.uid));
+    }
+
+    // Check if a document's status field is 'approved'
+    function isApprovedContent(resource) {
+      return resource.data.status == 'approved';
+    }
+
+    // PUBLIC-FACING CONTENT COLLECTIONS
+    // These collections can be read by anyone if the content is approved.
+    // Only team members can create, update, or delete content.
+    match /{collectionName}/{docId} where collectionName in ['calendarEvents', 'knowledgeHub', 'stores', 'books', 'readingRoomPdfs'] {
+      // Public can ONLY read documents where status is 'approved'
+      allow read: if isApprovedContent(resource);
+      // Team members can read all content (for admin review purposes)
+      allow read: if isTeamMember();
+      // Only team members can write
+      allow write: if isTeamMember();
+    }
+
+    // SUBMISSION QUEUES
+    // These collections hold content pending review. Only team members can access them.
+    match /{submissionCollection}/{submissionId} where submissionCollection in ['eventSubmissions', 'bookSubmissions', 'storeSubmissions', 'knowledgeHubSubmissions', 'readingRoomSubmissions'] {
+      allow create, read, update, delete: if isTeamMember();
+    }
+    
+    // TEAM MEMBERS COLLECTION
+    // This collection defines who has admin/team access.
+    match /teamMembers/{memberId} {
+      // CRITICAL FIX: Allow a 'get' request for any signed-in user.
+      // This is necessary so that other rules (like isTeamMember()) can check
+      // for a user's existence in this collection without failing.
+      allow get: if isSignedIn();
+      
+      // Only team members can list the full collection of team members.
+      allow list: if isTeamMember();
+      
+      // Team member documents should be managed by a secure backend (Cloud Function).
+      allow create, update, delete: if false; 
+    }
+
+    // USERS COLLECTION (Public Profiles)
+    // This collection stores public profiles for all app users.
+    match /users/{userId} {
+      // A user can only create their own profile document.
+      allow create: if isOwner(userId);
+      // Anyone can read public profiles.
+      allow read: if true;
+      // A user can only update or delete their own profile.
+      allow update, delete: if isOwner(userId);
+    }
+  }
+}

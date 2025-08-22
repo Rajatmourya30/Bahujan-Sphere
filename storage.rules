@@ -13,11 +13,28 @@ service firebase.storage {
     }
 
     // Public content folders
-    match /{folder}/{fileName} where folder in ['images/events', 'images/logos', 'images/stores', 'bookCovers', 'pdfs'] {
-      // Allow public read access so visitors can see images/PDFs.
+    match /images/events/{fileName} {
       allow read; 
-      
-      // Only allow authenticated team members to write (upload/delete).
+      allow write: if isTeamMember();
+    }
+    
+    match /images/logos/{fileName} {
+      allow read; 
+      allow write: if isTeamMember();
+    }
+    
+    match /images/stores/{fileName} {
+      allow read; 
+      allow write: if isTeamMember();
+    }
+    
+    match /bookCovers/{fileName} {
+      allow read; 
+      allow write: if isTeamMember();
+    }
+    
+    match /pdfs/{fileName} {
+      allow read; 
       allow write: if isTeamMember();
     }
 
