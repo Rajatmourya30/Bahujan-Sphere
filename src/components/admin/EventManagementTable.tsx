@@ -11,7 +11,7 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Calendar as CalendarIcon, Edit, MoreHorizontal, PlusCircle, Search, Trash2 } from "lucide-react";
+import { Calendar as CalendarIcon, Edit, MoreHorizontal, PlusCircle, Search, Trash2, Atom } from "lucide-react";
 import { Button } from "../ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import type { CalendarEvent } from "@/lib/events";
@@ -43,24 +43,25 @@ export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventM
     }));
     
     const years = useMemo(() => {
-        const eventYears = new Set(events.map(event => isValid(event.date) ? event.date.getFullYear() : 0).filter(y => y > 0));
+        const eventYears = new Set(events.map(event => isValid(event.date) ? (event.date as Date).getFullYear() : 0).filter(y => y > 0));
         return Array.from(eventYears).sort((a, b) => b - a);
     }, [events]);
 
     const filteredEvents = useMemo(() => {
         return events.filter(event => {
-            if (!isValid(event.date)) return false;
+            const eventDate = event.date instanceof Date ? event.date : (event.date as any).toDate();
+            if (!isValid(eventDate)) return false;
 
             const title = event.title?.toLowerCase() || '';
             const matchesSearch = title.includes(searchTerm.toLowerCase());
             
-            const eventMonth = event.date.getMonth().toString();
+            const eventMonth = eventDate.getMonth().toString();
             const matchesMonth = selectedMonth === 'all' || eventMonth === selectedMonth;
 
-            const eventYear = event.date.getFullYear().toString();
+            const eventYear = eventDate.getFullYear().toString();
             const matchesYear = selectedYear === 'all' || eventYear === selectedYear;
 
-            const matchesDate = !selectedDate || (getMonth(event.date) === getMonth(selectedDate) && getDate(event.date) === getDate(selectedDate));
+            const matchesDate = !selectedDate || (getMonth(eventDate) === getMonth(selectedDate) && getDate(eventDate) === getDate(selectedDate));
 
             return matchesSearch && matchesMonth && matchesYear && matchesDate;
         });
@@ -169,12 +170,19 @@ export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventM
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredEvents.length > 0 ? filteredEvents.map((event) => (
+                            {filteredEvents.length > 0 ? filteredEvents.map((event) => {
+                                const eventDate = event.date instanceof Date ? event.date : (event.date as any).toDate();
+                                const isBuddhistEvent = !!event.tradition;
+                                return (
                                 <TableRow key={event.id}>
                                     <TableCell className="font-medium">
-                                        <span className="font-bold">{event.title}</span>
+                                        <div className="flex items-center gap-2">
+                                            {isBuddhistEvent && <Atom className="h-4 w-4 text-primary" />}
+                                            <span className="font-bold">{event.title}</span>
+                                        </div>
+                                        {event.tradition && <Badge variant="outline" className="mt-1">{event.tradition}</Badge>}
                                     </TableCell>
-                                    <TableCell>{isValid(event.date) ? format(event.date, 'PPP') : 'Invalid Date'}</TableCell>
+                                    <TableCell>{isValid(eventDate) ? format(eventDate, 'PPP') : 'Invalid Date'}</TableCell>
                                     <TableCell>
                                         <div className="flex flex-wrap gap-1">
                                             {event.tags?.map(tag => (
@@ -193,14 +201,14 @@ export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventM
                                                 <Edit className="mr-2 h-4 w-4"/>
                                                 Edit
                                             </Button>
-                                            <Button variant="outline" size="sm" onClick={() => onRemove(event.id)}>
+                                            <Button variant="outline" size="sm" onClick={() => onRemove(event.id)} disabled={isBuddhistEvent}>
                                                 <Trash2 className="mr-2 h-4 w-4"/>
                                                 Remove
                                             </Button>
                                         </div>
                                     </TableCell>
                                 </TableRow>
-                            )) : (
+                            )}) : (
                                 <TableRow>
                                     <TableCell colSpan={5} className="h-24 text-center">
                                         No results found.

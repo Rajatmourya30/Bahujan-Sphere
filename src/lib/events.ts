@@ -16,6 +16,8 @@ export interface CalendarEvent {
   titleKey?: TranslationKey;
   tagKeys?: TranslationKey[];
   descriptionKey?: TranslationKey;
+  // New field for Buddhist events
+  tradition?: 'Universal' | 'Theravada' | 'Mahayana';
 }
 
     

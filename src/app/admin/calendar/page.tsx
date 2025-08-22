@@ -19,6 +19,7 @@ import { isValid } from 'date-fns';
 import { parseDate } from '@/lib/date-parser';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { buddhistEvents2024 } from '@/lib/buddhist-events';
 
 
 export default function ManageCalendarPage() {
@@ -58,11 +59,12 @@ export default function ManageCalendarPage() {
 
             return { id: doc.id, ...data, date: eventDate } as CalendarEvent;
         });
-        setEvents(fetchedEvents);
+        setEvents([...fetchedEvents, ...buddhistEvents2024]);
         setIsLoading(false);
     }, (error) => {
         console.error("Failed to fetch events:", error);
         toast({ title: 'Error', description: 'Could not fetch events from the database.', variant: 'destructive' });
+        setEvents(buddhistEvents2024); // Fallback to Buddhist events
         setIsLoading(false);
     });
 
@@ -78,6 +80,14 @@ export default function ManageCalendarPage() {
   const handleSave = async (eventData: Omit<CalendarEvent, 'id'>, newImageFile?: File) => {
     if (!firebaseUser) {
         toast({ title: "Authentication Error", description: "You must be logged in to save.", variant: "destructive" });
+        return;
+    }
+    
+    // Disallow editing of hardcoded Buddhist events
+    if (editingEvent?.id.startsWith('buddhist-')) {
+        toast({ title: "Action Not Allowed", description: "Buddhist events are part of the core data and cannot be edited here.", variant: "destructive"});
+        setIsDialogOpen(false);
+        setEditingEvent(null);
         return;
     }
 
@@ -122,6 +132,13 @@ export default function ManageCalendarPage() {
 
   const confirmRemove = async () => {
     if (!eventToDelete) return;
+    
+    if (eventToDelete.startsWith('buddhist-')) {
+        toast({ title: "Action Not Allowed", description: "Buddhist events cannot be deleted.", variant: "destructive"});
+        setEventToDelete(null);
+        return;
+    }
+    
     try {
         await deleteDoc(doc(db, 'calendarEvents', eventToDelete));
         toast({ title: "Event Deleted", description: "The event has been successfully removed." });

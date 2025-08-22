@@ -21,6 +21,7 @@ import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { parseDate } from '@/lib/date-parser';
 import Image from 'next/image';
 import { useAuthAction } from '@/hooks/useAuthAction';
+import { buddhistEvents2024 } from '@/lib/buddhist-events';
 
 
 function EventDetail({ event, onReadMoreClick }: { event: CalendarEvent, onReadMoreClick: () => void }) {
@@ -112,10 +113,13 @@ export function EventCalendar() {
                 readMoreUrl: data.readMoreUrl,
             } as CalendarEvent;
         });
-        setAllEvents(fetchedEvents);
+        // Combine Firestore events with static Buddhist events
+        setAllEvents([...fetchedEvents, ...buddhistEvents2024]);
         setIsLoading(false);
     }, (error) => {
         console.error("Failed to fetch events:", error);
+        // Still load Buddhist events even if Firestore fails
+        setAllEvents(buddhistEvents2024);
         setIsLoading(false);
     });
     
