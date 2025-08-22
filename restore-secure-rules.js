@@ -1,4 +1,9 @@
-rules_version = '2';
+// Script to restore secure Firestore rules after initial admin setup
+// Run this after you've successfully logged in and been added to teamMembers
+
+const fs = require('fs');
+
+const secureRules = `rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -106,10 +111,14 @@ service cloud.firestore {
       // WRITE: Only team members can add/update/remove other members.
       // (Further restricted in the app to Admins/Managers).
       allow write: if isTeamMember();
-
-      // TEMPORARY BOOTSTRAP: Allow any authenticated user to create their own team member document
-      // This is a temporary rule to solve the chicken-and-egg problem - REMOVE AFTER INITIAL SETUP
-      allow create: if isSignedIn() && request.auth.uid == memberId;
     }
   }
+}`;
+
+try {
+  fs.writeFileSync('firestore.rules', secureRules);
+  console.log('✅ Secure Firestore rules have been restored to firestore.rules');
+  console.log('📝 Run "firebase deploy --only firestore:rules" to deploy the secure rules');
+} catch (error) {
+  console.error('❌ Error writing secure rules:', error);
 }

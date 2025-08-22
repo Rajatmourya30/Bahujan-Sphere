@@ -12,7 +12,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { signInWithEmailAndPassword, onAuthStateChanged, type User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AdminLoginPage() {
@@ -59,6 +59,34 @@ export default function AdminLoginPage() {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
+
+      // Special bypass for the original admin user
+      if (user.email === 'rajatmourya82@gmail.com' && !(await isTeamMember(user))) {
+        try {
+          // Automatically add the original admin to teamMembers collection
+          await setDoc(doc(db, 'teamMembers', user.uid), {
+            name: 'Rajat Mourya',
+            email: user.email,
+            role: 'Admin',
+            joinedAt: serverTimestamp()
+          });
+          toast({
+            title: 'Admin Access Granted',
+            description: 'You have been automatically added to the admin team.',
+            variant: 'default',
+          });
+        } catch (addError) {
+          console.error('Error adding admin user:', addError);
+          toast({
+            title: 'Setup Required',
+            description: 'Please contact system administrator to add you to the team.',
+            variant: 'destructive',
+          });
+          await auth.signOut();
+          setIsLoading(false);
+          return;
+        }
+      }
 
       // Security Check: Verify if the user is in the teamMembers collection
       if (!(await isTeamMember(user))) {
