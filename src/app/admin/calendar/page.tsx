@@ -83,7 +83,6 @@ export default function ManageCalendarPage() {
         return;
     }
     
-    // If it's a Buddhist event, we treat it as a new event if edited.
     const isBuddhistEvent = editingEvent?.id.startsWith('buddhist-');
 
     try {
@@ -109,7 +108,6 @@ export default function ManageCalendarPage() {
             await updateDoc(eventRef, dataToSave);
             toast({ title: "Event Updated", description: "The event has been successfully updated." });
         } else {
-            // Add as a new event for Buddhist events or brand new events
             await addDoc(collection(db, 'calendarEvents'), {
                 ...dataToSave,
                 status: 'approved',
@@ -130,8 +128,6 @@ export default function ManageCalendarPage() {
   const confirmRemove = async () => {
     if (!eventToDelete) return;
     
-    // If it's a Buddhist event, we can't delete it from the hardcoded list,
-    // so we just inform the user. A more advanced system could hide it.
     if (eventToDelete.startsWith('buddhist-')) {
         toast({ title: "Action Not Allowed", description: "Core Buddhist events cannot be deleted directly. You can edit it to create your own version.", variant: "destructive"});
         setEventToDelete(null);
