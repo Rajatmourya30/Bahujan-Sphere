@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -13,85 +14,41 @@ service cloud.firestore {
     function isTeamMember() {
       return isSignedIn() && exists(/databases/$(database)/documents/teamMembers/$(request.auth.uid));
     }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
 
     // Checks if a document has been approved for public viewing.
     function isApprovedContent(resource) {
       return resource.data.status == 'approved';
     }
 
-    // PUBLIC CONTENT: Reading Room PDFs
-    match /readingRoomPdfs/{docId} {
+    // PUBLIC CONTENT: Only approved content is publicly readable
+    match /{collectionName}/{docId} where collectionName in ['calendarEvents', 'knowledgeHub', 'stores', 'books', 'readingRoomPdfs'] {
+      // Public can ONLY read documents where status is 'approved'
       allow read: if isApprovedContent(resource) || isTeamMember();
       allow write: if isTeamMember();
     }
 
-    // PUBLIC CONTENT: Books
-    match /books/{docId} {
-      allow read: if isApprovedContent(resource) || isTeamMember();
-      allow write: if isTeamMember();
+    // SUBMISSIONS: Only accessible by team members
+    match /{submissionCollection}/{submissionId} where submissionCollection in ['eventSubmissions', 'bookSubmissions', 'storeSubmissions', 'knowledgeHubSubmissions', 'readingRoomSubmissions'] {
+      allow create, read, update, delete: if isTeamMember();
     }
 
-    // PUBLIC CONTENT: Stores
-    match /stores/{docId} {
-      allow read: if isApprovedContent(resource) || isTeamMember();
-      allow write: if isTeamMember();
-    }
-
-    // PUBLIC CONTENT: Knowledge Hub
-    match /knowledgeHub/{docId} {
-      allow read: if isApprovedContent(resource) || isTeamMember();
-      allow write: if isTeamMember();
-    }
-
-    // PUBLIC CONTENT: Calendar Events
-    match /calendarEvents/{docId} {
-      allow read: if isApprovedContent(resource) || isTeamMember();
-      allow write: if isTeamMember();
-    }
-
-    // SUBMISSIONS: Event Submissions
-    match /eventSubmissions/{submissionId} {
-      allow create: if isTeamMember();
-      allow read, update, delete: if isTeamMember();
-    }
-
-    // SUBMISSIONS: Book Submissions
-    match /bookSubmissions/{submissionId} {
-      allow create: if isTeamMember();
-      allow read, update, delete: if isTeamMember();
-    }
-
-    // SUBMISSIONS: Store Submissions
-    match /storeSubmissions/{submissionId} {
-      allow create: if isTeamMember();
-      allow read, update, delete: if isTeamMember();
-    }
-
-    // SUBMISSIONS: Knowledge Hub Submissions
-    match /knowledgeHubSubmissions/{submissionId} {
-      allow create: if isTeamMember();
-      allow read, update, delete: if isTeamMember();
-    }
-
-    // SUBMISSIONS: Reading Room Submissions
-    match /readingRoomSubmissions/{submissionId} {
-      allow create: if isTeamMember();
-      allow read, update, delete: if isTeamMember();
-    }
-    
     // USER PROFILES: Public user data.
     match /users/{userId} {
       // CREATE: Any signed-in user can create their own profile document.
-      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isOwner(userId);
 
       // READ: Anyone can read user profiles (public profiles).
       allow read: if true;
 
       // UPDATE: Users can only update their own profile.
-      allow update: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isOwner(userId);
 
       // DELETE: Users can delete their own profile.
-      allow delete: if isSignedIn() && request.auth.uid == userId;
+      allow delete: if isOwner(userId);
     }
 
     // TEAM MEMBERS: Defines roles and permissions for the admin panel.
@@ -106,10 +63,6 @@ service cloud.firestore {
       // WRITE: Only team members can add/update/remove other members.
       // (Further restricted in the app to Admins/Managers).
       allow write: if isTeamMember();
-
-      // TEMPORARY BOOTSTRAP: Allow any authenticated user to create their own team member document
-      // This is a temporary rule to solve the chicken-and-egg problem - REMOVE AFTER INITIAL SETUP
-      allow create: if isSignedIn() && request.auth.uid == memberId;
     }
   }
 }
