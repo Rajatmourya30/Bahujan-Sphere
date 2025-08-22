@@ -61,11 +61,11 @@ export default function TeamManagementPage() {
 
   const handleUpdateRole = async (member: TeamMemberWithId, newRole: TeamMember['role']) => {
     const memberDocRef = doc(db, 'teamMembers', member.id);
+    const isAdmin = newRole === 'Admin' || newRole === 'Manager';
     try {
       await updateDoc(memberDocRef, { role: newRole });
-      const isAdmin = newRole === 'Admin';
       await setAdminClaim({ email: member.email, admin: isAdmin });
-      toast({ title: 'Success', description: `Team member role updated. Admin claim set to: ${isAdmin}` });
+      toast({ title: 'Success', description: `Team member role updated to ${newRole}.` });
     } catch (error) {
       console.error("Error updating role:", error);
       toast({ title: 'Error', description: 'Failed to update role.', variant: 'destructive' });
@@ -82,7 +82,7 @@ export default function TeamManagementPage() {
     try {
       await deleteDoc(memberDocRef);
       await setAdminClaim({ email: member.email, admin: false });
-      toast({ title: 'Success', description: 'Team member removed and admin claim revoked.' });
+      toast({ title: 'Success', description: 'Team member removed successfully.' });
     } catch (error) {
       console.error("Error removing member:", error);
       toast({ title: 'Error', description: 'Failed to remove team member.', variant: 'destructive' });
@@ -126,7 +126,7 @@ export default function TeamManagementPage() {
         <header className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
             <div>
                 <h1 className="font-headline text-3xl font-bold">Team Management</h1>
-                <p className="text-muted-foreground">Add and manage your team members in Firestore.</p>
+                <p className="text-muted-foreground">Add, manage, and remove team members.</p>
             </div>
             <Button onClick={() => setIsAddDialogOpen(true)}>
                 <UserPlus className="mr-2 h-4 w-4" />

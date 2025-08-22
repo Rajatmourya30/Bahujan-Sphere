@@ -76,7 +76,7 @@ export const createTeamUser = https.onCall(async (data, context) => {
         });
 
         // 2. Set custom claims based on role
-        const isAdmin = role === 'Admin';
+        const isAdmin = role === 'Admin' || role === 'Manager';
         await admin.auth().setCustomUserClaims(userRecord.uid, { admin: isAdmin });
 
         // 3. Return the UID so the client can create the Firestore doc

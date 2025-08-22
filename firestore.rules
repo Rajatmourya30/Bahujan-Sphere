@@ -91,11 +91,8 @@ service cloud.firestore {
       allow get: if isSignedIn();
       // Only existing team members can list all other members.
       allow list: if isTeamMember();
-      // Only team members can add/update/remove other members.
-      allow write: if isTeamMember();
-
-      // Special rule to allow the first admin to be created by the app logic
-      allow create: if (isSignedIn() && request.auth.uid == memberId && request.auth.email == 'rajatmourya82@gmail.com');
+      // Only team members can create/update/delete other members.
+      allow create, update, delete: if isTeamMember();
     }
   }
 }
