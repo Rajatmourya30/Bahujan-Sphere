@@ -19,7 +19,7 @@ import { isValid } from 'date-fns';
 import { parseDate } from '@/lib/date-parser';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import { buddhistEvents2024 } from '@/lib/buddhist-events';
+import { buddhistEvents } from '@/lib/buddhist-events';
 
 
 export default function ManageCalendarPage() {
@@ -59,12 +59,12 @@ export default function ManageCalendarPage() {
 
             return { id: doc.id, ...data, date: eventDate } as CalendarEvent;
         });
-        setEvents([...fetchedEvents, ...buddhistEvents2024]);
+        setEvents([...fetchedEvents, ...buddhistEvents]);
         setIsLoading(false);
     }, (error) => {
         console.error("Failed to fetch events:", error);
         toast({ title: 'Error', description: 'Could not fetch events from the database.', variant: 'destructive' });
-        setEvents(buddhistEvents2024); // Fallback to Buddhist events
+        setEvents(buddhistEvents); // Fallback to Buddhist events
         setIsLoading(false);
     });
 
@@ -83,13 +83,8 @@ export default function ManageCalendarPage() {
         return;
     }
     
-    // Disallow editing of hardcoded Buddhist events
-    if (editingEvent?.id.startsWith('buddhist-')) {
-        toast({ title: "Action Not Allowed", description: "Buddhist events are part of the core data and cannot be edited here.", variant: "destructive"});
-        setIsDialogOpen(false);
-        setEditingEvent(null);
-        return;
-    }
+    // If it's a Buddhist event, we treat it as a new event if edited.
+    const isBuddhistEvent = editingEvent?.id.startsWith('buddhist-');
 
     try {
         let imageUrl = editingEvent?.imageUrl || '';
@@ -109,18 +104,20 @@ export default function ManageCalendarPage() {
             imageStoragePath,
         };
 
-        if (editingEvent) {
+        if (editingEvent && !isBuddhistEvent) {
             const eventRef = doc(db, 'calendarEvents', editingEvent.id);
             await updateDoc(eventRef, dataToSave);
             toast({ title: "Event Updated", description: "The event has been successfully updated." });
         } else {
+            // Add as a new event for Buddhist events or brand new events
             await addDoc(collection(db, 'calendarEvents'), {
                 ...dataToSave,
                 status: 'approved',
                 approvedBy: firebaseUser.uid,
                 approvedAt: serverTimestamp(),
             });
-            toast({ title: "Event Added", description: "The new event has been added to the calendar." });
+            const action = isBuddhistEvent ? "overwritten and saved as a new event." : "added to the calendar.";
+            toast({ title: "Event Added", description: `The new event has been ${action}` });
         }
         setIsDialogOpen(false);
         setEditingEvent(null);
@@ -133,8 +130,10 @@ export default function ManageCalendarPage() {
   const confirmRemove = async () => {
     if (!eventToDelete) return;
     
+    // If it's a Buddhist event, we can't delete it from the hardcoded list,
+    // so we just inform the user. A more advanced system could hide it.
     if (eventToDelete.startsWith('buddhist-')) {
-        toast({ title: "Action Not Allowed", description: "Buddhist events cannot be deleted.", variant: "destructive"});
+        toast({ title: "Action Not Allowed", description: "Core Buddhist events cannot be deleted directly. You can edit it to create your own version.", variant: "destructive"});
         setEventToDelete(null);
         return;
     }

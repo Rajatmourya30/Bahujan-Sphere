@@ -11,9 +11,8 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Calendar as CalendarIcon, Edit, MoreHorizontal, PlusCircle, Search, Trash2, Atom } from "lucide-react";
+import { Calendar as CalendarIcon, Edit, PlusCircle, Search, Trash2, Atom } from "lucide-react";
 import { Button } from "../ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import type { CalendarEvent } from "@/lib/events";
 import { Badge } from "../ui/badge";
 import { Input } from "../ui/input";
@@ -201,7 +200,7 @@ export function EventManagementTable({ events, onEdit, onRemove, onAdd }: EventM
                                                 <Edit className="mr-2 h-4 w-4"/>
                                                 Edit
                                             </Button>
-                                            <Button variant="outline" size="sm" onClick={() => onRemove(event.id)} disabled={isBuddhistEvent}>
+                                            <Button variant="outline" size="sm" onClick={() => onRemove(event.id)}>
                                                 <Trash2 className="mr-2 h-4 w-4"/>
                                                 Remove
                                             </Button>
