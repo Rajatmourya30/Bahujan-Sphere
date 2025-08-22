@@ -28,7 +28,7 @@ import { RevenueByCategoryChart } from '@/components/admin/RevenueByCategoryChar
 import { TopAdPlacementsChart } from '@/components/admin/TopAdPlacementsChart';
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot, doc, getDoc } from 'firebase/firestore';
 
 
 const UserGrowthChart = dynamic(
@@ -57,15 +57,22 @@ export default function AdminDashboardPage() {
       if (user) {
         setFirebaseUser(user);
         
-        const teamQuery = query(collection(db, "teamMembers"), where("email", "==", user.email));
-        const querySnapshot = await getDocs(teamQuery);
-        
-        if (!querySnapshot.empty) {
-          const userDoc = querySnapshot.docs[0].data();
-          const role = userDoc.role as UserRole;
-          setUserRole(role);
-          localStorage.setItem('adminUserRole', role || '');
-        } else {
+        // Use UID-based lookup instead of email query to avoid permission issues
+        try {
+          const teamMemberDocRef = doc(db, "teamMembers", user.uid);
+          const teamMemberDoc = await getDoc(teamMemberDocRef);
+          
+          if (teamMemberDoc.exists()) {
+            const userDoc = teamMemberDoc.data();
+            const role = userDoc.role as UserRole;
+            setUserRole(role);
+            localStorage.setItem('adminUserRole', role || '');
+          } else {
+            setUserRole(null);
+            localStorage.removeItem('adminUserRole');
+          }
+        } catch (error) {
+          console.error("Error fetching team member data:", error);
           setUserRole(null);
           localStorage.removeItem('adminUserRole');
         }
