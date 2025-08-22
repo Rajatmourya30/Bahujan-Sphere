@@ -48,8 +48,8 @@ export const createTeamUser = https.onCall(async (data, context) => {
         throw new HttpsError("unauthenticated", "The function must be called while authenticated.");
     }
 
-    // CRITICAL FIX: Check if the caller is an admin via EITHER a custom claim OR by checking the database.
-    // This allows the first admin to create other users even before their own custom claim has propagated.
+    // Check if the caller is an admin via custom claim OR by checking the database.
+    // This provides a fallback if the custom claim hasn't propagated yet.
     const isCustomClaimAdmin = context.auth.token.admin === true;
     
     const teamQuery = await db.collection("teamMembers").where("email", "==", context.auth.token.email).limit(1).get();
@@ -60,26 +60,19 @@ export const createTeamUser = https.onCall(async (data, context) => {
     }
 
 
-    const { email, password, role } = data;
-    if (typeof email !== "string" || typeof password !== "string" || typeof role !== 'string') {
+    const { email, password } = data;
+    if (typeof email !== "string" || typeof password !== "string") {
         throw new HttpsError(
             "invalid-argument",
-            "Email, password, and role must be provided."
+            "Email and password must be provided."
         );
     }
 
     try {
-        // 1. Create user in Firebase Auth
         const userRecord = await admin.auth().createUser({
             email: email,
             password: password,
         });
-
-        // 2. Set custom claims based on role
-        const isAdmin = role === 'Admin' || role === 'Manager';
-        await admin.auth().setCustomUserClaims(userRecord.uid, { admin: isAdmin });
-
-        // 3. Return the UID so the client can create the Firestore doc
         return { uid: userRecord.uid };
     } catch (error) {
         console.error("Error creating new user:", error);

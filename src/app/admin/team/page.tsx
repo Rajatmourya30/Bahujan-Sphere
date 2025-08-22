@@ -7,17 +7,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { UserPlus } from 'lucide-react';
 import { TeamMemberTable } from '@/components/admin/TeamMemberTable';
-import { AddMemberDialog } from '@/components/admin/AddMemberDialog';
+import { SimpleAddMemberDialog } from '@/components/admin/SimpleAddMemberDialog';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { collection, onSnapshot, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, updateDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import type { NewTeamMember, TeamMember, TeamMemberWithId } from '@/lib/team';
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '@/lib/firebase';
-
-
-const setAdminClaim = httpsCallable(functions, 'setAdminClaim');
+import type { TeamMember, TeamMemberWithId } from '@/lib/team';
 
 export default function TeamManagementPage() {
   const router = useRouter();
@@ -61,10 +56,8 @@ export default function TeamManagementPage() {
 
   const handleUpdateRole = async (member: TeamMemberWithId, newRole: TeamMember['role']) => {
     const memberDocRef = doc(db, 'teamMembers', member.id);
-    const isAdmin = newRole === 'Admin' || newRole === 'Manager';
     try {
       await updateDoc(memberDocRef, { role: newRole });
-      await setAdminClaim({ email: member.email, admin: isAdmin });
       toast({ title: 'Success', description: `Team member role updated to ${newRole}.` });
     } catch (error) {
       console.error("Error updating role:", error);
@@ -81,35 +74,16 @@ export default function TeamManagementPage() {
     const memberDocRef = doc(db, 'teamMembers', member.id);
     try {
       await deleteDoc(memberDocRef);
-      await setAdminClaim({ email: member.email, admin: false });
       toast({ title: 'Success', description: 'Team member removed successfully.' });
     } catch (error) {
       console.error("Error removing member:", error);
-      toast({ title: 'Error', description: 'Failed to remove team member.', variant: 'destructive' });
-    }
-  };
-
- const handleAddMember = async (newMember: NewTeamMember, uid: string) => {
-    try {
-      // The Cloud Function now handles user creation and claim setting.
-      // This function's only job is to create the Firestore document.
-      await setDoc(doc(db, 'teamMembers', uid), {
-        ...newMember,
-        joinedAt: serverTimestamp(),
-      });
-      
-      toast({ title: 'Success', description: `New team member '${newMember.name}' has been added.` });
-      setIsAddDialogOpen(false);
-    } catch (error) {
-      console.error("Error adding member to Firestore:", error);
       toast({ 
-          title: 'Error Saving Member Details', 
-          description: 'The user login was created, but their details could not be saved to the database. Please check Firestore permissions.', 
-          variant: 'destructive' 
+        title: 'Error removing member', 
+        description: error instanceof Error ? error.message : 'An unknown error occurred.',
+        variant: 'destructive'
       });
     }
   };
-
 
   if (isLoading) {
     return (
@@ -143,9 +117,9 @@ export default function TeamManagementPage() {
       </section>
 
       {isAddDialogOpen && (
-        <AddMemberDialog
+        <SimpleAddMemberDialog
           onOpenChange={setIsAddDialogOpen}
-          onSave={handleAddMember}
+          onSuccess={() => setIsAddDialogOpen(false)}
         />
       )}
     </div>
