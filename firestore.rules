@@ -3,51 +3,53 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // HELPER FUNCTIONS
+    // Helper functions
     function isSignedIn() {
       return request.auth != null;
     }
 
     function isTeamMember() {
-      // Securely checks if a user's UID exists in the teamMembers collection.
-      // This is the primary function for checking admin/editor/etc. privileges.
+      // Securely checks if a user's UID exists in the teamMembers collection
       return isSignedIn() && exists(/databases/$(database)/documents/teamMembers/$(request.auth.uid));
     }
 
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
-    
-    function isApproved(resource) {
-      // Checks if a document has the 'approved' status.
+
+    function isApprovedContent(resource) {
+      // Checks the status field of a document
       return resource.data.status == 'approved';
     }
 
-    // TEAM MEMBERS & USERS
-    match /teamMembers/{userId} {
-      // IMPORTANT FIX: Allow any authenticated user to check for the EXISTENCE of their own team member document.
-      // This is required for Storage rules to function correctly. This rule does NOT allow reading the document's data.
-      allow get: if isSignedIn() && exists(/databases/$(database)/documents/teamMembers/$(request.auth.uid)) || isOwner(userId);
-      allow list: if isTeamMember();
-      allow write: if isTeamMember(); // Allow admins to manage team members
-    }
-
-    match /users/{userId} {
-      allow read, write: if isOwner(userId);
-      allow create; // Allow new user signups
-    }
-
-    // PUBLIC CONTENT COLLECTIONS
-    // Users can only read approved content. Team members can write and read all content.
+    // PUBLIC CONTENT: Only approved content is publicly readable
     match /{collectionName}/{docId} where collectionName in ['calendarEvents', 'knowledgeHub', 'stores', 'books', 'readingRoomPdfs'] {
-      allow read: if isApproved(resource) || isTeamMember();
+      // Public can ONLY read documents where status is 'approved'
+      allow read: if isApprovedContent(resource);
+      // Team members can read all content (for admin review purposes)
+      allow read: if isTeamMember();
+      // Only team members can write
       allow write: if isTeamMember();
     }
-    
-    // SUBMISSION COLLECTIONS
-    // Only team members can manage submissions.
+
+    // SUBMISSIONS: Only accessible by team members
     match /{submissionCollection}/{submissionId} where submissionCollection in ['eventSubmissions', 'bookSubmissions', 'storeSubmissions', 'knowledgeHubSubmissions', 'readingRoomSubmissions'] {
       allow create, read, update, delete: if isTeamMember();
+    }
+    
+    // TEAM MEMBERS: Secure access to team info
+    match /teamMembers/{memberId} {
+      allow read: if isTeamMember(); // Team members can see other team members
+      // Only allow Admins to create/update team members, ideally via a Cloud Function.
+      allow write: if isTeamMember() && get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.role == 'Admin';
+    }
+
+    // USER PROFILES: Publicly readable, but only owners can write.
+    match /users/{userId} {
+      // Anyone can view a user's public profile.
+      allow read: if true;
+      // Only the authenticated owner of the document can create or update it.
+      allow write: if isOwner(userId);
     }
   }
 }

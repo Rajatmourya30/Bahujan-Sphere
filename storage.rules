@@ -5,9 +5,18 @@ service firebase.storage {
 
     // HELPER FUNCTION
     function isTeamMember() {
-      // This check now works correctly because of the updated firestore.rules.
-      // exists() is more efficient and requires less permission than get().
-      return exists(/databases/(default)/documents/teamMembers/$(request.auth.uid));
+      // Check if user is authenticated and has team member custom claims
+      return request.auth != null && 
+             request.auth.token != null && 
+             request.auth.token.teamMember == true;
+    }
+
+    // ALTERNATIVE HELPER FUNCTION - Check by querying teamMembers collection
+    function isTeamMemberByEmail() {
+      return request.auth != null && 
+             request.auth.token != null && 
+             request.auth.token.email != null &&
+             exists(/databases/(default)/documents/teamMembers/$(request.auth.uid));
     }
 
     // PUBLIC CONTENT & TEAM UPLOADS
@@ -16,9 +25,9 @@ service firebase.storage {
       // Allow public read access so visitors can see images and PDFs.
       allow read;
       
-      // CRITICAL FIX: Only allow authenticated team members to write (upload/delete).
-      // This finally resolves the 'storage/unauthorized' error for admins and other roles.
-      allow write: if isTeamMember();
+      // CRITICAL FIX: Allow authenticated team members to write (upload/delete).
+      // Using custom claims approach for better performance and reliability.
+      allow write: if isTeamMember() || isTeamMemberByEmail();
     }
 
     // USER-SPECIFIC FILES (Profile Pictures)

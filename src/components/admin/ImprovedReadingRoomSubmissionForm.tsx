@@ -65,19 +65,34 @@ export function ImprovedReadingRoomSubmissionForm() {
             
             if (currentUser) {
                 try {
-                    // Check if user is a team member
-                    const teamQuery = query(collection(db, "teamMembers"), where("email", "==", currentUser.email));
-                    const querySnapshot = await getDocs(teamQuery);
+                    // First, try to get team member document using UID as document ID
+                    const teamMemberDocRef = doc(db, "teamMembers", currentUser.uid);
+                    const teamMemberDoc = await getDoc(teamMemberDocRef);
                     
-                    if (!querySnapshot.empty) {
-                        const userDoc = querySnapshot.docs[0].data();
-                        setUserRole(userDoc.role);
+                    if (teamMemberDoc.exists()) {
+                        const userData = teamMemberDoc.data();
+                        setUserRole(userData.role);
                         setIsTeamMember(true);
-                        console.log('User authenticated as team member:', userDoc.role);
+                        console.log('User authenticated as team member:', userData.role);
                     } else {
-                        setUserRole(null);
-                        setIsTeamMember(false);
-                        setAuthError('You are not authorized to upload files. Please contact an administrator.');
+                        // Fallback: Check by email query (for legacy team members)
+                        console.log('Team member document not found by UID, trying email query...');
+                        const teamQuery = query(collection(db, "teamMembers"), where("email", "==", currentUser.email));
+                        const querySnapshot = await getDocs(teamQuery);
+                        
+                        if (!querySnapshot.empty) {
+                            const userDoc = querySnapshot.docs[0].data();
+                            setUserRole(userDoc.role);
+                            setIsTeamMember(true);
+                            console.log('User authenticated as team member via email:', userDoc.role);
+                            
+                            // Optionally migrate the document to use UID as document ID
+                            console.log('Consider migrating team member document to use UID as document ID');
+                        } else {
+                            setUserRole(null);
+                            setIsTeamMember(false);
+                            setAuthError('You are not authorized to upload files. Please contact an administrator.');
+                        }
                     }
                 } catch (error) {
                     console.error("Error checking team membership:", error);
