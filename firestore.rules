@@ -18,43 +18,37 @@ service cloud.firestore {
       return resource.data.status == 'approved';
     }
 
-    // PUBLIC CONTENT: Reading Room PDFs, Books, Stores, etc.
-    match /{collectionName}/{docId} where collectionName in ['readingRoomPdfs', 'books', 'stores', 'knowledgeHub', 'calendarEvents'] {
-      // Public can read approved content; team members can read all for review.
+    // PUBLIC CONTENT: Only approved content is publicly readable
+    match /{collectionName}/{docId} where collectionName in ['calendarEvents', 'knowledgeHub', 'stores', 'books', 'readingRoomPdfs'] {
       allow read: if isApprovedContent(resource) || isTeamMember();
-      // Only team members can write.
       allow write: if isTeamMember();
     }
-    
-    // SUBMISSIONS: Secure access for team members only.
+
+    // SUBMISSIONS: Only accessible by team members
     match /{submissionCollection}/{submissionId} where submissionCollection in ['eventSubmissions', 'bookSubmissions', 'storeSubmissions', 'knowledgeHubSubmissions', 'readingRoomSubmissions'] {
       allow create, read, update, delete: if isTeamMember();
     }
     
-    // USER PROFILES: Public user data management.
+    // USER PROFILES: Public user data.
     match /users/{userId} {
-      // Any signed-in user can create their own profile document.
       allow create: if isSignedIn() && request.auth.uid == userId;
-      // Anyone can read user profiles.
       allow read: if true;
-      // Users can only update their own profile.
-      allow update, delete: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSignedIn() && request.auth.uid == userId;
+      allow delete: if isSignedIn() && request.auth.uid == userId;
     }
 
     // TEAM MEMBERS: Defines roles and permissions for the admin panel.
     match /teamMembers/{memberId} {
-      // GET: Allow a logged-in user to check their own team member status.
-      allow get: if isSignedIn();
-      
-      // LIST: Only existing team members can list all other members.
-      // Allow the original admin to list team members even before they have a team member document
-      allow list: if (isSignedIn() && request.auth.email == 'rajatmourya82@gmail.com') || isTeamMember();
+      // Allow the original admin to create their own team member document
+      allow create: if isSignedIn() && request.auth.uid == memberId && request.auth.email == 'rajatmourya82@gmail.com';
 
-      // WRITE (Update/Delete): Only team members can manage other members.
-      allow update, delete: if isTeamMember();
-      
-      // CREATE: Allow the original admin to create their own team member document. This is the critical fix.
-      allow create: if (isSignedIn() && request.auth.uid == memberId && request.auth.email == 'rajatmourya82@gmail.com') || isTeamMember();
+      // TEMPORARY FIX: Allow any signed-in user to read the team members list.
+      // This is necessary to allow the admin login page to verify credentials.
+      // This MUST be reverted to `if isTeamMember()` after the first admin logs in.
+      allow read: if isSignedIn();
+
+      // Only team members can add/update/remove other members.
+      allow write: if isTeamMember();
     }
   }
 }
