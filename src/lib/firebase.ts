@@ -12,7 +12,7 @@ const firebaseConfig = {
   authDomain: "bahujansphere-90sqv.firebaseapp.com",
   databaseURL: "https://bahujansphere-90sqv-default-rtdb.firebaseio.com",
   projectId: "bahujansphere-90sqv",
-  storageBucket: "bahujansphere-90sqv.appspot.com",
+  storageBucket: "bahujansphere-90sqv.firebasestorage.app",
   messagingSenderId: "3324981248",
   appId: "1:3324981248:web:ac368f108131bf2bed68e5",
   measurementId: "G-K6QXH1FK7M"

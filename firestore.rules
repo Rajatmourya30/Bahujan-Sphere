@@ -1,67 +1,74 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper Functions for security rules.
-    // These functions can be reused across different rules.
-
-    // Checks if the user is authenticated.
+    // Helper functions for secure, reusable logic
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Checks if the authenticated user is a documented team member.
-    // This is more secure than checking a custom claim alone as it requires a Firestore document.
+    // Checks if the user's UID exists as a document ID in the teamMembers collection.
+    // This is more secure and efficient than querying by email.
     function isTeamMember() {
       return isSignedIn() && exists(/databases/$(database)/documents/teamMembers/$(request.auth.uid));
     }
-    
+
     // Checks if a document has been approved for public viewing.
     function isApprovedContent(resource) {
       return resource.data.status == 'approved';
     }
 
-    // --- Rules for Publicly Viewable Content ---
-    // These collections contain content that, once approved, can be read by anyone.
-    match /{collectionName}/{docId} where collectionName in ['calendarEvents', 'knowledgeHub', 'stores', 'books', 'readingRoomPdfs'] {
-      // Public can ONLY read documents where status is 'approved'. This prevents data leaks.
+    // PUBLIC CONTENT: Reading Room PDFs, Books, Stores, etc.
+    // These collections should only allow public reading of 'approved' content.
+    match /{publicCollection}/{docId} where publicCollection in ['readingRoomPdfs', 'books', 'stores', 'knowledgeHub', 'calendarEvents'] {
+      // PUBLIC ACCESS: Anyone can read a document if its status is 'approved'.
       allow read: if isApprovedContent(resource);
-      // Team members can read all documents, including pending ones for review.
+
+      // TEAM ACCESS: Team members can read all documents (e.g., for review).
       allow read: if isTeamMember();
-      
-      // Only team members can create, update, or delete content.
+
+      // WRITE ACCESS: Only team members can create, update, or delete content.
       allow write: if isTeamMember();
     }
 
-    // --- Rules for User Profiles ---
-    // The 'users' collection stores public user profile data.
-    match /users/{userId} {
-        // Any user can read any public profile.
-        allow read: if true;
-        // An authenticated user can create their own profile document.
-        allow create: if isSignedIn() && request.auth.uid == userId;
-        // A user can only update their own profile.
-        allow update: if isSignedIn() && request.auth.uid == userId;
-        // A user can delete their own profile.
-        allow delete: if isSignedIn() && request.auth.uid == userId;
-    }
-    
-    // --- Rules for Submission Queues ---
-    // These collections hold content pending review by team members.
+    // SUBMISSIONS QUEUES: Event, Book, Store, etc., submissions.
+    // Only team members should have any access to these collections.
     match /{submissionCollection}/{submissionId} where submissionCollection in ['eventSubmissions', 'bookSubmissions', 'storeSubmissions', 'knowledgeHubSubmissions', 'readingRoomSubmissions'] {
-      // Only team members can access the submission queues.
-      allow read, write: if isTeamMember();
+      // Allow creation for team members (e.g., from admin panel forms).
+      allow create: if isTeamMember();
+      
+      // Allow full read/write/delete access for team members to manage the queue.
+      allow read, update, delete: if isTeamMember();
     }
     
-    // --- Rules for Team Management ---
-    // The 'teamMembers' collection is sensitive and access is restricted.
+    // USER PROFILES: Public user data.
+    match /users/{userId} {
+      // CREATE: Any signed-in user can create their own profile document.
+      allow create: if isSignedIn() && request.auth.uid == userId;
+
+      // READ: Anyone can read user profiles (public profiles).
+      allow read: if true;
+
+      // UPDATE: Users can only update their own profile.
+      allow update: if isSignedIn() && request.auth.uid == userId;
+
+      // DELETE: Users can delete their own profile.
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // TEAM MEMBERS: Defines roles and permissions for the admin panel.
     match /teamMembers/{memberId} {
-      // Allow a user's role to be read by other rules (e.g., in Storage rules).
+      // GET: Allow a logged-in user to check their own team member status.
+      // This is crucial for the admin login page to verify permissions.
       allow get: if isSignedIn();
-      // Only team members can see the list of other team members.
+
+      // LIST: Only existing team members can list all other members.
       allow list: if isTeamMember();
-      // Writing/deleting members should be handled by a secure Cloud Function, not directly by clients.
+
+      // WRITE: Only team members can add/update/remove other members.
+      // (Further restricted in the app to Admins/Managers).
       allow write: if isTeamMember();
     }
   }

@@ -11,13 +11,34 @@ service firebase.storage {
 
     // --- Rules for Public Content Folders ---
     // These folders store images and PDFs for the main application features.
-    match /{folder}/{fileName} where folder in ['images/events', 'images/logos', 'images/stores', 'bookCovers', 'pdfs'] {
-      
-      // Allow public read access so any visitor can see approved content images/PDFs.
+    
+    // Events images
+    match /images/events/{fileName} {
       allow read;
-      
-      // CRITICAL FIX: Only allow authenticated team members to write (upload/update/delete).
-      // This is the main fix for the "storage/unauthorized" error for admins and other team roles.
+      allow write: if isTeamMember();
+    }
+    
+    // Logo images
+    match /images/logos/{fileName} {
+      allow read;
+      allow write: if isTeamMember();
+    }
+    
+    // Store images
+    match /images/stores/{fileName} {
+      allow read;
+      allow write: if isTeamMember();
+    }
+    
+    // Book covers
+    match /bookCovers/{fileName} {
+      allow read;
+      allow write: if isTeamMember();
+    }
+    
+    // PDFs
+    match /pdfs/{fileName} {
+      allow read;
       allow write: if isTeamMember();
     }
 

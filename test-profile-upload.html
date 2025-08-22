@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Picture Upload Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background-color: #0056b3;
+        }
+        
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #007bff;
+        }
+        
+        .upload-area {
+            border: 2px dashed #007bff;
+            padding: 20px;
+            text-align: center;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background-color: #007bff;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖼️ Profile Picture Upload Test</h1>
+        <p>This page tests the profile picture upload functionality with enhanced error handling and debugging.</p>
+        
+        <div class="test-section">
+            <h2>📋 System Status</h2>
+            <div id="systemStatus">
+                <div class="info">Checking system status...</div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🔐 Authentication</h2>
+            <div id="authStatus">
+                <div class="info">Checking authentication...</div>
+            </div>
+            <button id="loginBtn" onclick="signInWithGoogle()" style="display: none;">Sign In with Google</button>
+            <button id="logoutBtn" onclick="signOut()" style="display: none;">Sign Out</button>
+        </div>
+        
+        <div class="test-section">
+            <h2>📤 Upload Test</h2>
+            <div id="uploadStatus">
+                <div class="info">Please authenticate first</div>
+            </div>
+            
+            <div class="upload-area" id="uploadArea" style="display: none;">
+                <p>Click to select an image or drag and drop</p>
+                <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                <img id="preview" class="avatar" style="display: none;">
+                <div class="progress-bar" id="progressBar" style="display: none;">
+                    <div class="progress-fill" id="progressFill" style="width: 0%;"></div>
+                </div>
+                <div id="progressText"></div>
+                <button id="uploadBtn" onclick="uploadImage()" style="display: none;">Upload Image</button>
+                <button id="cancelBtn" onclick="cancelUpload()" style="display: none;">Cancel</button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🔍 Debug Information</h2>
+            <div id="debugInfo">
+                <div class="info">Debug information will appear here...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut as firebaseSignOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getStorage, ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+        import { getFirestore, doc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDyg5huOpWkk0KZybL7U6c5rPGLvAw8ffM",
+            authDomain: "bahujansphere-90sqv.firebaseapp.com",
+            databaseURL: "https://bahujansphere-90sqv-default-rtdb.firebaseio.com",
+            projectId: "bahujansphere-90sqv",
+            storageBucket: "bahujansphere-90sqv.appspot.com",
+            messagingSenderId: "3324981248",
+            appId: "1:3324981248:web:ac368f108131bf2bed68e5",
+            measurementId: "G-K6QXH1FK7M"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const storage = getStorage(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        let currentUser = null;
+        let selectedFile = null;
+        let uploadTask = null;
+
+        // Make functions global
+        window.signInWithGoogle = signInWithGoogle;
+        window.signOut = signOut;
+        window.uploadImage = uploadImage;
+        window.cancelUpload = cancelUpload;
+
+        // System status check
+        function updateSystemStatus() {
+            const statusDiv = document.getElementById('systemStatus');
+            statusDiv.innerHTML = `
+                <div class="success">✅ Firebase SDK loaded successfully</div>
+                <div class="success">✅ Storage service initialized</div>
+                <div class="success">✅ Authentication service initialized</div>
+                <div class="success">✅ Firestore service initialized</div>
+            `;
+        }
+
+        // Authentication functions
+        async function signInWithGoogle() {
+            try {
+                const result = await signInWithPopup(auth, provider);
+                console.log('Sign in successful:', result.user);
+            } catch (error) {
+                console.error('Sign in error:', error);
+                updateAuthStatus(`<div class="error">❌ Sign in failed: ${error.message}</div>`);
+            }
+        }
+
+        async function signOut() {
+            try {
+                await firebaseSignOut(auth);
+                console.log('Sign out successful');
+            } catch (error) {
+                console.error('Sign out error:', error);
+            }
+        }
+
+        function updateAuthStatus(html) {
+            document.getElementById('authStatus').innerHTML = html;
+        }
+
+        function updateUploadStatus(html) {
+            document.getElementById('uploadStatus').innerHTML = html;
+        }
+
+        function updateDebugInfo(info) {
+            const debugDiv = document.getElementById('debugInfo');
+            const timestamp = new Date().toLocaleTimeString();
+            debugDiv.innerHTML += `<div class="info">[${timestamp}] ${info}</div>`;
+        }
+
+        // File handling
+        function setupFileInput() {
+            const fileInput = document.getElementById('fileInput');
+            const uploadArea = document.getElementById('uploadArea');
+            const preview = document.getElementById('preview');
+
+            uploadArea.onclick = () => fileInput.click();
+
+            fileInput.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    handleFileSelection(file);
+                }
+            };
+
+            // Drag and drop
+            uploadArea.ondragover = (e) => {
+                e.preventDefault();
+                uploadArea.style.backgroundColor = '#e3f2fd';
+            };
+
+            uploadArea.ondragleave = () => {
+                uploadArea.style.backgroundColor = '';
+            };
+
+            uploadArea.ondrop = (e) => {
+                e.preventDefault();
+                uploadArea.style.backgroundColor = '';
+                const file = e.dataTransfer.files[0];
+                if (file) {
+                    handleFileSelection(file);
+                }
+            };
+        }
+
+        function handleFileSelection(file) {
+            updateDebugInfo(`File selected: ${file.name} (${file.type}, ${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+
+            // Validate file
+            if (!file.type.startsWith('image/')) {
+                updateUploadStatus('<div class="error">❌ Please select an image file</div>');
+                return;
+            }
+
+            if (file.size > 5 * 1024 * 1024) {
+                updateUploadStatus('<div class="error">❌ Image must be smaller than 5MB</div>');
+                return;
+            }
+
+            selectedFile = file;
+
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const preview = document.getElementById('preview');
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+
+            // Show upload button
+            document.getElementById('uploadBtn').style.display = 'inline-block';
+            updateUploadStatus('<div class="success">✅ Image ready for upload</div>');
+        }
+
+        async function uploadImage() {
+            if (!selectedFile || !currentUser) {
+                updateUploadStatus('<div class="error">❌ No file selected or user not authenticated</div>');
+                return;
+            }
+
+            const uploadBtn = document.getElementById('uploadBtn');
+            const cancelBtn = document.getElementById('cancelBtn');
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+
+            uploadBtn.style.display = 'none';
+            cancelBtn.style.display = 'inline-block';
+            progressBar.style.display = 'block';
+
+            try {
+                updateDebugInfo(`Starting upload for user: ${currentUser.uid}`);
+
+                // Create storage reference
+                const timestamp = Date.now();
+                const fileExtension = selectedFile.name.split('.').pop() || 'jpg';
+                const fileName = `profile_${timestamp}.${fileExtension}`;
+                const storagePath = `profilePictures/${currentUser.uid}/${fileName}`;
+                
+                updateDebugInfo(`Storage path: ${storagePath}`);
+
+                const storageRef = ref(storage, storagePath);
+
+                // Create upload task with progress tracking
+                uploadTask = uploadBytesResumable(storageRef, selectedFile, {
+                    contentType: selectedFile.type,
+                    customMetadata: {
+                        uploadedBy: currentUser.uid,
+                        uploadedAt: new Date().toISOString(),
+                        originalName: selectedFile.name
+                    }
+                });
+
+                // Monitor upload progress
+                uploadTask.on('state_changed', 
+                    (snapshot) => {
+                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                        progressFill.style.width = progress + '%';
+                        progressText.textContent = `Upload progress: ${Math.round(progress)}%`;
+                        updateDebugInfo(`Upload progress: ${Math.round(progress)}%`);
+                    },
+                    (error) => {
+                        console.error('Upload error:', error);
+                        updateUploadStatus(`<div class="error">❌ Upload failed: ${error.code} - ${error.message}</div>`);
+                        updateDebugInfo(`Upload error: ${error.code} - ${error.message}`);
+                        resetUploadUI();
+                    },
+                    async () => {
+                        try {
+                            // Upload completed successfully
+                            updateDebugInfo('Upload completed, getting download URL...');
+                            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                            updateDebugInfo(`Download URL obtained: ${downloadURL}`);
+
+                            // Update user document (optional - you may not have this collection)
+                            try {
+                                const userDocRef = doc(db, 'users', currentUser.uid);
+                                await updateDoc(userDocRef, { 
+                                    photoUrl: downloadURL,
+                                    photoUpdatedAt: new Date().toISOString()
+                                });
+                                updateDebugInfo('User document updated successfully');
+                            } catch (docError) {
+                                updateDebugInfo(`User document update failed (this may be normal): ${docError.message}`);
+                            }
+
+                            updateUploadStatus('<div class="success">✅ Profile picture uploaded successfully!</div>');
+                            updateDebugInfo('Upload process completed successfully');
+
+                            // Update preview with new image
+                            document.getElementById('preview').src = downloadURL;
+
+                            resetUploadUI();
+                        } catch (error) {
+                            console.error('Post-upload error:', error);
+                            updateUploadStatus(`<div class="error">❌ Upload completed but failed to get URL: ${error.message}</div>`);
+                            resetUploadUI();
+                        }
+                    }
+                );
+
+            } catch (error) {
+                console.error('Upload initialization error:', error);
+                updateUploadStatus(`<div class="error">❌ Failed to start upload: ${error.message}</div>`);
+                updateDebugInfo(`Upload initialization error: ${error.message}`);
+                resetUploadUI();
+            }
+        }
+
+        function cancelUpload() {
+            if (uploadTask) {
+                uploadTask.cancel();
+                updateUploadStatus('<div class="warning">⚠️ Upload canceled</div>');
+                updateDebugInfo('Upload canceled by user');
+            }
+            resetUploadUI();
+        }
+
+        function resetUploadUI() {
+            document.getElementById('uploadBtn').style.display = 'inline-block';
+            document.getElementById('cancelBtn').style.display = 'none';
+            document.getElementById('progressBar').style.display = 'none';
+            document.getElementById('progressFill').style.width = '0%';
+            document.getElementById('progressText').textContent = '';
+            uploadTask = null;
+        }
+
+        // Auth state observer
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (user) {
+                updateAuthStatus(`
+                    <div class="success">✅ Authenticated as: ${user.email}</div>
+                    <div class="info">User ID: ${user.uid}</div>
+                `);
+                document.getElementById('loginBtn').style.display = 'none';
+                document.getElementById('logoutBtn').style.display = 'inline-block';
+                document.getElementById('uploadArea').style.display = 'block';
+                updateUploadStatus('<div class="info">Select an image to upload</div>');
+                updateDebugInfo(`User authenticated: ${user.email} (${user.uid})`);
+            } else {
+                updateAuthStatus('<div class="warning">⚠️ Not authenticated</div>');
+                document.getElementById('loginBtn').style.display = 'inline-block';
+                document.getElementById('logoutBtn').style.display = 'none';
+                document.getElementById('uploadArea').style.display = 'none';
+                updateUploadStatus('<div class="info">Please authenticate first</div>');
+                updateDebugInfo('User signed out');
+            }
+        });
+
+        // Initialize
+        updateSystemStatus();
+        setupFileInput();
+        updateDebugInfo('Test page initialized');
+    </script>
+</body>
+</html>

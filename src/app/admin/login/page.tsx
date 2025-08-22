@@ -12,7 +12,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { signInWithEmailAndPassword, onAuthStateChanged, type User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AdminLoginPage() {
@@ -23,19 +23,29 @@ export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  
+  const isTeamMember = async (user: User): Promise<boolean> => {
+      // Primary check: UID-based document lookup (more secure and efficient)
+      const teamMemberDocRef = doc(db, "teamMembers", user.uid);
+      const teamMemberDoc = await getDoc(teamMemberDocRef);
+      if (teamMemberDoc.exists()) {
+          return true;
+      }
+
+      // Fallback check: Email-based query (for legacy or different structures)
+      const teamQuery = query(collection(db, "teamMembers"), where("email", "==", user.email));
+      const querySnapshot = await getDocs(teamQuery);
+      return !querySnapshot.empty;
+  }
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // If user is logged in, check if they are a team member
-        const teamQuery = query(collection(db, "teamMembers"), where("email", "==", user.email));
-        getDocs(teamQuery).then((querySnapshot) => {
-          if (!querySnapshot.empty) {
+        if (await isTeamMember(user)) {
             router.replace('/admin');
-          } else {
+        } else {
             setIsCheckingAuth(false);
-          }
-        });
+        }
       } else {
         setIsCheckingAuth(false);
       }
@@ -51,10 +61,7 @@ export default function AdminLoginPage() {
       const user = userCredential.user;
 
       // Security Check: Verify if the user is in the teamMembers collection
-      const teamQuery = query(collection(db, "teamMembers"), where("email", "==", user.email));
-      const querySnapshot = await getDocs(teamQuery);
-      
-      if (querySnapshot.empty) {
+      if (!(await isTeamMember(user))) {
         // If the user is not in the team collection, they are not an admin.
         await auth.signOut(); // Log them out immediately
         toast({
@@ -73,16 +80,13 @@ export default function AdminLoginPage() {
       let description = 'An unexpected error occurred. Please try again.';
       switch (error.code) {
         case 'auth/user-not-found':
-          description = 'No user found with this email. Please check the email or create an account in Firebase Authentication.';
-          break;
         case 'auth/wrong-password':
-          description = 'Incorrect password. Please check your password and try again.';
-          break;
         case 'auth/invalid-credential':
           description = 'Invalid credentials. Please check your email and password.';
           break;
         default:
-          description = 'Invalid credentials. Please check your email and password.';
+          description = 'An error occurred during login. Please check the console for details.';
+          console.error("Login error:", error);
           break;
       }
       toast({
