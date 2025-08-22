@@ -13,10 +13,6 @@ service cloud.firestore {
       return isSignedIn() && exists(/databases/$(database)/documents/teamMembers/$(request.auth.uid));
     }
 
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
     function isApprovedContent(resource) {
       // Checks the status field of a document
       return resource.data.status == 'approved';
@@ -40,16 +36,15 @@ service cloud.firestore {
     // TEAM MEMBERS: Secure access to team info
     match /teamMembers/{memberId} {
       allow read: if isTeamMember(); // Team members can see other team members
-      // Only allow Admins to create/update team members, ideally via a Cloud Function.
-      allow write: if isTeamMember() && get(/databases/$(database)/documents/teamMembers/$(request.auth.uid)).data.role == 'Admin';
+      allow write: if false; // Should be handled by secure Cloud Functions
     }
 
-    // USER PROFILES: Publicly readable, but only owners can write.
+    // USER PROFILES: Publicly readable, but only the owner can write.
     match /users/{userId} {
-      // Anyone can view a user's public profile.
-      allow read: if true;
-      // Only the authenticated owner of the document can create or update it.
-      allow write: if isOwner(userId);
+      allow read: if true; // Public profiles are readable by anyone
+      allow create: if isSignedIn() and request.auth.uid == userId; // A user can create their own profile document
+      allow update: if isSignedIn() and request.auth.uid == userId; // A user can update their own profile
+      allow delete: if isSignedIn() and request.auth.uid == userId; // A user can delete their own profile
     }
   }
 }

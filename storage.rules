@@ -1,39 +1,30 @@
 rules_version = '2';
-
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // HELPER FUNCTION
     function isTeamMember() {
-      // Check if user is authenticated and has team member custom claims
-      return request.auth != null && 
-             request.auth.token != null && 
-             request.auth.token.teamMember == true;
+      // exists() is more efficient and requires less permission than get()
+      return request.auth != null && exists(/databases/(default)/documents/teamMembers/$(request.auth.uid));
     }
 
-    // ALTERNATIVE HELPER FUNCTION - Check by querying teamMembers collection
-    function isTeamMemberByEmail() {
-      return request.auth != null && 
-             request.auth.token != null && 
-             request.auth.token.email != null &&
-             exists(/databases/(default)/documents/teamMembers/$(request.auth.uid));
+    // Check if a corresponding user document exists in Firestore
+    function userProfileExists(userId) {
+      return exists(/databases/(default)/documents/users/$(userId));
     }
 
-    // PUBLIC CONTENT & TEAM UPLOADS
-    // Covers all paths where team members need to upload files.
-    match /{allPaths=**} {
-      // Allow public read access so visitors can see images and PDFs.
-      allow read;
+    // Public content folders
+    match /{folder}/{fileName} where folder in ['images/events', 'images/logos', 'images/stores', 'bookCovers', 'pdfs'] {
+      // Allow public read access so visitors can see images/PDFs.
+      allow read; 
       
-      // CRITICAL FIX: Allow authenticated team members to write (upload/delete).
-      // Using custom claims approach for better performance and reliability.
-      allow write: if isTeamMember() || isTeamMemberByEmail();
+      // Only allow authenticated team members to write (upload/delete).
+      allow write: if isTeamMember();
     }
 
-    // USER-SPECIFIC FILES (Profile Pictures)
-    // Users can only read and write to their own designated folder.
+    // Profile pictures: Users can only manage their own, and only if their profile document exists.
     match /profilePictures/{userId}/{fileName} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read; // Profile pictures are public
+      allow write: if request.auth != null && request.auth.uid == userId && userProfileExists(userId);
     }
   }
 }
