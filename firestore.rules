@@ -9,6 +9,7 @@ service cloud.firestore {
     }
 
     // Checks if the user's UID exists as a document ID in the teamMembers collection.
+    // This is more secure and efficient than querying by email.
     function isTeamMember() {
       return isSignedIn() && exists(/databases/$(database)/documents/teamMembers/$(request.auth.uid));
     }
@@ -18,14 +19,60 @@ service cloud.firestore {
       return resource.data.status == 'approved';
     }
 
-    // PUBLIC CONTENT: Only approved content is publicly readable
-    match /{collectionName}/{docId} where collectionName in ['calendarEvents', 'knowledgeHub', 'stores', 'books', 'readingRoomPdfs'] {
+    // PUBLIC CONTENT: Reading Room PDFs
+    match /readingRoomPdfs/{docId} {
+      // Public can ONLY read documents where status is 'approved'.
+      // Team members can read all documents for review purposes.
       allow read: if isApprovedContent(resource) || isTeamMember();
       allow write: if isTeamMember();
     }
 
-    // SUBMISSIONS: Only accessible by team members
-    match /{submissionCollection}/{submissionId} where submissionCollection in ['eventSubmissions', 'bookSubmissions', 'storeSubmissions', 'knowledgeHubSubmissions', 'readingRoomSubmissions'] {
+    // PUBLIC CONTENT: Books
+    match /books/{docId} {
+      allow read: if isApprovedContent(resource) || isTeamMember();
+      allow write: if isTeamMember();
+    }
+
+    // PUBLIC CONTENT: Stores
+    match /stores/{docId} {
+      allow read: if isApprovedContent(resource) || isTeamMember();
+      allow write: if isTeamMember();
+    }
+
+    // PUBLIC CONTENT: Knowledge Hub
+    match /knowledgeHub/{docId} {
+      allow read: if isApprovedContent(resource) || isTeamMember();
+      allow write: if isTeamMember();
+    }
+
+    // PUBLIC CONTENT: Calendar Events
+    match /calendarEvents/{docId} {
+      allow read: if isApprovedContent(resource) || isTeamMember();
+      allow write: if isTeamMember();
+    }
+
+    // SUBMISSIONS: Event Submissions
+    match /eventSubmissions/{submissionId} {
+      allow create, read, update, delete: if isTeamMember();
+    }
+
+    // SUBMISSIONS: Book Submissions
+    match /bookSubmissions/{submissionId} {
+      allow create, read, update, delete: if isTeamMember();
+    }
+
+    // SUBMISSIONS: Store Submissions
+    match /storeSubmissions/{submissionId} {
+      allow create, read, update, delete: if isTeamMember();
+    }
+
+    // SUBMISSIONS: Knowledge Hub Submissions
+    match /knowledgeHubSubmissions/{submissionId} {
+      allow create, read, update, delete: if isTeamMember();
+    }
+
+    // SUBMISSIONS: Reading Room Submissions
+    match /readingRoomSubmissions/{submissionId} {
       allow create, read, update, delete: if isTeamMember();
     }
     
@@ -39,16 +86,16 @@ service cloud.firestore {
 
     // TEAM MEMBERS: Defines roles and permissions for the admin panel.
     match /teamMembers/{memberId} {
-      // Allow the original admin to create their own team member document
-      allow create: if isSignedIn() && request.auth.uid == memberId && request.auth.email == 'rajatmourya82@gmail.com';
-
-      // TEMPORARY FIX: Allow any signed-in user to read the team members list.
-      // This is necessary to allow the admin login page to verify credentials.
-      // This MUST be reverted to `if isTeamMember()` after the first admin logs in.
-      allow read: if isSignedIn();
-
+      // Allow a logged-in user to check their own team member status.
+      // This is crucial for the admin login page to verify permissions.
+      allow get: if isSignedIn();
+      // Only existing team members can list all other members.
+      allow list: if isTeamMember();
       // Only team members can add/update/remove other members.
       allow write: if isTeamMember();
+
+      // Special rule to allow the first admin to be created by the app logic
+      allow create: if (isSignedIn() && request.auth.uid == memberId && request.auth.email == 'rajatmourya82@gmail.com');
     }
   }
 }
