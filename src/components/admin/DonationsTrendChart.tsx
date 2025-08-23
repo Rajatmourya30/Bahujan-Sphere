@@ -1,18 +1,11 @@
 
 'use client';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
-
-const chartData = [
-  { month: "January", donations: 1860 },
-  { month: "February", donations: 3050 },
-  { month: "March", donations: 2370 },
-  { month: "April", donations: 1730 },
-  { month: "May", donations: 2090 },
-  { month: "June", donations: 2140 },
-  { month: "July", donations: 1950 },
-];
+import { getDonationsData, type DonationData } from '@/lib/admin-analytics';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const chartConfig = {
   donations: {
@@ -22,11 +15,59 @@ const chartConfig = {
 };
 
 export function DonationsTrendChart() {
+    const [chartData, setChartData] = useState<DonationData[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                setIsLoading(true);
+                const data = await getDonationsData();
+                setChartData(data);
+                setError(null);
+            } catch (err) {
+                console.error('Error fetching donations data:', err);
+                setError('Failed to load donations data');
+                // Fallback to empty data on error
+                setChartData([
+                    { month: "January", donations: 0 },
+                    { month: "February", donations: 0 },
+                    { month: "March", donations: 0 },
+                    { month: "April", donations: 0 },
+                    { month: "May", donations: 0 },
+                    { month: "June", donations: 0 },
+                    { month: "July", donations: 0 },
+                ]);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchData();
+    }, []);
+
+    if (isLoading) {
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Donations Over Time</CardTitle>
+                    <CardDescription>Donation amounts per month</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Skeleton className="h-[250px] w-full" />
+                </CardContent>
+            </Card>
+        );
+    }
+
     return (
         <Card>
             <CardHeader>
                 <CardTitle>Donations Over Time</CardTitle>
-                <CardDescription>Donation amounts per month (sample data)</CardDescription>
+                <CardDescription>
+                    {error ? 'Failed to load data' : 'Donation amounts per month (live data)'}
+                </CardDescription>
             </CardHeader>
             <CardContent>
                 <ChartContainer config={chartConfig} className="h-[250px] w-full">
@@ -40,7 +81,7 @@ export function DonationsTrendChart() {
                             tickFormatter={(value) => value.slice(0, 3)}
                         />
                          <YAxis 
-                            tickFormatter={(value) => `₹${value / 1000}k`}
+                            tickFormatter={(value) => value > 1000 ? `₹${(value / 1000).toFixed(1)}k` : `₹${value}`}
                          />
                         <ChartTooltip
                             cursor={false}

@@ -48,6 +48,12 @@ service firebase.storage {
       allow read;
       allow write: if request.auth != null;
     }
+    
+    // QR codes for payment methods - allow authenticated users to upload
+    match /qr-codes/{fileName} {
+      allow read;
+      allow write: if request.auth != null;
+    }
 
     // Profile pictures - keep original rules
     match /profilePictures/{userId}/{fileName} {

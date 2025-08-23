@@ -28,6 +28,7 @@ export function Header() {
     { href: '/knowledge-hub', label: t('nav.knowledge') },
     { href: '/store', label: t('nav.store') },
     { href: '/books', label: t('nav.books') },
+    { href: '/donate', label: 'Donate' },
   ];
 
   if (pathname.startsWith('/admin') || pathname === '/login' || pathname === '/signup' || pathname === '/language-selection') {

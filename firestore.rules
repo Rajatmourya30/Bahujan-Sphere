@@ -94,5 +94,25 @@ service cloud.firestore {
       // Only team members can create/update/delete other members.
       allow create, update, delete: if isTeamMember();
     }
+
+    // DONATIONS: Public can create donations, team members can manage
+    match /donations/{donationId} {
+      // Anyone can create a donation (public donation page)
+      allow create: if true;
+      // Only team members can read, update, or delete donations
+      allow read, update, delete: if isTeamMember();
+    }
+
+    // PAYMENT METHODS: Only team members can manage payment methods
+    match /paymentMethods/{methodId} {
+      // Only team members can manage payment methods
+      allow read, create, update, delete: if isTeamMember();
+    }
+
+    // PAYMENT METHODS: Public can read active payment methods for donation page
+    match /paymentMethods/{methodId} {
+      // Public can read active payment methods to display on donation page
+      allow read: if resource.data.isActive == true;
+    }
   }
 }

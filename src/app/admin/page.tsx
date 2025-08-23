@@ -29,6 +29,7 @@ import { TopAdPlacementsChart } from '@/components/admin/TopAdPlacementsChart';
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { collection, query, where, getDocs, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { getDashboardStats, type DashboardStats } from '@/lib/admin-analytics';
 
 
 const UserGrowthChart = dynamic(
@@ -51,6 +52,8 @@ export default function AdminDashboardPage() {
   const [userRole, setUserRole] = useState<UserRole>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
@@ -94,6 +97,25 @@ export default function AdminDashboardPage() {
 
     return () => unsubscribeAuth(); // Cleanup auth listener
   }, [router]);
+
+  // Fetch dashboard stats
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!firebaseUser) return;
+      
+      try {
+        setStatsLoading(true);
+        const stats = await getDashboardStats();
+        setDashboardStats(stats);
+      } catch (error) {
+        console.error('Error fetching dashboard stats:', error);
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, [firebaseUser]);
 
   const handleLogout = async () => {
     try {
@@ -158,12 +180,14 @@ export default function AdminDashboardPage() {
             </Card>
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Active Users (DAU)</CardTitle>
+                    <CardTitle className="text-sm font-medium">Active Users (30d)</CardTitle>
                     <Activity className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">5</div>
-                    <p className="text-xs text-muted-foreground">+2 since yesterday</p>
+                    <div className="text-2xl font-bold">
+                        {statsLoading ? <Skeleton className="h-8 w-12" /> : dashboardStats?.activeUsers || 0}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Active in last 30 days</p>
                 </CardContent>
             </Card>
             <Card>
@@ -214,8 +238,10 @@ export default function AdminDashboardPage() {
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">128</div>
-                    <p className="text-xs text-muted-foreground">4 upcoming this month</p>
+                    <div className="text-2xl font-bold">
+                        {statsLoading ? <Skeleton className="h-8 w-12" /> : dashboardStats?.totalEvents || 0}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Events in calendar</p>
                 </CardContent>
             </Card>
             <Card>
@@ -224,7 +250,9 @@ export default function AdminDashboardPage() {
                     <CheckCircle className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">3</div>
+                    <div className="text-2xl font-bold">
+                        {statsLoading ? <Skeleton className="h-8 w-12" /> : dashboardStats?.pendingSubmissions || 0}
+                    </div>
                     <p className="text-xs text-muted-foreground">Awaiting review</p>
                 </CardContent>
             </Card>
@@ -267,7 +295,9 @@ export default function AdminDashboardPage() {
                     <Store className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">24</div>
+                    <div className="text-2xl font-bold">
+                        {statsLoading ? <Skeleton className="h-8 w-12" /> : dashboardStats?.totalStores || 0}
+                    </div>
                     <p className="text-xs text-muted-foreground">Stores listed in directory</p>
                 </CardContent>
             </Card>
@@ -317,7 +347,9 @@ export default function AdminDashboardPage() {
                     <Library className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">12</div>
+                    <div className="text-2xl font-bold">
+                        {statsLoading ? <Skeleton className="h-8 w-12" /> : dashboardStats?.totalOrganizations || 0}
+                    </div>
                     <p className="text-xs text-muted-foreground">Organizations listed</p>
                 </CardContent>
             </Card>
@@ -367,8 +399,10 @@ export default function AdminDashboardPage() {
                     <Heart className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">₹10,850</div>
-                    <p className="text-xs text-muted-foreground">From 5 donations</p>
+                    <div className="text-2xl font-bold">
+                        {statsLoading ? <Skeleton className="h-8 w-16" /> : `₹${dashboardStats?.totalDonations?.toLocaleString() || 0}`}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Total amount donated</p>
                 </CardContent>
             </Card>
             <Card>
@@ -377,7 +411,9 @@ export default function AdminDashboardPage() {
                     <Banknote className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">₹2,170</div>
+                    <div className="text-2xl font-bold">
+                        {statsLoading ? <Skeleton className="h-8 w-16" /> : `₹${Math.round(dashboardStats?.averageDonation || 0).toLocaleString()}`}
+                    </div>
                     <p className="text-xs text-muted-foreground">Per contribution</p>
                 </CardContent>
             </Card>
