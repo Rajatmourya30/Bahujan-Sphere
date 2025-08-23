@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { StoreDirectoryTable } from '@/components/admin/StoreDirectoryTable';
 import { ManageStoreDialog } from '@/components/admin/ManageStoreDialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 export default function ManageStorePage() {
   const router = useRouter();
@@ -26,6 +27,7 @@ export default function ManageStorePage() {
   const [stores, setStores] = useState<BahujanStore[]>([]);
   const [editingStore, setEditingStore] = useState<BahujanStore | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [storeToDelete, setStoreToDelete] = useState<BahujanStore | null>(null);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
@@ -58,19 +60,31 @@ export default function ManageStorePage() {
     setIsDialogOpen(true);
   };
 
-  const handleRemove = async (storeId: string) => {
-      if (!window.confirm("Are you sure you want to delete this store?")) return;
-      try {
-          const storeToDelete = stores.find(s => s.id === storeId);
-          if (storeToDelete?.imageStoragePath) {
-              await deleteObject(ref(storage, storeToDelete.imageStoragePath));
-          }
-          await deleteDoc(doc(db, 'stores', storeId));
-          toast({ title: 'Success', description: 'Store deleted.' });
-      } catch (error) {
-          console.error("Error removing store:", error);
-          toast({ title: 'Error', description: 'Could not delete store.', variant: 'destructive' });
-      }
+  const handleRemove = (storeToRemove: BahujanStore) => {
+    setStoreToDelete(storeToRemove);
+  };
+
+  const confirmRemove = async () => {
+    if (!storeToDelete) return;
+    try {
+        if (storeToDelete.imageStoragePath) {
+             try {
+                await deleteObject(ref(storage, storeToDelete.imageStoragePath));
+            } catch (error: any) {
+                if (error.code !== 'storage/object-not-found') {
+                    throw error;
+                }
+                console.warn(`Image not found, proceeding with deletion: ${storeToDelete.imageStoragePath}`);
+            }
+        }
+        await deleteDoc(doc(db, 'stores', storeToDelete.id));
+        toast({ title: 'Success', description: 'Store deleted.' });
+    } catch (error) {
+        console.error("Error removing store:", error);
+        toast({ title: 'Error', description: 'Could not delete store.', variant: 'destructive' });
+    } finally {
+        setStoreToDelete(null);
+    }
   };
 
   const handleSave = async (data: Omit<BahujanStore, 'id' | 'imageUrl'>, newImageFile?: File) => {
@@ -152,6 +166,21 @@ export default function ManageStorePage() {
             onSave={handleSave}
         />
       )}
+
+      <AlertDialog open={!!storeToDelete} onOpenChange={(isOpen) => !isOpen && setStoreToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the store "{storeToDelete?.name}" and its associated image from storage.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRemove}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

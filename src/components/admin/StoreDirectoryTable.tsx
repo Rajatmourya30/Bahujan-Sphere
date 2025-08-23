@@ -19,7 +19,7 @@ import type { BahujanStore } from "@/lib/store";
 interface StoreDirectoryTableProps {
     stores: BahujanStore[];
     onEdit: (store: BahujanStore) => void;
-    onRemove: (storeId: string) => void;
+    onRemove: (store: BahujanStore) => void;
 }
 
 export function StoreDirectoryTable({ stores, onEdit, onRemove }: StoreDirectoryTableProps) {
@@ -65,7 +65,7 @@ export function StoreDirectoryTable({ stores, onEdit, onRemove }: StoreDirectory
                                             <Edit className="mr-2 h-4 w-4" />
                                             Edit
                                         </Button>
-                                        <Button variant="outline" size="sm" onClick={() => onRemove(store.id)}>
+                                        <Button variant="outline" size="sm" onClick={() => onRemove(store)}>
                                             <Trash2 className="mr-2 h-4 w-4" />
                                             Remove
                                         </Button>
