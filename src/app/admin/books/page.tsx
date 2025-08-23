@@ -59,18 +59,31 @@ export default function ManageBooksPage() {
   };
 
   const handleRemove = async (bookId: string) => {
-      if (!window.confirm("Are you sure you want to delete this book?")) return;
-      try {
-          const bookToDelete = books.find(b => b.id === bookId);
-          if (bookToDelete?.imageStoragePath) {
-              await deleteObject(ref(storage, bookToDelete.imageStoragePath));
-          }
-          await deleteDoc(doc(db, 'books', bookId));
-          toast({ title: 'Success', description: 'Book deleted.' });
-      } catch (error) {
-          console.error("Error removing book:", error);
-          toast({ title: 'Error', description: 'Could not delete book.', variant: 'destructive' });
-      }
+    if (!window.confirm("Are you sure you want to delete this book?")) return;
+    try {
+        const bookToDelete = books.find(b => b.id === bookId);
+
+        // Safely attempt to delete the image from Storage
+        if (bookToDelete?.imageStoragePath) {
+            try {
+                await deleteObject(ref(storage, bookToDelete.imageStoragePath));
+            } catch (error: any) {
+                // Ignore 'object-not-found' errors, as the file might already be deleted
+                if (error.code !== 'storage/object-not-found') {
+                    throw error; // Re-throw other errors
+                }
+                console.warn(`Image not found in storage, but proceeding with Firestore deletion: ${bookToDelete.imageStoragePath}`);
+            }
+        }
+        
+        // Delete the document from Firestore
+        await deleteDoc(doc(db, 'books', bookId));
+        
+        toast({ title: 'Success', description: 'Book deleted.' });
+    } catch (error) {
+        console.error("Error removing book:", error);
+        toast({ title: 'Error', description: 'Could not delete book.', variant: 'destructive' });
+    }
   };
 
   const handleSave = async (data: Omit<Book, 'id' | 'imageUrl'>, newImageFile?: File) => {
