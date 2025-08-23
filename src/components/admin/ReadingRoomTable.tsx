@@ -73,7 +73,7 @@ export function ReadingRoomTable({ documents, onEdit, onDelete }: ReadingRoomTab
                                         </Button>
                                         <Button 
                                             size="sm" 
-                                            variant="destructive"
+                                            variant="outline"
                                             onClick={() => onDelete(doc)}
                                         >
                                             <Trash2 className="mr-2 h-4 w-4" />
