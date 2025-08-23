@@ -16,6 +16,8 @@ import { ReviewReadingRoomSubmissionsTab } from '@/components/admin/review/Revie
 import { ReadingRoomTable } from '@/components/admin/ReadingRoomTable';
 import { ManageDocumentDialog, type DocumentFormData } from '@/components/admin/ManageDocumentDialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ReadingRoomStatsDashboard } from '@/components/admin/ReadingRoomStatsDashboard';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 export interface ReadingRoomPdf {
   id: string;
@@ -41,6 +43,7 @@ export default function ManageReadingRoomPage() {
   const [documents, setDocuments] = useState<ReadingRoomPdf[]>([]);
   const [editingDocument, setEditingDocument] = useState<ReadingRoomPdf | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
@@ -75,10 +78,15 @@ export default function ManageReadingRoomPage() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (docToDelete: ReadingRoomPdf) => {
-    if (!window.confirm(`Are you sure you want to delete "${docToDelete.title}"? This action cannot be undone.`)) {
-        return;
-    }
+  const handleDelete = (docToDelete: ReadingRoomPdf) => {
+    setDocumentToDelete(docToDelete.id);
+  };
+
+  const confirmRemove = async () => {
+    if (!documentToDelete) return;
+    
+    const docToDelete = documents.find(doc => doc.id === documentToDelete);
+    if (!docToDelete) return;
 
     try {
         // Delete Firestore document
@@ -100,6 +108,8 @@ export default function ManageReadingRoomPage() {
     } catch (error) {
         console.error("Error deleting document:", error);
         toast({ title: 'Error', description: 'Failed to delete the document.', variant: 'destructive' });
+    } finally {
+        setDocumentToDelete(null);
     }
   };
 
@@ -152,6 +162,8 @@ export default function ManageReadingRoomPage() {
         <h1 className="font-headline text-3xl font-bold">Manage Reading Room</h1>
         <p className="text-muted-foreground">Manage, add, or review documents for the Reading Room.</p>
       </header>
+
+      <ReadingRoomStatsDashboard />
       
       <Tabs defaultValue="manage">
         <TabsList className="grid w-full grid-cols-4">
@@ -197,6 +209,21 @@ export default function ManageReadingRoomPage() {
             onSave={handleSave}
         />
       )}
+
+      <AlertDialog open={!!documentToDelete} onOpenChange={(isOpen) => !isOpen && setDocumentToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the document and all associated files from the database and storage.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRemove}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

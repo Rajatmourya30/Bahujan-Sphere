@@ -20,6 +20,7 @@ import { parseDate } from '@/lib/date-parser';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { buddhistEvents } from '@/lib/buddhist-events';
+import { CalendarStatsDashboard } from '@/components/admin/CalendarStatsDashboard';
 
 
 export default function ManageCalendarPage() {
@@ -161,6 +162,8 @@ export default function ManageCalendarPage() {
         <h1 className="font-headline text-3xl font-bold">Manage Calendar</h1>
         <p className="text-muted-foreground">Add, edit, and manage all calendar events.</p>
       </header>
+
+      <CalendarStatsDashboard />
 
       <Tabs defaultValue="manage" className="w-full">
         <TabsList className="grid w-full grid-cols-1 sm:grid-cols-4">

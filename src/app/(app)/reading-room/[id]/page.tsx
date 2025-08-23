@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { PdfViewer } from '@/components/reading-room/PdfViewer';
+import { EnhancedPdfViewer } from '@/components/reading-room/EnhancedPdfViewer';
 import { ReadingRoomPdf } from '@/app/admin/reading-room/page';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isTeamMember as checkIsTeamMember } from '@/lib/firebase-utils';
@@ -114,7 +114,7 @@ export default function PdfViewPage() {
         {pdf.author && <p className="text-sm text-muted-foreground">by {pdf.author}</p>}
       </header>
       <div className="flex-grow">
-        <PdfViewer file={pdf.url} />
+        <EnhancedPdfViewer file={pdf.url} />
       </div>
     </div>
   );

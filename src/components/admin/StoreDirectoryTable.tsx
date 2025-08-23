@@ -10,9 +10,8 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import { Card, CardContent } from "@/components/ui/card";
-import { MoreHorizontal } from "lucide-react";
+import { Edit, Trash2 } from "lucide-react";
 import { Button } from "../ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import Image from "next/image";
 import { useLanguage } from "@/hooks/use-language";
 import type { BahujanStore } from "@/lib/store";
@@ -45,41 +44,32 @@ export function StoreDirectoryTable({ stores, onEdit, onRemove }: StoreDirectory
                                         <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-md border">
                                             <Image
                                                 src={store.imageUrl}
-                                                alt={t(store.nameKey)}
+                                                alt={store.nameKey ? t(store.nameKey) : store.name || 'Store image'}
                                                 fill
+                                                sizes="40px"
                                                 className="object-cover"
                                                 data-ai-hint={store.imageAiHint}
                                             />
                                         </div>
-                                        <span className="font-bold">{t(store.nameKey)}</span>
+                                        <span className="font-bold">{store.nameKey ? t(store.nameKey) : store.name || 'Store'}</span>
                                     </div>
                                 </TableCell>
                                 <TableCell className="max-w-md">
                                     <p className="text-sm text-muted-foreground truncate">
-                                        {t(store.descriptionKey)}
+                                        {store.descriptionKey ? t(store.descriptionKey) : store.description || ''}
                                     </p>
                                 </TableCell>
                                 <TableCell className="text-right">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                                <span className="sr-only">Open menu</span>
-                                                <MoreHorizontal className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                            <DropdownMenuItem onClick={() => onEdit(store)}>
-                                                Edit
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                                className="text-destructive focus:text-destructive focus:bg-destructive/10"
-                                                onClick={() => onRemove(store.id)}
-                                            >
-                                                Remove
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
+                                    <div className="flex gap-2 justify-end">
+                                        <Button variant="outline" size="sm" onClick={() => onEdit(store)}>
+                                            <Edit className="mr-2 h-4 w-4" />
+                                            Edit
+                                        </Button>
+                                        <Button variant="outline" size="sm" onClick={() => onRemove(store.id)}>
+                                            <Trash2 className="mr-2 h-4 w-4" />
+                                            Remove
+                                        </Button>
+                                    </div>
                                 </TableCell>
                             </TableRow>
                         ))}

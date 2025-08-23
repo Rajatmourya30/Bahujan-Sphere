@@ -1,0 +1,55 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Helper function to check if the user is a team member.
+    // exists() is more efficient and requires fewer permissions than get().
+    function isTeamMember() {
+      return exists(/databases/(default)/documents/teamMembers/$(request.auth.uid));
+    }
+
+    // --- Rules for Public Content Folders ---
+    // These folders store images and PDFs for the main application features.
+    
+    // Events images
+    match /images/events/{fileName} {
+      allow read;
+      allow write: if isTeamMember();
+    }
+    
+    // Logo images
+    match /images/logos/{fileName} {
+      allow read;
+      allow write: if isTeamMember();
+    }
+    
+    // Store images
+    match /images/stores/{fileName} {
+      allow read;
+      allow write: if isTeamMember();
+    }
+    
+    // Book covers
+    match /bookCovers/{fileName} {
+      allow read;
+      allow write: if isTeamMember();
+    }
+    
+    // PDFs
+    match /pdfs/{fileName} {
+      allow read;
+      allow write: if isTeamMember();
+    }
+
+    // --- Rules for Profile Pictures ---
+    // Users should only be able to manage their own profile pictures.
+    match /profilePictures/{userId}/{fileName} {
+      // Anyone can read profile pictures.
+      allow read;
+      
+      // A user can only write to their own folder (`request.auth.uid == userId`).
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

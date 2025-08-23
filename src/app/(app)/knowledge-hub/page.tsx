@@ -41,6 +41,7 @@ function OrganizationCard({ organization }: { organization: KnowledgeOrganizatio
                             src={organization.logoUrl}
                             alt={name}
                             fill
+                            sizes="64px"
                             className="object-contain p-1"
                             data-ai-hint={organization.imageAiHint}
                         />

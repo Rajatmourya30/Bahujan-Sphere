@@ -1,6 +1,7 @@
 
 import { getAuth } from "firebase-admin/auth";
-import { https, HttpsError } from "firebase-functions";
+import { https } from "firebase-functions";
+import { HttpsError } from "firebase-functions/v1/https";
 import * as admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
 

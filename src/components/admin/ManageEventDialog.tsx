@@ -170,6 +170,7 @@ export function ManageEventDialog({ event, onOpenChange, onSave }: ManageEventDi
                     src={imagePreview || 'https://placehold.co/400x400.png'}
                     alt="Event image preview"
                     fill
+                    sizes="96px"
                     className="object-cover rounded-md"
                   />
                 </div>

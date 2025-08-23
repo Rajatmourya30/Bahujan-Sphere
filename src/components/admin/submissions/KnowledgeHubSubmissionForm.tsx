@@ -20,11 +20,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { KNOWLEDGE_HUB_CATEGORIES } from '@/lib/categories';
 
 const formSchema = z.object({
-  nameKey: z.string().min(1, 'Key is required'),
-  descriptionKey: z.string().min(1, 'Key is required'),
+  nameKey: z.string().min(1, 'Name key is required'),
+  descriptionKey: z.string().min(1, 'Description key is required'),
   categoryKey: z.string().min(1, 'Category is required'),
-  logoFile: z.instanceof(File, { message: 'A logo image is required.' }).refine(file => file.size > 0, 'A logo image is required.'),
-  websiteUrl: z.string().url('Must be a valid URL'),
+  logoFile: z.instanceof(File, { message: 'Please upload a logo image.' }).refine(file => file.size > 0, 'Please upload a logo image.'),
+  websiteUrl: z.string().min(1, 'Website URL is required').url('Please enter a valid website URL (e.g., https://example.com)'),
 });
 
 export function KnowledgeHubSubmissionForm() {
@@ -169,6 +169,13 @@ export function KnowledgeHubSubmissionForm() {
                 </FormItem>
               )}
             />
+            <FormField control={form.control} name="websiteUrl" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Website URL</FormLabel>
+                  <FormControl><Input type="url" placeholder="https://example.com" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+            )} />
             <FormField
               control={form.control}
               name="logoFile"
@@ -194,13 +201,6 @@ export function KnowledgeHubSubmissionForm() {
                 </FormItem>
               )}
             />
-            <FormField control={form.control} name="websiteUrl" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Website URL</FormLabel>
-                  <FormControl><Input type="url" placeholder="https://example.com" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-            )} />
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {userRole === 'Admin' || userRole === 'Manager' ? 'Publish Directly' : 'Submit for Review'}

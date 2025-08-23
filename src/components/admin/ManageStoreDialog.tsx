@@ -118,6 +118,7 @@ export function ManageStoreDialog({ store, onOpenChange, onSave }: ManageStoreDi
                     src={imagePreview || 'https://placehold.co/400x400.png'}
                     alt="Store image preview"
                     fill
+                    sizes="80px"
                     className="object-cover rounded-md border"
                   />
                 </div>

@@ -24,7 +24,7 @@ function BookCard({ book }: { book: Book }) {
 
     const title = book.titleKey ? t(book.titleKey) : book.title;
     const author = book.authorKey ? t(book.authorKey) : book.author;
-    const description = book.descriptionKey ? t(book.descriptionKey) : book.description;
+    const description = book.descriptionKey ? t(book.descriptionKey) : '';
 
 
     return (
@@ -37,6 +37,7 @@ function BookCard({ book }: { book: Book }) {
                             src={book.imageUrl}
                             alt={title}
                             fill
+                            sizes="96px"
                             className="object-cover rounded-md"
                             data-ai-hint={book.imageAiHint}
                         />
@@ -99,7 +100,7 @@ export default function BooksPage() {
         return books.filter(book => {
             const title = book.titleKey ? t(book.titleKey) : book.title;
             const author = book.authorKey ? t(book.authorKey) : book.author;
-            const description = book.descriptionKey ? t(book.descriptionKey) : book.description;
+            const description = book.descriptionKey ? t(book.descriptionKey) : '';
             
             return title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                    author.toLowerCase().includes(searchTerm.toLowerCase()) ||

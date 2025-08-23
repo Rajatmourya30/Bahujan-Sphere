@@ -35,6 +35,7 @@ function StoreCard({ store }: { store: BahujanStore }) {
                             src={store.imageUrl}
                             alt={name}
                             fill
+                            sizes="96px"
                             className="object-cover"
                             data-ai-hint={store.imageAiHint}
                         />

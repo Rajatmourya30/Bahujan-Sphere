@@ -2,24 +2,6 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    
-    // Helper function to check if user is admin
-    function isAdmin() {
-      return request.auth != null && 
-             request.auth.token.role != null && 
-             request.auth.token.role in ['Admin', 'Manager'];
-    }
-
-    // TEMPORARY: Allow all authenticated users full access for testing
-    // TODO: Revert to admin-only access once token refresh is working
-    match /{allPaths=**} {
-      allow list, read, write, delete: if request.auth != null;
-    }
-
-    // Admin access - allow admins to list, read, write, and delete all files
-    // match /{allPaths=**} {
-    //   allow list, read, write, delete: if isAdmin();
-    // }
 
     // TEMPORARY FIX: Allow all authenticated users to upload to events
     // This bypasses the team member check temporarily

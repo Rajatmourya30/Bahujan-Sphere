@@ -41,7 +41,7 @@ type FormValues = z.infer<typeof formSchema>;
 interface ManageBookDialogProps {
   book: Book | null;
   onOpenChange: (open: boolean) => void;
-  onSave: (data: Omit<Book, 'id' | 'imageUrl'>, newImageFile?: File) => void;
+  onSave: (data: Omit<Book, 'id' | 'imageUrl' | 'title' | 'author'>, newImageFile?: File) => void;
   managePdfUrl?: boolean;
   manageAffiliateUrl?: boolean;
 }
@@ -81,7 +81,8 @@ export function ManageBookDialog({
   };
 
   const onSubmit = (values: FormValues) => {
-    onSave(values, imageFile || undefined);
+    const dataToSave = { ...values, imageAiHint: book?.imageAiHint || 'book cover' };
+    onSave(dataToSave, imageFile || undefined);
     onOpenChange(false);
   };
 

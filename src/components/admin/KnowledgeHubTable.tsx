@@ -44,6 +44,7 @@ export function KnowledgeHubTable({ organizations, onEdit, onRemove }: Knowledge
                                                 src={org.logoUrl}
                                                 alt={org.name}
                                                 fill
+                                                sizes="40px"
                                                 className="object-contain p-1"
                                                 data-ai-hint={org.imageAiHint}
                                             />

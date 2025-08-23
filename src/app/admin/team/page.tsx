@@ -7,7 +7,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { UserPlus } from 'lucide-react';
 import { TeamMemberTable } from '@/components/admin/TeamMemberTable';
-import { SimpleAddMemberDialog } from '@/components/admin/SimpleAddMemberDialog';
+import { EnhancedAddMemberDialog } from '@/components/admin/EnhancedAddMemberDialog';
+import { TeamStatsDashboard } from '@/components/admin/TeamStatsDashboard';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { collection, onSnapshot, updateDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
@@ -107,6 +108,8 @@ export default function TeamManagementPage() {
                 Add Team Member
             </Button>
       </header>
+
+      <TeamStatsDashboard />
       
       <section>
         <TeamMemberTable
@@ -117,7 +120,7 @@ export default function TeamManagementPage() {
       </section>
 
       {isAddDialogOpen && (
-        <SimpleAddMemberDialog
+        <EnhancedAddMemberDialog
           onOpenChange={setIsAddDialogOpen}
           onSuccess={() => setIsAddDialogOpen(false)}
         />

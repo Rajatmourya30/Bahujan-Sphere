@@ -26,105 +26,124 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import type { NewTeamMember, TeamMemberRole } from '@/lib/team';
-import { ROLE_DEFINITIONS, getAvailableRolesForUser } from '@/lib/roles';
+import { Checkbox } from '@/components/ui/checkbox';
+import type { NewTeamMember } from '@/lib/team';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
-import { Loader2, Shield, Users, Eye, Edit, FileText } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
 
-const createTeamUser = httpsCallable(functions, 'createTeamUser');
+const roles = ['Admin', 'Manager', 'Editor', 'Reviewer', 'Contributor'] as const;
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
   email: z.string().email('Please enter a valid email address.'),
-  password: z.string().min(8, 'Password must be at least 8 characters.')
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Password must contain at least one uppercase letter, one lowercase letter, and one number.'),
-  role: z.enum(['Admin', 'Manager', 'Editor', 'Reviewer', 'Contributor'] as const),
+  uid: z.string().optional(),
+  password: z.string().optional(),
+  role: z.enum(roles),
+  createNewUser: z.boolean().default(false),
+}).refine((data) => {
+  if (data.createNewUser) {
+    return data.password && data.password.length >= 6;
+  }
+  return data.uid && data.uid.length > 0;
+}, {
+  message: "Either provide a UID for existing user or password (min 6 chars) for new user",
+  path: ["password"],
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
 interface EnhancedAddMemberDialogProps {
   onOpenChange: (open: boolean) => void;
-  onSave: (newMember: NewTeamMember, uid: string) => Promise<void>;
-  currentUserRole: TeamMemberRole;
+  onSuccess: () => void;
 }
 
-const getRoleIcon = (role: TeamMemberRole) => {
-  switch (role) {
-    case 'Admin':
-      return <Shield className="h-4 w-4" />;
-    case 'Manager':
-      return <Users className="h-4 w-4" />;
-    case 'Editor':
-      return <Edit className="h-4 w-4" />;
-    case 'Reviewer':
-      return <Eye className="h-4 w-4" />;
-    case 'Contributor':
-      return <FileText className="h-4 w-4" />;
-    default:
-      return <Users className="h-4 w-4" />;
-  }
-};
-
-export function EnhancedAddMemberDialog({ onOpenChange, onSave, currentUserRole }: EnhancedAddMemberDialogProps) {
+export function EnhancedAddMemberDialog({ onOpenChange, onSuccess }: EnhancedAddMemberDialogProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<TeamMemberRole>('Contributor');
-
-  const availableRoles = getAvailableRolesForUser(currentUserRole);
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
       email: '',
+      uid: '',
       password: '',
       role: 'Contributor',
+      createNewUser: false,
     },
   });
+
+  const createNewUser = form.watch('createNewUser');
 
   const onSubmit = async (values: FormValues) => {
     setIsLoading(true);
     try {
-      // Step 1: Create user and set claims via the Cloud Function
-      const result: any = await createTeamUser({ 
-        email: values.email, 
-        password: values.password,
-        role: values.role
-      });
-      const { uid } = result.data;
+      let userUid = values.uid;
 
-      if (!uid) {
-        throw new Error('Failed to create user: UID was not returned.');
+      // If creating a new user, call the Cloud Function
+      if (values.createNewUser && values.password) {
+        const createTeamUser = httpsCallable(functions, 'createTeamUser');
+        const result = await createTeamUser({
+          email: values.email,
+          password: values.password,
+        });
+        
+        const data = result.data as { uid: string };
+        userUid = data.uid;
+
+        toast({
+          title: 'User Created',
+          description: `New Firebase user created successfully with UID: ${userUid}`,
+        });
       }
 
-      // Step 2: Call the onSave prop to handle Firestore document creation
-      await onSave({
+      if (!userUid) {
+        throw new Error('No user UID available');
+      }
+
+      // Add the user to the teamMembers collection
+      await setDoc(doc(db, 'teamMembers', userUid), {
         name: values.name,
         email: values.email,
         role: values.role,
-      }, uid);
-
-      toast({
-        title: 'Team Member Added Successfully',
-        description: `${values.name} has been added as a ${values.role} with appropriate permissions.`,
+        joinedAt: serverTimestamp(),
       });
 
-      onOpenChange(false);
-
-    } catch (error: any) {
-      console.error("Error creating user:", error);
       toast({
-        title: 'User Creation Failed',
-        description: error.message || "An unexpected error occurred. This could be due to an existing email or a server-side issue.",
+        title: 'Success',
+        description: `Team member '${values.name}' has been added successfully.${
+          values.createNewUser 
+            ? ` They can now login with email: ${values.email} and the password you provided.`
+            : ''
+        }`,
+      });
+
+      onSuccess();
+      onOpenChange(false);
+    } catch (error: any) {
+      console.error("Error adding team member:", error);
+      
+      let errorMessage = "Failed to add team member. Please check your permissions.";
+      
+      if (error.code === 'functions/permission-denied') {
+        errorMessage = "You don't have permission to create new users. Only admins can create team members.";
+      } else if (error.code === 'functions/invalid-argument') {
+        errorMessage = "Invalid email or password provided.";
+      } else if (error.message?.includes('email-already-exists')) {
+        errorMessage = "A user with this email already exists. Use 'Add Existing User' option instead.";
+      }
+      
+      toast({
+        title: 'Error',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
@@ -132,183 +151,159 @@ export function EnhancedAddMemberDialog({ onOpenChange, onSave, currentUserRole 
     }
   };
 
-  const generatePassword = () => {
-    const length = 12;
-    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-    let password = "";
-    
-    // Ensure at least one of each required character type
-    password += "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 26)]; // uppercase
-    password += "abcdefghijklmnopqrstuvwxyz"[Math.floor(Math.random() * 26)]; // lowercase
-    password += "0123456789"[Math.floor(Math.random() * 10)]; // number
-    
-    // Fill the rest randomly
-    for (let i = 3; i < length; i++) {
-      password += charset[Math.floor(Math.random() * charset.length)];
-    }
-    
-    // Shuffle the password
-    password = password.split('').sort(() => Math.random() - 0.5).join('');
-    
-    form.setValue('password', password);
-  };
-
-  const roleDefinition = ROLE_DEFINITIONS[selectedRole];
-
   return (
     <Dialog open={true} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Add New Team Member</DialogTitle>
           <DialogDescription>
-            Create a new team member account with role-based permissions. They will receive login credentials to access the admin dashboard.
+            Add a team member by creating a new account or adding an existing Firebase user.
           </DialogDescription>
         </DialogHeader>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-4">
-          <div className="space-y-4">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Full Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Jane Doe" {...field} disabled={isLoading}/>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email Address</FormLabel>
-                      <FormControl>
-                        <Input type="email" placeholder="name@example.com" {...field} disabled={isLoading}/>
-                      </FormControl>
-                      <FormDescription>
-                        This will be their login email address
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <div className="flex gap-2">
-                        <FormControl>
-                          <Input type="password" placeholder="Enter secure password" {...field} disabled={isLoading}/>
-                        </FormControl>
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          onClick={generatePassword}
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+            <FormField
+              control={form.control}
+              name="createNewUser"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={isLoading}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>
+                      Create New User Account
+                    </FormLabel>
+                    <p className="text-sm text-muted-foreground">
+                      Check this to create a new Firebase account with email and password
+                    </p>
+                  </div>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Full Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., Jane Doe" {...field} disabled={isLoading}/>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email Address</FormLabel>
+                  <FormControl>
+                    <Input type="email" placeholder="name@example.com" {...field} disabled={isLoading}/>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {createNewUser ? (
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Input 
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Minimum 6 characters" 
+                          {...field} 
+                          disabled={isLoading}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                          onClick={() => setShowPassword(!showPassword)}
                           disabled={isLoading}
                         >
-                          Generate
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
                         </Button>
                       </div>
-                      <FormDescription>
-                        Must be at least 8 characters with uppercase, lowercase, and number
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="role"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Role</FormLabel>
-                      <Select 
-                        onValueChange={(value: TeamMemberRole) => {
-                          field.onChange(value);
-                          setSelectedRole(value);
-                        }} 
-                        defaultValue={field.value} 
-                        disabled={isLoading}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a role" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {availableRoles.map((role) => (
-                            <SelectItem key={role} value={role}>
-                              <div className="flex items-center gap-2">
-                                {getRoleIcon(role)}
-                                {role}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        You can only assign roles at or below your current level
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </form>
-            </Form>
-          </div>
-          
-          <div className="space-y-4">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  {getRoleIcon(selectedRole)}
-                  {roleDefinition.name} Role
-                </CardTitle>
-                <CardDescription>
-                  {roleDefinition.description}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div>
-                    <h4 className="font-medium text-sm mb-2">Permissions:</h4>
-                    <div className="flex flex-wrap gap-1">
-                      {roleDefinition.permissions.map(permission => (
-                        <Badge key={permission} variant="outline" className="text-xs">
-                          {permission}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Access Level: {roleDefinition.level}/5
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : (
+              <FormField
+                control={form.control}
+                name="uid"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>User ID (UID)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Firebase User UID" {...field} disabled={isLoading}/>
+                    </FormControl>
+                    <p className="text-sm text-muted-foreground">
+                      Find the UID in Firebase Console under Authentication
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
-        <DialogFooter className="pt-4">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
-            Cancel
-          </Button>
-          <Button onClick={form.handleSubmit(onSubmit)} disabled={isLoading}>
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Add Team Member
-          </Button>
-        </DialogFooter>
+            <FormField
+              control={form.control}
+              name="role"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Role</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a role" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {roles.map((role) => (
+                        <SelectItem key={role} value={role}>
+                          {role}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <DialogFooter className="pt-4">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {createNewUser ? 'Create & Add Member' : 'Add Member'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

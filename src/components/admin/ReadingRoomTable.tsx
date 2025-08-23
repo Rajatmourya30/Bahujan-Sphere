@@ -10,9 +10,8 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, MoreHorizontal, Trash2 } from "lucide-react";
+import { BookOpen, Edit, Trash2 } from "lucide-react";
 import { Button } from "../ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import Image from "next/image";
 import type { ReadingRoomPdf } from "@/app/admin/reading-room/page";
 import Link from "next/link";
@@ -64,27 +63,22 @@ export function ReadingRoomTable({ documents, onEdit, onDelete }: ReadingRoomTab
                                                 View
                                             </Link>
                                         </Button>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                                    <span className="sr-only">Open menu</span>
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                <DropdownMenuItem onClick={() => onEdit(doc)}>
-                                                    Edit
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    className="text-destructive focus:text-destructive focus:bg-destructive/10"
-                                                    onClick={() => onDelete(doc)}
-                                                >
-                                                    <Trash2 className="mr-2 h-4 w-4" />
-                                                    Delete
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
+                                        <Button 
+                                            size="sm" 
+                                            variant="outline"
+                                            onClick={() => onEdit(doc)}
+                                        >
+                                            <Edit className="mr-2 h-4 w-4" />
+                                            Edit
+                                        </Button>
+                                        <Button 
+                                            size="sm" 
+                                            variant="destructive"
+                                            onClick={() => onDelete(doc)}
+                                        >
+                                            <Trash2 className="mr-2 h-4 w-4" />
+                                            Remove
+                                        </Button>
                                     </div>
                                 </TableCell>
                             </TableRow>

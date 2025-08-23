@@ -33,7 +33,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 const formSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   description: z.string().min(1, 'Description is required'),
-  websiteUrl: z.string().url('Must be a valid URL'),
+  websiteUrl: z.string().min(1, 'Website URL is required').url('Must be a valid URL'),
   categoryKey: z.string().min(1, 'Category is required'),
 });
 
@@ -151,6 +151,7 @@ export function ManageOrganizationDialog({ organization, onOpenChange, onSave }:
                     src={imagePreview || 'https://placehold.co/400x400.png'}
                     alt="Logo preview"
                     fill
+                    sizes="80px"
                     className="object-contain rounded-md border p-1"
                   />
                 </div>

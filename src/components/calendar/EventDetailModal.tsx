@@ -41,6 +41,7 @@ export function EventDetailModal({ event, isOpen, onClose }: EventDetailModalPro
                         src={event.imageUrl}
                         alt={title}
                         fill
+                        sizes="(max-width: 768px) 100vw, 512px"
                         className="object-cover rounded-md"
                         data-ai-hint={event.imageAiHint}
                     />

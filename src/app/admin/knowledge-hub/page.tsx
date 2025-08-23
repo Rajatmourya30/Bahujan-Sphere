@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { KnowledgeHubTable } from '@/components/admin/KnowledgeHubTable';
 import { ManageOrganizationDialog } from '@/components/admin/ManageOrganizationDialog';
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { KnowledgeHubStatsDashboard } from '@/components/admin/KnowledgeHubStatsDashboard';
 
 export default function ManageKnowledgeHubPage() {
   const router = useRouter();
@@ -116,6 +117,8 @@ export default function ManageKnowledgeHubPage() {
           <h1 className="font-headline text-3xl font-bold">Manage Knowledge Hub</h1>
           <p className="text-muted-foreground">Manage, submit, or review organizations.</p>
       </header>
+
+      <KnowledgeHubStatsDashboard />
 
       <Tabs defaultValue="manage">
         <TabsList className="grid w-full grid-cols-4">

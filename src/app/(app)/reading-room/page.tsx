@@ -32,6 +32,7 @@ function ReadingRoomBookCard({ pdf }: { pdf: ReadingRoomPdf }) {
                         src={pdf.coverImageUrl || 'https://placehold.co/400x600.png'}
                         alt={pdf.title}
                         fill
+                        sizes="96px"
                         className="object-cover rounded-md"
                         data-ai-hint="book cover"
                     />

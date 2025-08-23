@@ -48,6 +48,7 @@ function EventDetail({ event, onReadMoreClick }: { event: CalendarEvent, onReadM
                   src={event.imageUrl}
                   alt={event.title}
                   fill
+                  sizes="(max-width: 640px) 100vw, 33vw"
                   className="rounded-lg object-cover"
                   data-ai-hint={event.imageAiHint}
               />

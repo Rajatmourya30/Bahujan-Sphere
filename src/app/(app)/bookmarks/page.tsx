@@ -25,7 +25,7 @@ import { parseDate } from '@/lib/date-parser';
 function EventBookmarkCard({ event, onRemove }: { event: CalendarEvent, onRemove: (id: string) => void }) {
     const { t } = useLanguage();
     const description = event.descriptionKey ? t(event.descriptionKey) : event.summary;
-    const tags = event.tagKeys ? event.tagKeys.map(t) : event.tags;
+    const tags = event.tagKeys ? event.tagKeys.map(key => t(key)) : event.tags;
     const title = event.titleKey ? t(event.titleKey) : event.title;
 
     return (
@@ -76,6 +76,7 @@ function StoreBookmarkCard({ store, onRemove }: { store: BahujanStore, onRemove:
                         src={store.imageUrl}
                         alt={name}
                         fill
+                        sizes="96px"
                         className="object-cover"
                         data-ai-hint={store.imageAiHint}
                     />
@@ -118,6 +119,7 @@ function OrgBookmarkCard({ org, onRemove }: { org: KnowledgeOrganization, onRemo
                         src={org.logoUrl}
                         alt={name}
                         fill
+                        sizes="64px"
                         className="object-contain p-1"
                         data-ai-hint={org.imageAiHint}
                     />
@@ -161,6 +163,7 @@ function BookBookmarkCard({ book, onRemove }: { book: Book, onRemove: (id: strin
                         src={book.imageUrl}
                         alt={title}
                         fill
+                        sizes="96px"
                         className="object-cover rounded-md"
                         data-ai-hint={book.imageAiHint}
                     />
