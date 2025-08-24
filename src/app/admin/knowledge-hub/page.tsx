@@ -17,6 +17,7 @@ import { KnowledgeHubTable } from '@/components/admin/KnowledgeHubTable';
 import { ManageOrganizationDialog } from '@/components/admin/ManageOrganizationDialog';
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { KnowledgeHubStatsDashboard } from '@/components/admin/KnowledgeHubStatsDashboard';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 export default function ManageKnowledgeHubPage() {
   const router = useRouter();
@@ -26,6 +27,7 @@ export default function ManageKnowledgeHubPage() {
   const [organizations, setOrganizations] = useState<KnowledgeOrganization[]>([]);
   const [editingOrg, setEditingOrg] = useState<KnowledgeOrganization | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [orgToDelete, setOrgToDelete] = useState<KnowledgeOrganization | null>(null);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
@@ -58,22 +60,28 @@ export default function ManageKnowledgeHubPage() {
     setIsDialogOpen(true);
   };
 
-  const handleRemove = async (orgId: string) => {
-      if (!window.confirm("Are you sure you want to delete this organization?")) return;
-      try {
-          const orgToDelete = organizations.find(o => o.id === orgId);
-          if (orgToDelete?.logoStoragePath) {
-              await deleteObject(ref(storage, orgToDelete.logoStoragePath));
-          }
-          await deleteDoc(doc(db, 'knowledgeHub', orgId));
-          toast({ title: 'Success', description: 'Organization deleted.' });
-      } catch (error) {
-          console.error("Error removing organization:", error);
-          toast({ title: 'Error', description: 'Could not delete organization.', variant: 'destructive' });
-      }
+  const handleRemove = (org: KnowledgeOrganization) => {
+    setOrgToDelete(org);
   };
 
-  const handleSave = async (data: Omit<KnowledgeOrganization, 'id' | 'logoUrl'>, newImageFile?: File) => {
+  const confirmRemove = async () => {
+    if (!orgToDelete) return;
+
+    try {
+        if (orgToDelete.logoStoragePath) {
+            await deleteObject(ref(storage, orgToDelete.logoStoragePath));
+        }
+        await deleteDoc(doc(db, 'knowledgeHub', orgToDelete.id));
+        toast({ title: 'Success', description: 'Organization deleted.' });
+    } catch (error) {
+        console.error("Error removing organization:", error);
+        toast({ title: 'Error', description: 'Could not delete organization.', variant: 'destructive' });
+    } finally {
+        setOrgToDelete(null);
+    }
+  };
+
+  const handleSave = async (data: Omit<KnowledgeOrganization, 'id' | 'logoUrl' | 'nameKey' | 'descriptionKey'>, newImageFile?: File) => {
       if (!editingOrg) return;
       try {
           let logoUrl = editingOrg.logoUrl;
@@ -152,6 +160,21 @@ export default function ManageKnowledgeHubPage() {
             onSave={handleSave}
         />
       )}
+      
+      <AlertDialog open={!!orgToDelete} onOpenChange={() => setOrgToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the organization "{orgToDelete?.name}" and its associated logo from storage.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRemove}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

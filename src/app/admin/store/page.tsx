@@ -60,22 +60,16 @@ export default function ManageStorePage() {
     setIsDialogOpen(true);
   };
 
-  const handleRemove = (storeToRemove: BahujanStore) => {
-    setStoreToDelete(storeToRemove);
+  const handleRemove = (store: BahujanStore) => {
+    setStoreToDelete(store);
   };
 
   const confirmRemove = async () => {
     if (!storeToDelete) return;
+
     try {
         if (storeToDelete.imageStoragePath) {
-             try {
-                await deleteObject(ref(storage, storeToDelete.imageStoragePath));
-            } catch (error: any) {
-                if (error.code !== 'storage/object-not-found') {
-                    throw error;
-                }
-                console.warn(`Image not found, proceeding with deletion: ${storeToDelete.imageStoragePath}`);
-            }
+            await deleteObject(ref(storage, storeToDelete.imageStoragePath));
         }
         await deleteDoc(doc(db, 'stores', storeToDelete.id));
         toast({ title: 'Success', description: 'Store deleted.' });
@@ -167,7 +161,7 @@ export default function ManageStorePage() {
         />
       )}
 
-      <AlertDialog open={!!storeToDelete} onOpenChange={(isOpen) => !isOpen && setStoreToDelete(null)}>
+      <AlertDialog open={!!storeToDelete} onOpenChange={() => setStoreToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>

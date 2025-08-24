@@ -8,14 +8,14 @@ import { getAnalytics, isSupported } from "firebase/analytics";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyDyg5huOpWkk0KZybL7U6c5rPGLvAw8ffM",
-  authDomain: "bahujansphere-90sqv.firebaseapp.com",
-  databaseURL: "https://bahujansphere-90sqv-default-rtdb.firebaseio.com",
-  projectId: "bahujansphere-90sqv",
-  storageBucket: "bahujansphere-90sqv.firebasestorage.app",
-  messagingSenderId: "3324981248",
-  appId: "1:3324981248:web:ac368f108131bf2bed68e5",
-  measurementId: "G-K6QXH1FK7M"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
 

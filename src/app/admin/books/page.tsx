@@ -60,26 +60,29 @@ export default function ManageBooksPage() {
     setIsDialogOpen(true);
   };
 
-  const handleRemove = (bookToRemove: Book) => {
-    setBookToDelete(bookToRemove);
+  const handleRemove = (book: Book) => {
+    setBookToDelete(book);
   };
   
   const confirmRemove = async () => {
     if (!bookToDelete) return;
+
     try {
+        // First, delete the image from storage if it exists
         if (bookToDelete.imageStoragePath) {
             try {
                 await deleteObject(ref(storage, bookToDelete.imageStoragePath));
-            } catch (error: any) {
-                if (error.code !== 'storage/object-not-found') {
-                    throw error;
+            } catch (storageError: any) {
+                // If the file doesn't exist, we can ignore the error and proceed
+                if (storageError.code !== 'storage/object-not-found') {
+                    throw storageError; // Re-throw other storage errors
                 }
-                console.warn(`Image not found, proceeding with deletion: ${bookToDelete.imageStoragePath}`);
             }
         }
         
+        // Then, delete the document from Firestore
         await deleteDoc(doc(db, 'books', bookToDelete.id));
-        
+
         toast({ title: 'Success', description: 'Book deleted.' });
     } catch (error) {
         console.error("Error removing book:", error);
@@ -87,7 +90,8 @@ export default function ManageBooksPage() {
     } finally {
         setBookToDelete(null);
     }
-  }
+  };
+
 
   const handleSave = async (data: Omit<Book, 'id' | 'imageUrl'>, newImageFile?: File) => {
       if (!editingBook) return;
@@ -169,7 +173,7 @@ export default function ManageBooksPage() {
         />
       )}
 
-      <AlertDialog open={!!bookToDelete} onOpenChange={(isOpen) => !isOpen && setBookToDelete(null)}>
+      <AlertDialog open={!!bookToDelete} onOpenChange={() => setBookToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>

@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { collection, query, orderBy, onSnapshot, type Timestamp, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
-import { BookOpen, Search, Filter } from 'lucide-react';
+import { BookOpen, Search } from 'lucide-react';
 import Image from 'next/image';
 
 interface ReadingRoomPdf {
@@ -114,7 +114,6 @@ export default function ReadingRoomPage() {
     // Filter and search functionality
     const filteredPdfs = useMemo(() => {
         return pdfs.filter(pdf => {
-            // Search filter
             return searchTerm === '' || 
                 pdf.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 pdf.author?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -134,26 +133,15 @@ export default function ReadingRoomPage() {
             </header>
 
             {/* Search and Filter Section */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Filter className="h-5 w-5" />
-                        Search Documents
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    {/* Search Bar */}
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Search by title, author, description, or tags..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10"
-                        />
-                    </div>
-                </CardContent>
-            </Card>
+            <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                    placeholder="Search by title, author, description, or tags..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                />
+            </div>
 
             {/* Results Section */}
             <div>
@@ -179,23 +167,17 @@ export default function ReadingRoomPage() {
                     <Card className="text-center py-16">
                         <CardContent>
                             <h3 className="text-lg font-medium">
-                                {searchTerm ? 'No Documents Match Your Search' : 'No Documents Available'}
+                                {searchTerm 
+                                    ? 'No Documents Match Your Search' 
+                                    : 'No Documents Available'
+                                }
                             </h3>
                             <p className="text-muted-foreground mt-2">
-                                {searchTerm 
-                                    ? 'Try adjusting your search term to find more documents.'
+                                {searchTerm
+                                    ? 'Try adjusting your search terms.' 
                                     : 'Check back later for new additions to the reading room.'
                                 }
                             </p>
-                            {searchTerm && (
-                                <Button 
-                                    variant="outline" 
-                                    onClick={() => setSearchTerm('')}
-                                    className="mt-4"
-                                >
-                                    Clear Search
-                                </Button>
-                            )}
                         </CardContent>
                     </Card>
                 )}

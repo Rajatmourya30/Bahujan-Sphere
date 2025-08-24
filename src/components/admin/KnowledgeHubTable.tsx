@@ -19,7 +19,7 @@ import { Badge } from "../ui/badge";
 interface KnowledgeHubTableProps {
     organizations: KnowledgeOrganization[];
     onEdit: (organization: KnowledgeOrganization) => void;
-    onRemove: (organizationId: string) => void;
+    onRemove: (organization: KnowledgeOrganization) => void;
 }
 
 export function KnowledgeHubTable({ organizations, onEdit, onRemove }: KnowledgeHubTableProps) {
@@ -42,7 +42,7 @@ export function KnowledgeHubTable({ organizations, onEdit, onRemove }: Knowledge
                                         <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-md border">
                                             <Image
                                                 src={org.logoUrl}
-                                                alt={org.name}
+                                                alt={org.name || 'Organization logo'}
                                                 fill
                                                 sizes="40px"
                                                 className="object-contain p-1"
@@ -64,7 +64,7 @@ export function KnowledgeHubTable({ organizations, onEdit, onRemove }: Knowledge
                                             <Edit className="mr-2 h-4 w-4" />
                                             Edit
                                         </Button>
-                                        <Button variant="outline" size="sm" onClick={() => onRemove(org.id)}>
+                                        <Button variant="destructive" size="sm" onClick={() => onRemove(org)}>
                                             <Trash2 className="mr-2 h-4 w-4" />
                                             Remove
                                         </Button>

@@ -65,7 +65,7 @@ export function BookManagementTable({ books, onEdit, onRemove }: BookManagementT
                                             <Edit className="mr-2 h-4 w-4" />
                                             Edit
                                         </Button>
-                                        <Button variant="outline" size="sm" onClick={() => onRemove(book)}>
+                                        <Button variant="destructive" size="sm" onClick={() => onRemove(book)}>
                                             <Trash2 className="mr-2 h-4 w-4" />
                                             Remove
                                         </Button>
