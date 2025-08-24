@@ -17,6 +17,7 @@ import { KnowledgeHubTable } from '@/components/admin/KnowledgeHubTable';
 import { ManageOrganizationDialog } from '@/components/admin/ManageOrganizationDialog';
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { KnowledgeHubStatsDashboard } from '@/components/admin/KnowledgeHubStatsDashboard';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 export default function ManageKnowledgeHubPage() {
   const router = useRouter();
@@ -26,6 +27,7 @@ export default function ManageKnowledgeHubPage() {
   const [organizations, setOrganizations] = useState<KnowledgeOrganization[]>([]);
   const [editingOrg, setEditingOrg] = useState<KnowledgeOrganization | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [orgToDelete, setOrgToDelete] = useState<KnowledgeOrganization | null>(null);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
@@ -58,18 +60,24 @@ export default function ManageKnowledgeHubPage() {
     setIsDialogOpen(true);
   };
 
-  const handleRemove = async (org: KnowledgeOrganization) => {
-    if (!window.confirm(`Are you sure you want to delete "${org.name}"?`)) return;
+  const handleRemove = (org: KnowledgeOrganization) => {
+    setOrgToDelete(org);
+  };
+
+  const confirmRemove = async () => {
+    if (!orgToDelete) return;
 
     try {
-        if (org.logoStoragePath) {
-            await deleteObject(ref(storage, org.logoStoragePath));
+        if (orgToDelete.logoStoragePath) {
+            await deleteObject(ref(storage, orgToDelete.logoStoragePath));
         }
-        await deleteDoc(doc(db, 'knowledgeHub', org.id));
+        await deleteDoc(doc(db, 'knowledgeHub', orgToDelete.id));
         toast({ title: 'Success', description: 'Organization deleted.' });
     } catch (error) {
         console.error("Error removing organization:", error);
         toast({ title: 'Error', description: 'Could not delete organization.', variant: 'destructive' });
+    } finally {
+        setOrgToDelete(null);
     }
   };
 
@@ -152,6 +160,21 @@ export default function ManageKnowledgeHubPage() {
             onSave={handleSave}
         />
       )}
+      
+      <AlertDialog open={!!orgToDelete} onOpenChange={() => setOrgToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the organization "{orgToDelete?.name}" and its associated logo from storage.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRemove}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -19,7 +19,7 @@ import type { Book } from "@/lib/books";
 interface BookManagementTableProps {
     books: Book[];
     onEdit: (book: Book) => void;
-    onRemove: (bookId: string) => void;
+    onRemove: (book: Book) => void;
 }
 
 export function BookManagementTable({ books, onEdit, onRemove }: BookManagementTableProps) {
@@ -65,7 +65,7 @@ export function BookManagementTable({ books, onEdit, onRemove }: BookManagementT
                                             <Edit className="mr-2 h-4 w-4" />
                                             Edit
                                         </Button>
-                                        <Button variant="destructive" size="sm" onClick={() => onRemove(book.id)}>
+                                        <Button variant="destructive" size="sm" onClick={() => onRemove(book)}>
                                             <Trash2 className="mr-2 h-4 w-4" />
                                             Remove
                                         </Button>

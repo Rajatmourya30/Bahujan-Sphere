@@ -42,7 +42,7 @@ export function KnowledgeHubTable({ organizations, onEdit, onRemove }: Knowledge
                                         <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-md border">
                                             <Image
                                                 src={org.logoUrl}
-                                                alt={org.name}
+                                                alt={org.name || 'Organization logo'}
                                                 fill
                                                 sizes="40px"
                                                 className="object-contain p-1"
