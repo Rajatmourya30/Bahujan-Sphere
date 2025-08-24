@@ -65,7 +65,7 @@ export function StoreDirectoryTable({ stores, onEdit, onRemove }: StoreDirectory
                                             <Edit className="mr-2 h-4 w-4" />
                                             Edit
                                         </Button>
-                                        <Button variant="outline" size="sm" onClick={() => onRemove(store)}>
+                                        <Button variant="destructive" size="sm" onClick={() => onRemove(store)}>
                                             <Trash2 className="mr-2 h-4 w-4" />
                                             Remove
                                         </Button>

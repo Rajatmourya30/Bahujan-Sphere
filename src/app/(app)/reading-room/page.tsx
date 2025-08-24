@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
@@ -13,6 +14,8 @@ import { collection, query, orderBy, onSnapshot, type Timestamp, where } from 'f
 import { Skeleton } from '@/components/ui/skeleton';
 import { BookOpen, Search, Filter } from 'lucide-react';
 import Image from 'next/image';
+import { READING_ROOM_CATEGORIES } from '@/lib/categories';
+import { languages } from '@/lib/i18n/languages';
 
 interface ReadingRoomPdf {
   id: string;
@@ -89,6 +92,8 @@ export default function ReadingRoomPage() {
     const [pdfs, setPdfs] = useState<ReadingRoomPdf[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState('all');
+    const [selectedLanguage, setSelectedLanguage] = useState('all');
 
     useEffect(() => {
         const q = query(
@@ -114,14 +119,24 @@ export default function ReadingRoomPage() {
     // Filter and search functionality
     const filteredPdfs = useMemo(() => {
         return pdfs.filter(pdf => {
+            // Category filter
+            const categoryMatch = selectedCategory === 'all' || 
+                (pdf.tags && pdf.tags.map(t => t.toLowerCase()).includes(selectedCategory.toLowerCase()));
+
+            // Language filter
+            const languageMatch = selectedLanguage === 'all' || 
+                (pdf.language && pdf.language.toLowerCase() === selectedLanguage.toLowerCase());
+            
             // Search filter
-            return searchTerm === '' || 
+            const searchMatch = searchTerm === '' || 
                 pdf.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 pdf.author?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 pdf.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 pdf.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+
+            return categoryMatch && languageMatch && searchMatch;
         });
-    }, [pdfs, searchTerm]);
+    }, [pdfs, searchTerm, selectedCategory, selectedLanguage]);
 
 
     return (
@@ -138,12 +153,12 @@ export default function ReadingRoomPage() {
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <Filter className="h-5 w-5" />
-                        Search Documents
+                        Search & Filter
                     </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* Search Bar */}
-                    <div className="relative">
+                    <div className="relative md:col-span-3">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                             placeholder="Search by title, author, description, or tags..."
@@ -151,6 +166,40 @@ export default function ReadingRoomPage() {
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="pl-10"
                         />
+                    </div>
+                    {/* Category Filter */}
+                    <div>
+                        <Label>Category</Label>
+                        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="All Categories" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Categories</SelectItem>
+                                {READING_ROOM_CATEGORIES.map(category => (
+                                    <SelectItem key={category.key} value={category.label}>
+                                        {category.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    {/* Language Filter */}
+                    <div>
+                        <Label>Language</Label>
+                        <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="All Languages" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Languages</SelectItem>
+                                {languages.map(lang => (
+                                    <SelectItem key={lang.code} value={lang.code}>
+                                        {lang.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
                 </CardContent>
             </Card>
@@ -179,23 +228,17 @@ export default function ReadingRoomPage() {
                     <Card className="text-center py-16">
                         <CardContent>
                             <h3 className="text-lg font-medium">
-                                {searchTerm ? 'No Documents Match Your Search' : 'No Documents Available'}
+                                {searchTerm || selectedCategory !== 'all' || selectedLanguage !== 'all' 
+                                    ? 'No Documents Match Your Filters' 
+                                    : 'No Documents Available'
+                                }
                             </h3>
                             <p className="text-muted-foreground mt-2">
-                                {searchTerm 
-                                    ? 'Try adjusting your search term to find more documents.'
+                                {searchTerm || selectedCategory !== 'all' || selectedLanguage !== 'all' 
+                                    ? 'Try adjusting your search or filter options.' 
                                     : 'Check back later for new additions to the reading room.'
                                 }
                             </p>
-                            {searchTerm && (
-                                <Button 
-                                    variant="outline" 
-                                    onClick={() => setSearchTerm('')}
-                                    className="mt-4"
-                                >
-                                    Clear Search
-                                </Button>
-                            )}
                         </CardContent>
                     </Card>
                 )}

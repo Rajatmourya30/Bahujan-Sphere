@@ -17,7 +17,6 @@ import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage
 import { BookManagementTable } from '@/components/admin/BookManagementTable';
 import { ManageBookDialog } from '@/components/admin/ManageBookDialog';
 import { BookBulkUpload } from '@/components/admin/submissions/BookBulkUpload';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 export default function ManageBooksPage() {
   const router = useRouter();
@@ -27,7 +26,6 @@ export default function ManageBooksPage() {
   const [books, setBooks] = useState<Book[]>([]);
   const [editingBook, setEditingBook] = useState<Book | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [bookToDelete, setBookToDelete] = useState<Book | null>(null);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
@@ -60,34 +58,16 @@ export default function ManageBooksPage() {
     setIsDialogOpen(true);
   };
 
-  const handleRemove = (bookToRemove: Book) => {
-    setBookToDelete(bookToRemove);
-  };
-  
-  const confirmRemove = async () => {
-    if (!bookToDelete) return;
+  const handleRemove = async (bookId: string) => {
+    if (!window.confirm("Are you sure you want to delete this book?")) return;
     try {
-        if (bookToDelete.imageStoragePath) {
-            try {
-                await deleteObject(ref(storage, bookToDelete.imageStoragePath));
-            } catch (error: any) {
-                if (error.code !== 'storage/object-not-found') {
-                    throw error;
-                }
-                console.warn(`Image not found, proceeding with deletion: ${bookToDelete.imageStoragePath}`);
-            }
-        }
-        
-        await deleteDoc(doc(db, 'books', bookToDelete.id));
-        
+        await deleteDoc(doc(db, 'books', bookId));
         toast({ title: 'Success', description: 'Book deleted.' });
     } catch (error) {
         console.error("Error removing book:", error);
         toast({ title: 'Error', description: 'Could not delete book.', variant: 'destructive' });
-    } finally {
-        setBookToDelete(null);
     }
-  }
+  };
 
   const handleSave = async (data: Omit<Book, 'id' | 'imageUrl'>, newImageFile?: File) => {
       if (!editingBook) return;
@@ -168,21 +148,6 @@ export default function ManageBooksPage() {
             onSave={handleSave}
         />
       )}
-
-      <AlertDialog open={!!bookToDelete} onOpenChange={(isOpen) => !isOpen && setBookToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the book "{bookToDelete?.title}" and its associated image from storage.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmRemove}>Continue</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
